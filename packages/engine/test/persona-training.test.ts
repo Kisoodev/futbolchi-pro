@@ -44,6 +44,24 @@ describe('persona creation', () => {
     expect(() => make({ name: ' ' })).toThrow();
   });
 
+  it('stores a valid appearance and rejects invalid ones', () => {
+    expect(make().appearance).toEqual(C.DEFAULT_APPEARANCE);
+    const custom = { ...C.DEFAULT_APPEARANCE, hairStyle: 'curly' as const, heightCm: 191, weightKg: 84, foot: 'left' as const };
+    expect(make({ appearance: custom }).appearance).toEqual(custom);
+    const bad = (over: object) => validatePersonaInput({ name: 'Aziz', position: 'ST', bonus: {}, appearance: { ...C.DEFAULT_APPEARANCE, ...over } as never });
+    expect(bad({ heightCm: 230 })).toBe('bad_appearance');
+    expect(bad({ weightKg: 54.5 })).toBe('bad_appearance');
+    expect(bad({ hairStyle: 'spiky' })).toBe('bad_appearance');
+    expect(bad({})).toBeNull();
+  });
+
+  it('appearance does not change stats or potential', () => {
+    const a = make();
+    const b = make({ appearance: { ...C.DEFAULT_APPEARANCE, heightCm: 200, weightKg: 100 } });
+    expect(b.stats).toEqual(a.stats);
+    expect(b.potential).toBe(a.potential);
+  });
+
   it('potential is deterministic, hidden in the view, and within range', () => {
     expect(make().potential).toBe(make().potential);
     const pots = Array.from({ length: 500 }, (_, i) => make({ seed: i }).potential);

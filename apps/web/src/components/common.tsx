@@ -8,6 +8,7 @@ import {
   type Season,
 } from '@futbolchi/engine';
 import { uz } from '../i18n/uz';
+import { Avatar } from '../art/Avatar';
 
 export function StatBars({ persona }: { persona: PersonaView }) {
   const w = C.POSITION_WEIGHTS[persona.position];
@@ -29,6 +30,7 @@ export function StatBars({ persona }: { persona: PersonaView }) {
 export function PersonaHeader({ persona, club }: { persona: PersonaView; club: Club }) {
   return (
     <div className="persona-header" style={{ borderColor: club.color }}>
+      <Avatar appearance={persona.appearance} kit={club.color} scale={1.6} className="mini-avatar" />
       <div className="ovr">
         <strong>{Math.round(personaOvr(persona))}</strong>
         <small>{uz.ovr}</small>

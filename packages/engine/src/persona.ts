@@ -1,7 +1,21 @@
 import * as C from './constants';
 import { computeOvr, topStats } from './positions';
 import { clamp, createRng, hashSeed, triangular } from './rng';
-import { POSITIONS, STAT_KEYS, type Persona, type PersonaView, type Position, type StatKey, type Stats } from './types';
+import {
+  FEET,
+  HAIR_COLORS,
+  HAIR_STYLES,
+  HEAD_SHAPES,
+  POSITIONS,
+  SKIN_TONES,
+  STAT_KEYS,
+  type Appearance,
+  type Persona,
+  type PersonaView,
+  type Position,
+  type StatKey,
+  type Stats,
+} from './types';
 
 export interface CreatePersonaInput {
   id: string;
@@ -11,14 +25,38 @@ export interface CreatePersonaInput {
   bonus: Partial<Stats>;
   seed: number;
   clubId: string;
+  /** Cosmetic. Defaults to DEFAULT_APPEARANCE. */
+  appearance?: Appearance;
 }
 
-export type PersonaError = 'name_length' | 'bad_position' | 'bonus_negative' | 'bonus_per_stat' | 'bonus_total';
+export type PersonaError =
+  | 'name_length'
+  | 'bad_position'
+  | 'bonus_negative'
+  | 'bonus_per_stat'
+  | 'bonus_total'
+  | 'bad_appearance';
+
+export function isValidAppearance(a: Appearance): boolean {
+  const int = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
+  return (
+    !!a &&
+    HEAD_SHAPES.includes(a.headShape) &&
+    SKIN_TONES.includes(a.skinTone) &&
+    HAIR_STYLES.includes(a.hairStyle) &&
+    HAIR_COLORS.includes(a.hairColor) &&
+    FEET.includes(a.foot) &&
+    int(a.heightCm, C.HEIGHT_MIN_CM, C.HEIGHT_MAX_CM) &&
+    int(a.weightKg, C.WEIGHT_MIN_KG, C.WEIGHT_MAX_KG)
+  );
+}
 
 export const NAME_MIN = 2;
 export const NAME_MAX = 24;
 
-export function validatePersonaInput(input: Pick<CreatePersonaInput, 'name' | 'position' | 'bonus'>): PersonaError | null {
+export function validatePersonaInput(
+  input: Pick<CreatePersonaInput, 'name' | 'position' | 'bonus' | 'appearance'>,
+): PersonaError | null {
   const name = input.name.trim();
   if (name.length < NAME_MIN || name.length > NAME_MAX) return 'name_length';
   if (!POSITIONS.includes(input.position)) return 'bad_position';
@@ -30,6 +68,7 @@ export function validatePersonaInput(input: Pick<CreatePersonaInput, 'name' | 'p
     total += v;
   }
   if (total > C.BONUS_POINTS_TOTAL) return 'bonus_total';
+  if (input.appearance !== undefined && !isValidAppearance(input.appearance)) return 'bad_appearance';
   return null;
 }
 
@@ -44,6 +83,7 @@ export function createPersona(input: CreatePersonaInput): Persona {
     name: input.name.trim(),
     position: input.position,
     age: C.START_AGE,
+    appearance: { ...(input.appearance ?? C.DEFAULT_APPEARANCE) },
     stats,
     potential: Math.round(triangular(rng, C.POTENTIAL_MIN, C.POTENTIAL_MODE, C.POTENTIAL_MAX)),
     fatigue: 0,

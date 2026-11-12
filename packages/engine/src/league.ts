@@ -32,8 +32,8 @@ const NAME_PATTERNS = [
 ];
 
 const COLORS = [
-  '#d94848', '#2f6fd6', '#2e9e5b', '#e0a526', '#8a4fd1', '#1fa3a3', '#e06a2b', '#4a5568',
-  '#c2398f', '#5b8c2a', '#2b4c7e', '#b5651d', '#7a1f3d', '#0f766e', '#9f7aea', '#a0522d',
+  '#d94848', '#2f6fd6', '#111827', '#e0a526', '#8a4fd1', '#e64980', '#e06a2b', '#4a5568',
+  '#c2398f', '#5f3dc4', '#2b4c7e', '#b5651d', '#7a1f3d', '#364fc7', '#9f7aea', '#a0522d',
 ];
 
 function rateClub(base: number, rng: ReturnType<typeof createRng>): ClubRatings {

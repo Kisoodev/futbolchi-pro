@@ -2,18 +2,21 @@
  * Local persistence. The game state is plain JSON stored in localStorage.
  * Every access is wrapped: storage may be unavailable (private mode, blocked).
  */
-import type { GameState } from '@futbolchi/engine';
+import { constants as C, type GameState } from '@futbolchi/engine';
 
 const SAVE_KEY = 'futbolchi.save.v1';
 const USER_KEY = 'futbolchi.userId';
-const ENTITLEMENT_KEY = 'futbolchi.entitlementId';
+const NAME_KEY = 'futbolchi.userName';
 
 export function loadGame(): GameState | null {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
-    return s.version === 1 ? s : null;
+    if (s.version !== 1) return null;
+    // Saves made before appearance existed.
+    if (!s.persona.appearance) s.persona.appearance = { ...C.DEFAULT_APPEARANCE };
+    return s;
   } catch {
     return null;
   }
@@ -51,10 +54,20 @@ export function getUserId(): string {
   }
 }
 
-export function rememberEntitlement(id: string | null): void {
+let memoryName = '';
+/** The name entered on the main menu. */
+export function getUserName(): string {
   try {
-    if (id) localStorage.setItem(ENTITLEMENT_KEY, id);
-    else localStorage.removeItem(ENTITLEMENT_KEY);
+    return localStorage.getItem(NAME_KEY) ?? memoryName;
+  } catch {
+    return memoryName;
+  }
+}
+
+export function setUserName(name: string): void {
+  memoryName = name;
+  try {
+    localStorage.setItem(NAME_KEY, name);
   } catch {
     /* ignore */
   }

@@ -1,103 +1,117 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   computeOvr,
   newGame,
   validatePersonaInput,
+  FEET,
+  HAIR_COLORS,
+  HAIR_STYLES,
+  HEAD_SHAPES,
   POSITIONS,
+  SKIN_TONES,
   STAT_KEYS,
   constants as C,
+  type Appearance,
   type GameState,
   type Position,
   type Stats,
 } from '@futbolchi/engine';
 import { uz } from '../i18n/uz';
-import { api, formatUzs } from '../state/api';
-import { getUserId, rememberEntitlement } from '../state/store';
-
-type Step = 'checking' | 'pay' | 'checkout' | 'waiting' | 'form';
+import { api } from '../state/api';
+import { getUserId } from '../state/store';
+import { Avatar } from '../art/Avatar';
+import { HAIR_HEX, SKIN_HEX } from '../art/avatarRects';
 
 interface Props {
+  /** Registered on the main menu. */
+  name: string;
+  /** Paid (or admin-granted) persona slot that this creation will use. */
+  entitlementId: string;
   onCreated: (state: GameState) => void;
-  onBack: () => void;
 }
 
+/** Kit shown in the preview; the real club colour is only known after creation. */
+const PREVIEW_KIT = '#2f78b7';
 const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0];
 
-export function CreateScreen({ onCreated, onBack }: Props) {
-  const userId = getUserId();
-  const [step, setStep] = useState<Step>('checking');
-  const [error, setError] = useState<string | null>(null);
-  const [price, setPrice] = useState<number | null>(null);
-  const [paymentId, setPaymentId] = useState<string | null>(null);
-  const [entitlementId, setEntitlementId] = useState<string | null>(null);
-  const [receiptId, setReceiptId] = useState<string | null>(null);
+function Choice<T extends string>({ label, options, value, names, onChange }: {
+  label: string;
+  options: readonly T[];
+  value: T;
+  names: Record<T, string>;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="field">
+      <span>{label}</span>
+      <div className="chips tight">
+        {options.map((o) => (
+          <button key={o} type="button" className={o === value ? 'chip on' : 'chip'} aria-pressed={o === value} onClick={() => onChange(o)}>
+            {names[o]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-  const [name, setName] = useState('');
+function Swatches<T extends string>({ label, options, value, names, colors, onChange }: {
+  label: string;
+  options: readonly T[];
+  value: T;
+  names: Record<T, string>;
+  colors: Record<T, string>;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="field">
+      <span>{label}: <b>{names[value]}</b></span>
+      <div className="swatches">
+        {options.map((o) => (
+          <button
+            key={o}
+            type="button"
+            className={o === value ? 'swatch on' : 'swatch'}
+            style={{ background: colors[o] }}
+            aria-label={names[o]}
+            aria-pressed={o === value}
+            onClick={() => onChange(o)}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Slider({ label, value, min, max, text, onChange }: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  text: string;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="field slider">
+      <span>{label}: <b>{text}</b></span>
+      <input type="range" min={min} max={max} step={1} value={value} onChange={(e) => onChange(Number(e.target.value))} />
+    </label>
+  );
+}
+
+export function CreateScreen({ name, entitlementId, onCreated }: Props) {
+  const [look, setLook] = useState<Appearance>({ ...C.DEFAULT_APPEARANCE });
   const [position, setPosition] = useState<Position>('ST');
   const [bonus, setBonus] = useState<Partial<Stats>>({});
   const [busy, setBusy] = useState(false);
-
-  // Is there already a paid, unused persona slot?
-  useEffect(() => {
-    (async () => {
-      try {
-        const [{ entitlements }, product] = await Promise.all([api.entitlements(userId), api.product()]);
-        setPrice(product.amountMinor);
-        const free = entitlements.find((e) => e.consumedByPersonaId === null);
-        if (free) {
-          setEntitlementId(free.id);
-          setStep('form');
-        } else setStep('pay');
-      } catch {
-        setError(uz.serverDown);
-        setStep('pay');
-      }
-    })();
-  }, [userId]);
-
-  const startPayment = async () => {
-    setError(null);
-    try {
-      const p = await api.createPayment(userId);
-      setPaymentId(p.paymentId);
-      // TODO(payme/click): redirect to p.checkoutUrl instead of showing the mock panel.
-      setStep('checkout');
-    } catch {
-      setError(uz.serverDown);
-    }
-  };
-
-  const mockCheckout = async (outcome: 'success' | 'fail') => {
-    if (!paymentId) return;
-    setStep('waiting');
-    try {
-      await api.mockPay(paymentId, outcome);
-      for (let i = 0; i < 20; i++) {
-        const { status } = await api.paymentStatus(paymentId);
-        if (status === 'paid') {
-          const [{ entitlements }, { receipts }] = await Promise.all([api.entitlements(userId), api.receipts(userId)]);
-          const ent = entitlements.find((e) => e.paymentId === paymentId);
-          setEntitlementId(ent?.id ?? null);
-          setReceiptId(receipts.find((r) => r.paymentId === paymentId)?.id ?? null);
-          setStep('form');
-          return;
-        }
-        if (status === 'failed') break;
-        await new Promise((r) => setTimeout(r, 400));
-      }
-      setError(uz.payFailed);
-      setStep('pay');
-    } catch {
-      setError(uz.serverDown);
-      setStep('pay');
-    }
-  };
+  const [error, setError] = useState<string | null>(null);
+  const set = <K extends keyof Appearance>(k: K, v: Appearance[K]) => setLook((prev) => ({ ...prev, [k]: v }));
 
   const used = STAT_KEYS.reduce((a, k) => a + (bonus[k] ?? 0), 0);
   const left = C.BONUS_POINTS_TOTAL - used;
   const preview = { ...C.STAT_TEMPLATES[position] };
   for (const k of STAT_KEYS) preview[k] += bonus[k] ?? 0;
-  const validation = validatePersonaInput({ name, position, bonus });
+  const validation = validatePersonaInput({ name, position, bonus, appearance: look });
 
   const adjust = (k: keyof Stats, d: number) => {
     const v = (bonus[k] ?? 0) + d;
@@ -106,14 +120,13 @@ export function CreateScreen({ onCreated, onBack }: Props) {
   };
 
   const create = async () => {
-    if (validation || !entitlementId) return;
+    if (validation || busy) return;
     setBusy(true);
     setError(null);
     try {
       const personaId = crypto.randomUUID();
-      const state = newGame({ seed: randomSeed(), persona: { id: personaId, name, position, bonus } });
-      await api.consume(entitlementId, userId, personaId);
-      rememberEntitlement(null);
+      const state = newGame({ seed: randomSeed(), persona: { id: personaId, name, position, bonus, appearance: look } });
+      await api.consume(entitlementId, getUserId(), personaId);
       onCreated(state);
     } catch {
       setError(uz.serverDown);
@@ -121,53 +134,37 @@ export function CreateScreen({ onCreated, onBack }: Props) {
     }
   };
 
-  if (step === 'checking') return <div className="screen center">{uz.loading}</div>;
-
-  if (step !== 'form') {
-    return (
-      <div className="screen narrow">
-        <button className="link" onClick={onBack}>← {uz.back}</button>
-        <h1>{uz.payTitle}</h1>
-        <p>{uz.payText}</p>
-        {price !== null && <p className="price">{uz.payPrice(formatUzs(price))}</p>}
-        {error && <p className="error">{error}</p>}
-        {step === 'pay' && (
-          <button className="primary big" onClick={startPayment}>
-            {uz.payButton}
-          </button>
-        )}
-        {step === 'checkout' && (
-          <div className="mock-checkout">
-            <p className="notice">{uz.payMockNotice}</p>
-            <div className="row">
-              <button className="primary" onClick={() => mockCheckout('success')}>{uz.payConfirm}</button>
-              <button onClick={() => mockCheckout('fail')}>{uz.payDecline}</button>
-            </div>
-          </div>
-        )}
-        {step === 'waiting' && <p className="muted">{uz.payWaiting}</p>}
-      </div>
-    );
-  }
-
   return (
-    <div className="screen narrow">
-      <button className="link" onClick={onBack}>← {uz.back}</button>
-      {receiptId && (
-        <p className="success">
-          {uz.payDone} <span className="muted small">{uz.receipt(receiptId.slice(0, 8))}</span>
-        </p>
-      )}
+    <div className="screen narrow create">
+      <p className="success">{uz.createPaid}</p>
       <h1>{uz.createTitle}</h1>
-      <label className="field">
-        <span>{uz.nameLabel}</span>
-        <input value={name} maxLength={24} placeholder={uz.namePlaceholder} onChange={(e) => setName(e.target.value)} />
-      </label>
+
+      <section className="look">
+        <div className="avatar-stage">
+          <Avatar appearance={look} kit={PREVIEW_KIT} scale={5} />
+          <strong>{name}</strong>
+          <span className="muted small">
+            {uz.heightValue(look.heightCm)} · {uz.weightValue(look.weightKg)}
+          </span>
+        </div>
+        <div className="look-controls">
+          <h2>{uz.appearanceTitle}</h2>
+          <Choice label={uz.headShapeLabel} options={HEAD_SHAPES} value={look.headShape} names={uz.headShapes} onChange={(v) => set('headShape', v)} />
+          <Swatches label={uz.skinToneLabel} options={SKIN_TONES} value={look.skinTone} names={uz.skinTones} colors={SKIN_HEX} onChange={(v) => set('skinTone', v)} />
+          <Choice label={uz.hairStyleLabel} options={HAIR_STYLES} value={look.hairStyle} names={uz.hairStyles} onChange={(v) => set('hairStyle', v)} />
+          <Swatches label={uz.hairColorLabel} options={HAIR_COLORS} value={look.hairColor} names={uz.hairColors} colors={HAIR_HEX} onChange={(v) => set('hairColor', v)} />
+          <Slider label={uz.heightLabel} value={look.heightCm} min={C.HEIGHT_MIN_CM} max={C.HEIGHT_MAX_CM} text={uz.heightValue(look.heightCm)} onChange={(v) => set('heightCm', v)} />
+          <Slider label={uz.weightLabel} value={look.weightKg} min={C.WEIGHT_MIN_KG} max={C.WEIGHT_MAX_KG} text={uz.weightValue(look.weightKg)} onChange={(v) => set('weightKg', v)} />
+          <Choice label={uz.footLabel} options={FEET} value={look.foot} names={uz.feet} onChange={(v) => set('foot', v)} />
+        </div>
+      </section>
+
+      <h2>{uz.skillsTitle}</h2>
       <div className="field">
         <span>{uz.positionLabel}</span>
         <div className="chips">
           {POSITIONS.map((p) => (
-            <button key={p} className={p === position ? 'chip on' : 'chip'} onClick={() => { setPosition(p); setBonus({}); }}>
+            <button key={p} type="button" className={p === position ? 'chip on' : 'chip'} aria-pressed={p === position} onClick={() => { setPosition(p); setBonus({}); }}>
               <b>{p}</b> {uz.positions[p]}
             </button>
           ))}
@@ -179,12 +176,12 @@ export function CreateScreen({ onCreated, onBack }: Props) {
           {STAT_KEYS.map((k) => (
             <li key={k} className={C.POSITION_WEIGHTS[position][k] >= 0.15 ? 'key' : ''}>
               <span className="label">{uz.stats[k]}</span>
-              <button onClick={() => adjust(k, -1)} disabled={!bonus[k]} aria-label="−">−</button>
+              <button type="button" onClick={() => adjust(k, -1)} disabled={!bonus[k]} aria-label={`${uz.stats[k]} −`}>−</button>
               <span className="val">
                 {preview[k]}
                 {bonus[k] ? <small> +{bonus[k]}</small> : null}
               </span>
-              <button onClick={() => adjust(k, 1)} disabled={left <= 0 || (bonus[k] ?? 0) >= C.BONUS_POINTS_PER_STAT_MAX} aria-label="+">+</button>
+              <button type="button" onClick={() => adjust(k, 1)} disabled={left <= 0 || (bonus[k] ?? 0) >= C.BONUS_POINTS_PER_STAT_MAX} aria-label={`${uz.stats[k]} +`}>+</button>
             </li>
           ))}
         </ul>
@@ -192,8 +189,9 @@ export function CreateScreen({ onCreated, onBack }: Props) {
           {uz.ovr}: {Math.round(computeOvr(preview, position))}
         </p>
       </div>
+
       {error && <p className="error">{error}</p>}
-      {name.length > 0 && validation && <p className="error">{uz.errors[validation]}</p>}
+      {validation && <p className="error">{uz.errors[validation] ?? validation}</p>}
       <button className="primary big" disabled={!!validation || busy} onClick={create}>
         {uz.createButton}
       </button>

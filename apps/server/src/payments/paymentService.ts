@@ -41,6 +41,13 @@ export class PaymentService {
   async createPayment(userId: string, productId: ProductId): Promise<{ payment: Payment; checkoutUrl: string }> {
     const product = PRODUCTS[productId];
     if (!product) throw new Error('unknown product');
+    // One open payment per user and product: returning to the pay page must not pile up payments.
+    const open = this.store.read((db) =>
+      Object.values(db.payments).find(
+        (p) => p.userId === userId && p.product === productId && p.provider === this.provider.name && p.status === 'pending',
+      ),
+    );
+    if (open) return { payment: open, checkoutUrl: open.checkoutUrl ?? '' };
     const id = `pay_${randomUUID()}`;
     const res = await this.provider.createPayment({
       paymentId: id,
@@ -58,6 +65,7 @@ export class PaymentService {
       provider: this.provider.name,
       providerPaymentId: res.providerPaymentId,
       status: 'pending',
+      checkoutUrl: res.checkoutUrl,
       createdAt: now(),
       updatedAt: now(),
     };
@@ -139,6 +147,37 @@ export class PaymentService {
     db.entitlements[entId] = entitlement;
     db.receipts[receipt.id] = receipt;
     return 'granted';
+  }
+
+  /**
+   * Free access granted by an admin (no payment). It still leaves a Payment and
+   * a 0-amount Receipt so every grant is auditable. If the user already has an
+   * unused slot, that one is returned instead of creating another.
+   */
+  adminGrant(userId: string, productId: ProductId): Entitlement {
+    return this.store.transaction((db) => {
+      const unused = Object.values(db.entitlements).find(
+        (e) => e.userId === userId && e.product === productId && e.consumedByPersonaId === null,
+      );
+      if (unused) return unused;
+      const id = `pay_${randomUUID()}`;
+      const payment: Payment = {
+        id,
+        userId,
+        product: productId,
+        amountMinor: 0,
+        currency: 'UZS',
+        provider: 'admin',
+        providerPaymentId: `admin_${id}`,
+        status: 'pending',
+        checkoutUrl: '',
+        createdAt: now(),
+        updatedAt: now(),
+      };
+      db.payments[id] = payment;
+      this.grant(db, payment, `admingrant_${id}`);
+      return db.entitlements[entitlementIdFor(id)];
+    });
   }
 
   entitlements(userId: string): Entitlement[] {

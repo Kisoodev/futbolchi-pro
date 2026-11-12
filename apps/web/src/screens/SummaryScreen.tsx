@@ -16,8 +16,10 @@ export function SummaryScreen({ state, onNextSeason }: Props) {
   const club = state.clubs[state.persona.clubId];
   const [preview, setPreview] = useState<string | null>(null);
 
-  const card = () => renderShareCard(facts, story, club.color);
-  const share = () => shareOrDownload(card(), `futbolchi-${season.index}-mavsum.png`, uz.shareText(facts.personaName));
+  const card = () => renderShareCard(facts, story, club.color, state.persona.appearance);
+  const share = async () =>
+    shareOrDownload(await card(), `futbolchi-${season.index}-mavsum.png`, uz.shareText(facts.personaName));
+  const showPreview = async () => setPreview((await card()).toDataURL('image/png'));
 
   return (
     <div className="screen narrow">
@@ -40,7 +42,7 @@ export function SummaryScreen({ state, onNextSeason }: Props) {
 
       <div className="row">
         <button onClick={share}>{uz.share}</button>
-        <button onClick={() => setPreview(card().toDataURL('image/png'))}>{uz.downloadCard}</button>
+        <button onClick={showPreview}>{uz.downloadCard}</button>
       </div>
       {preview && (
         <a href={preview} download={`futbolchi-${season.index}-mavsum.png`}>

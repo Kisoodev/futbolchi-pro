@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Club, Match, MatchEvent, PitchPoint, Position } from '@futbolchi/engine';
 import { uz } from '../i18n/uz';
 import { eventText } from '../i18n/events';
-import { buildTimeline, frameAt, type Frame } from './timeline';
+import { buildTimeline, frameAt, personaWindow, type Frame } from './timeline';
+import { kitColors, kitStroke } from './kits';
 
 /** Home formation (home attacks towards x = 100). Away is mirrored. */
 const FORMATION: { pos: Position; x: number; y: number }[] = [
@@ -28,6 +29,10 @@ interface Props {
 }
 
 const SPEEDS = [1, 2, 4];
+
+/** Canvas can't read CSS variables cheaply; keep in sync with styles.css. */
+const COLORS = { grassA: '#62b533', grassB: '#6cc23a', sun: '#ffcf33', ink: '#12324f' };
+const PIXEL_FONT = "'Pixelify Sans', system-ui, sans-serif";
 
 export function PitchReplay({ match, clubs, personaName, personaPosition, onFinished }: Props) {
   const events = match.events;
@@ -158,12 +163,12 @@ function drawFrame(
   const X = (x: number) => (x / 100) * w;
   const Y = (y: number) => (y / 100) * h;
 
-  // Grass
+  // Grass (bright, like the stadium art)
   for (let i = 0; i < 10; i++) {
-    ctx.fillStyle = i % 2 ? '#2f8f46' : '#2a8540';
+    ctx.fillStyle = i % 2 ? COLORS.grassA : COLORS.grassB;
     ctx.fillRect((i * w) / 10, 0, w / 10 + 1, h);
   }
-  ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
   ctx.lineWidth = 2;
   const m = 4;
   ctx.strokeRect(m, m, w - 2 * m, h - 2 * m);
@@ -189,11 +194,14 @@ function drawFrame(
   const shiftY = (ball.y - 50) * 0.15;
   const personaSide = match.personaSide;
   const personaSlot = FORMATION.findIndex((f) => f.pos === personaPosition);
-  const personaPlaying = match.personaStats && match.personaStats.minutes > 0;
+  const onWindow = personaWindow(match);
+  const minute = current?.minute ?? 0;
+  const personaOnPitch = !!onWindow && minute >= onWindow.from && minute <= onWindow.to;
   const personaActing = current?.actor === 'persona';
+  const kits = kitColors(clubs[match.homeId].color, clubs[match.awayId].color);
 
   const drawTeam = (side: 'home' | 'away') => {
-    const club = clubs[side === 'home' ? match.homeId : match.awayId];
+    const kit = kits[side];
     FORMATION.forEach((f, i) => {
       const bx = side === 'home' ? f.x : 100 - f.x;
       const by = side === 'home' ? f.y : 100 - f.y;
@@ -201,22 +209,25 @@ function drawFrame(
         x: Math.min(97, Math.max(3, bx + (f.pos === 'GK' ? shiftX * 0.15 : shiftX))),
         y: Math.min(96, Math.max(4, by + shiftY)),
       };
-      const isPersona = personaPlaying && side === personaSide && i === personaSlot;
+      const isPersona = personaOnPitch && side === personaSide && i === personaSlot;
       if (isPersona && personaActing && current && current.type !== 'substitution') {
         p = { x: ball.x - (side === 'home' ? 2 : -2), y: ball.y + 2 };
       }
       ctx.beginPath();
       ctx.arc(X(p.x), Y(p.y), isPersona ? 8 : 6, 0, Math.PI * 2);
-      ctx.fillStyle = club.color;
+      ctx.fillStyle = kit;
       ctx.fill();
       ctx.lineWidth = isPersona ? 3 : 1.5;
-      ctx.strokeStyle = isPersona ? '#ffd23f' : 'rgba(255,255,255,0.9)';
+      ctx.strokeStyle = isPersona ? COLORS.sun : kitStroke(kit);
       ctx.stroke();
       if (isPersona) {
-        ctx.font = '600 12px system-ui, sans-serif';
+        ctx.font = `700 13px ${PIXEL_FONT}`;
         ctx.textAlign = 'center';
-        ctx.fillStyle = '#ffd23f';
-        ctx.fillText(personaName, X(p.x), Y(p.y) - 12);
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = COLORS.ink;
+        ctx.strokeText(personaName, X(p.x), Y(p.y) - 13);
+        ctx.fillStyle = COLORS.sun;
+        ctx.fillText(personaName, X(p.x), Y(p.y) - 13);
       }
     });
   };
@@ -228,16 +239,19 @@ function drawFrame(
   ctx.arc(X(ball.x), Y(ball.y), 5, 0, Math.PI * 2);
   ctx.fillStyle = '#fff';
   ctx.fill();
-  ctx.strokeStyle = '#111';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = COLORS.ink;
+  ctx.lineWidth = 1.5;
   ctx.stroke();
 
   if (current?.type === 'goal' && frame.arrived) {
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(0, h / 2 - 28, w, 56);
-    ctx.font = '800 34px system-ui, sans-serif';
+    ctx.fillStyle = 'rgba(18,50,79,0.45)';
+    ctx.fillRect(0, h / 2 - 32, w, 64);
+    ctx.font = `700 42px ${PIXEL_FONT}`;
     ctx.textAlign = 'center';
-    ctx.fillStyle = current.actor === 'persona' ? '#ffd23f' : '#fff';
-    ctx.fillText('GOL!', w / 2, h / 2 + 12);
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = COLORS.ink;
+    ctx.strokeText('GOL!', w / 2, h / 2 + 14);
+    ctx.fillStyle = current.actor === 'persona' ? COLORS.sun : '#fff';
+    ctx.fillText('GOL!', w / 2, h / 2 + 14);
   }
 }

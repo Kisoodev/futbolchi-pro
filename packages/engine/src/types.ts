@@ -19,6 +19,28 @@ export type StatKey = (typeof STAT_KEYS)[number];
 /** Stats are floats in [1, 99]; the UI shows them rounded. */
 export type Stats = Record<StatKey, number>;
 
+/** Cosmetic body options chosen at creation. They do not affect simulation. */
+export const HEAD_SHAPES = ['round', 'oval', 'square'] as const;
+export type HeadShape = (typeof HEAD_SHAPES)[number];
+export const SKIN_TONES = ['light', 'medium', 'tan', 'dark'] as const;
+export type SkinTone = (typeof SKIN_TONES)[number];
+export const HAIR_STYLES = ['short', 'buzz', 'curly', 'long', 'mohawk', 'bald'] as const;
+export type HairStyle = (typeof HAIR_STYLES)[number];
+export const HAIR_COLORS = ['black', 'brown', 'blonde', 'red', 'gray', 'white'] as const;
+export type HairColor = (typeof HAIR_COLORS)[number];
+export const FEET = ['right', 'left'] as const;
+export type Foot = (typeof FEET)[number];
+
+export interface Appearance {
+  headShape: HeadShape;
+  skinTone: SkinTone;
+  hairStyle: HairStyle;
+  hairColor: HairColor;
+  heightCm: number;
+  weightKg: number;
+  foot: Foot;
+}
+
 export interface CareerStats {
   seasons: number;
   apps: number;
@@ -32,6 +54,7 @@ export interface Persona {
   name: string;
   position: Position;
   age: number;
+  appearance: Appearance;
   stats: Stats;
   /** HIDDEN from the player. Caps long-term growth. Never render it. */
   potential: number;

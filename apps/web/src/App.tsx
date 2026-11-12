@@ -2,14 +2,28 @@ import { useEffect, useState } from 'react';
 import { playWeek, startNextSeason, type GameState, type TrainingId } from '@futbolchi/engine';
 import { uz } from './i18n/uz';
 import { api } from './state/api';
-import { clearGame, getUserId, loadGame, saveGame } from './state/store';
+import { clearGame, getUserId, getUserName, loadGame, saveGame } from './state/store';
+import { LoadingScreen } from './screens/LoadingScreen';
+import { HomeScreen } from './screens/HomeScreen';
+import { PayScreen } from './screens/PayScreen';
 import { CreateScreen } from './screens/CreateScreen';
 import { WeekScreen } from './screens/WeekScreen';
 import { MatchScreen } from './screens/MatchScreen';
 import { SummaryScreen } from './screens/SummaryScreen';
 import { AdminScreen } from './screens/AdminScreen';
+import { PixelArt, SkyBackdrop } from './art/PixelArt';
+import { BALL } from './art/sprites';
 
-type Route = { name: 'home' } | { name: 'create' } | { name: 'game' } | { name: 'match'; matchId: string };
+/**
+ * New player flow: loading (counter) → home (name) → pay (receipt) → create (persona) → game.
+ */
+type Route =
+  | { name: 'loading' }
+  | { name: 'home' }
+  | { name: 'pay' }
+  | { name: 'create'; entitlementId: string }
+  | { name: 'game' }
+  | { name: 'match'; matchId: string };
 
 const useHash = () => {
   const [hash, setHash] = useState(location.hash);
@@ -24,7 +38,7 @@ const useHash = () => {
 export function App() {
   const hash = useHash();
   const [game, setGame] = useState<GameState | null>(() => loadGame());
-  const [route, setRoute] = useState<Route>({ name: 'home' });
+  const [route, setRoute] = useState<Route>({ name: 'loading' });
 
   const update = (next: GameState) => {
     setGame(next);
@@ -32,13 +46,42 @@ export function App() {
     void api.syncSave(getUserId(), next);
   };
 
-  if (hash === '#/admin') return <AdminScreen />;
+  if (hash === '#/admin') {
+    return (
+      <div className="app">
+        <SkyBackdrop />
+        <main>
+          <AdminScreen />
+        </main>
+      </div>
+    );
+  }
+
+  if (route.name === 'loading') {
+    return (
+      <div className="app">
+        <SkyBackdrop />
+        <main>
+          <LoadingScreen onDone={() => setRoute({ name: 'home' })} />
+        </main>
+      </div>
+    );
+  }
 
   let body: JSX.Element;
-  if (route.name === 'create') {
+  if (route.name === 'pay') {
+    body = (
+      <PayScreen
+        name={getUserName()}
+        onBack={() => setRoute({ name: 'home' })}
+        onPaid={(entitlementId) => setRoute({ name: 'create', entitlementId })}
+      />
+    );
+  } else if (route.name === 'create') {
     body = (
       <CreateScreen
-        onBack={() => setRoute({ name: 'home' })}
+        name={getUserName()}
+        entitlementId={route.entitlementId}
         onCreated={(s) => {
           update(s);
           setRoute({ name: 'game' });
@@ -63,37 +106,24 @@ export function App() {
       );
   } else {
     body = (
-      <div className="screen center hero">
-        <div className="ball-logo" aria-hidden>⚽</div>
-        <h1>{uz.appName}</h1>
-        <p className="tagline">{uz.tagline}</p>
-        {game && (
-          <button className="primary big" onClick={() => setRoute({ name: 'game' })}>
-            {uz.continue} — {game.persona.name}
-          </button>
-        )}
-        <button
-          className={game ? 'big' : 'primary big'}
-          onClick={() => {
-            if (game && !confirm(uz.confirmNewCareer)) return;
-            if (game) {
-              clearGame();
-              setGame(null);
-            }
-            setRoute({ name: 'create' });
-          }}
-        >
-          {game ? uz.newCareer : uz.start}
-        </button>
-      </div>
+      <HomeScreen
+        game={game}
+        onContinue={() => setRoute({ name: 'game' })}
+        onDiscardCareer={() => {
+          clearGame();
+          setGame(null);
+        }}
+        onStart={() => setRoute({ name: 'pay' })}
+      />
     );
   }
 
   return (
     <div className="app">
+      <SkyBackdrop />
       <header className="topbar">
         <button className="brand" onClick={() => setRoute({ name: 'home' })}>
-          ⚽ {uz.appName}
+          <PixelArt sprite={BALL} scale={2} /> {uz.appName}
         </button>
       </header>
       <main>{body}</main>

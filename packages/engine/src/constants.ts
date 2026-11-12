@@ -1,7 +1,7 @@
 /**
  * Every tunable number lives here. Keep BALANCE.md in sync when changing anything.
  */
-import type { Position, StatKey, Stats, Tier } from './types';
+import type { Appearance, Position, StatKey, Stats, Tier } from './types';
 
 // ---------- Stats ----------
 export const STAT_MIN = 1;
@@ -30,6 +30,21 @@ export const STAT_TEMPLATES: Record<Position, Stats> = {
 export const BONUS_POINTS_TOTAL = 10;
 export const BONUS_POINTS_PER_STAT_MAX = 5;
 export const START_AGE = 17;
+
+// ---------- Appearance (cosmetic only) ----------
+export const HEIGHT_MIN_CM = 160;
+export const HEIGHT_MAX_CM = 200;
+export const WEIGHT_MIN_KG = 55;
+export const WEIGHT_MAX_KG = 100;
+export const DEFAULT_APPEARANCE: Appearance = {
+  headShape: 'round',
+  skinTone: 'medium',
+  hairStyle: 'short',
+  hairColor: 'black',
+  heightCm: 178,
+  weightKg: 72,
+  foot: 'right',
+};
 
 /** Hidden potential: triangular(min, mode, max). */
 export const POTENTIAL_MIN = 60;

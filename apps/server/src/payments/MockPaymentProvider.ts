@@ -2,16 +2,10 @@
  * Mock provider for the MVP. No money moves. Webhooks are HMAC-signed so the
  * verification path is exercised exactly like a real provider's would be.
  */
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import type { PaymentStatus } from '../domain';
-import {
-  InvalidWebhookError,
-  type CreatePaymentInput,
-  type CreatePaymentResult,
-  type PaymentProvider,
-  type ProviderWebhookEvent,
-  type WebhookHeaders,
-} from './PaymentProvider';
+import type { CreatePaymentInput, CreatePaymentResult, PaymentProvider, ProviderWebhookEvent, WebhookHeaders } from './PaymentProvider';
+import { signBody, verifySignedEvent } from './signedEvents';
 
 export const MOCK_SIGNATURE_HEADER = 'x-mock-signature';
 
@@ -39,34 +33,11 @@ export class MockPaymentProvider implements PaymentProvider {
   }
 
   sign(rawBody: string): string {
-    return createHmac('sha256', this.secret).update(rawBody).digest('hex');
+    return signBody(this.secret, rawBody);
   }
 
   async parseWebhook(rawBody: string, headers: WebhookHeaders): Promise<ProviderWebhookEvent> {
-    const sig = headers[MOCK_SIGNATURE_HEADER];
-    if (typeof sig !== 'string') throw new InvalidWebhookError('missing signature');
-    const expected = Buffer.from(this.sign(rawBody), 'hex');
-    const given = Buffer.from(sig, 'hex');
-    if (given.length !== expected.length || !timingSafeEqual(given, expected)) {
-      throw new InvalidWebhookError('bad signature');
-    }
-    let body: unknown;
-    try {
-      body = JSON.parse(rawBody);
-    } catch {
-      throw new InvalidWebhookError('bad json');
-    }
-    const e = body as Partial<ProviderWebhookEvent>;
-    if (
-      typeof e.eventId !== 'string' ||
-      (e.type !== 'payment.succeeded' && e.type !== 'payment.failed') ||
-      typeof e.providerPaymentId !== 'string' ||
-      typeof e.amountMinor !== 'number' ||
-      typeof e.providerTxnId !== 'string'
-    ) {
-      throw new InvalidWebhookError('bad payload');
-    }
-    return e as ProviderWebhookEvent;
+    return verifySignedEvent(this.secret, MOCK_SIGNATURE_HEADER, rawBody, headers);
   }
 
   /**

@@ -3,7 +3,22 @@
  * answers "where is the ball at time t". No physics — the ball moves linearly
  * between the event's waypoints, then pauses on the final point.
  */
-import type { MatchEvent, PitchPoint } from '@futbolchi/engine';
+import type { Match, MatchEvent, PitchPoint } from '@futbolchi/engine';
+
+/**
+ * Minutes during which the persona is on the pitch, derived from the events:
+ * a sub comes on at their substitution; injury/fatigue subs and red cards end it.
+ * Null when the persona did not play.
+ */
+export function personaWindow(m: Match): { from: number; to: number } | null {
+  if (!m.personaStats || m.personaStats.minutes <= 0) return null;
+  const mine = m.events.filter((e) => e.actor === 'persona');
+  const on = mine.find((e) => e.type === 'substitution' && e.detail?.personaIn === true);
+  const off = mine.find(
+    (e) => (e.type === 'substitution' && e.detail?.personaIn === false) || (e.type === 'card' && e.detail?.card === 'red'),
+  );
+  return { from: on ? on.minute : 0, to: off ? off.minute : 90 };
+}
 
 export const HOP_MS = 550;
 export const HOLD_MS = 1100;

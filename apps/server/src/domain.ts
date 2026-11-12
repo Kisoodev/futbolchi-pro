@@ -2,7 +2,8 @@
 import type { GameState } from '@futbolchi/engine';
 
 export type ProductId = 'persona_slot';
-export type ProviderName = 'mock' | 'payme' | 'click';
+/** 'manual' = card transfer + receipt approved by an admin; 'admin' = free access granted by an admin. */
+export type ProviderName = 'mock' | 'manual' | 'admin' | 'payme' | 'click';
 export type PaymentStatus = 'pending' | 'paid' | 'failed';
 
 export interface Product {
@@ -12,11 +13,11 @@ export interface Product {
   currency: 'UZS';
 }
 
-/** TODO(pricing): set the real persona price. Placeholder until decided. */
+/** Persona price: 5 000 so'm. Override with PERSONA_PRICE_MINOR (in tiyin). */
 export const PRODUCTS: Record<ProductId, Product> = {
   persona_slot: {
     id: 'persona_slot',
-    amountMinor: Number(process.env.PERSONA_PRICE_MINOR ?? 0),
+    amountMinor: Number(process.env.PERSONA_PRICE_MINOR ?? 500_000),
     currency: 'UZS',
   },
 };
@@ -30,8 +31,27 @@ export interface Payment {
   provider: ProviderName;
   providerPaymentId: string;
   status: PaymentStatus;
+  checkoutUrl: string;
   createdAt: string;
   updatedAt: string;
+}
+
+/** A registered player (name entered on the main menu). No accounts yet: the id is the browser's anonymous id. */
+export interface User {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+/** Uploaded receipt image for a manual payment. The file itself lives in ProofStorage. */
+export interface PaymentProof {
+  paymentId: string;
+  mime: 'image/png' | 'image/jpeg' | 'image/webp';
+  size: number;
+  uploadedAt: string;
+  status: 'submitted' | 'approved' | 'rejected';
+  reviewedAt?: string;
+  note?: string;
 }
 
 /** Access granted by a paid payment. Unique per paymentId. */
@@ -74,6 +94,9 @@ export interface SaveRecord {
 }
 
 export interface DbShape {
+  users: Record<string, User>;
+  /** key: paymentId */
+  proofs: Record<string, PaymentProof>;
   payments: Record<string, Payment>;
   entitlements: Record<string, Entitlement>;
   receipts: Record<string, Receipt>;
@@ -84,6 +107,8 @@ export interface DbShape {
 }
 
 export const emptyDb = (): DbShape => ({
+  users: {},
+  proofs: {},
   payments: {},
   entitlements: {},
   receipts: {},

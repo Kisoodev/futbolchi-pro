@@ -6,9 +6,27 @@ A browser football career game. You create a fictional footballer, pick one trai
 
 ```bash
 npm install
-npm run dev:server   # API on :8787 (mock payments, saves, admin)
+npm run dev:server   # API on :8787 (registration, payments, saves, admin)
 npm run dev:web      # game on http://localhost:5173
 ```
+
+## New player flow
+
+1. **Loading** — a rolling counter shows how many players have registered (`GET /api/stats`, a real count).
+2. **Main menu** — the player enters a name; the price (5 000 so'm) appears next to *Davom etish*.
+3. **Payment** — the player transfers to the card shown, uploads a receipt image ("chek") and waits. The page polls and continues by itself once an admin approves.
+4. **Persona** — appearance (head shape, skin, hair style and colour, height, weight, strong foot) with a live pixel avatar, then position and bonus points. Appearance is cosmetic only.
+5. **Game.**
+
+## Server settings (environment variables)
+
+| Variable | Purpose | Dev default |
+|---|---|---|
+| `PAYMENT_CARD_NUMBER`, `PAYMENT_CARD_HOLDER` | Card shown to players on the payment page | placeholder `0000 0000 0000 0000` |
+| `PERSONA_PRICE_MINOR` | Price in tiyin | `500000` (5 000 so'm) |
+| `ADMIN_TOKEN` | Admin panel token | `dev-admin-token` (admin is disabled in production if unset) |
+| `PAYMENT_EVENT_SECRET` | Signs admin payment decisions | dev value (required in production) |
+| `DATA_DIR` | Where `db.json` and receipt images are stored | `apps/server/data` |
 
 ```bash
 npm test             # all unit tests (engine, server, replay timeline)
@@ -16,7 +34,13 @@ npm run typecheck
 npx tsx packages/engine/scripts/balance-report.ts 200 6
 ```
 
-- Admin stub: `http://localhost:5173/#/admin`. The dev token is `dev-admin-token`; set `ADMIN_TOKEN` to change it.
+## Admin panel
+
+Open `http://localhost:5173/#/admin` and enter the admin token. It has three parts:
+
+- **To'lovsiz kirish** — gives this browser a free persona slot, so the owner can play without paying. It is recorded as a 0 so'm receipt.
+- **To'lovlar** — uploaded receipts with their images; approve or reject (a rejection reason is shown to the player).
+- **Highlightlar** — mark match events as highlights.
 
 ## Layout
 
@@ -24,7 +48,7 @@ npx tsx packages/engine/scripts/balance-report.ts 200 6
 |---|---|
 | `packages/engine` | Pure, deterministic simulation (no DOM, no I/O, no `Math.random`). Persona, training, match, league, season, story. |
 | `apps/web` | Vite + React SPA. Game state lives in `localStorage` as plain JSON. Includes the canvas replay and share card. |
-| `apps/server` | Fastify. `PaymentProvider` interface + mock, idempotent webhooks, receipts, save sync, admin highlights. JSON-file store in `apps/server/data/`. |
+| `apps/server` | Fastify. `PaymentProvider` interface with a manual provider (receipt upload + admin approval) and a mock (tests), idempotent payment events, receipts, save sync, admin. JSON-file store and receipt images in `apps/server/data/` (git-ignored). |
 | `BALANCE.md` | Every formula and tunable number. |
 
 ## Stack rationale
@@ -36,7 +60,7 @@ npx tsx packages/engine/scripts/balance-report.ts 200 6
 
 ## Not in the MVP (by design)
 
-- Real payment providers: see `TODO(payme)` and `TODO(click)` in `apps/server/src/payments/PaymentProvider.ts`.
-- A real price: `PERSONA_PRICE_MINOR` defaults to 0. See `TODO(pricing)`.
+- Automatic payment providers: see `TODO(payme)` and `TODO(click)` in `apps/server/src/payments/PaymentProvider.ts`. Payments are confirmed by hand for now.
+- Deleting old receipt images: see `TODO(privacy)` in `apps/server/src/store/proofStorage.ts`.
 - Accounts: the user id is an anonymous id kept in localStorage.
 - Video highlights, the mobile app, and multiplayer.
