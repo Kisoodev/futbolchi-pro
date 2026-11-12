@@ -1,0 +1,9 @@
+{
+  "name": "@futbolchi/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": { "dev": "tsx watch src/main.ts", "start": "tsx src/main.ts" },
+  "dependencies": { "@futbolchi/engine": "*", "fastify": "^5.2.0" },
+  "devDependencies": { "tsx": "^4.19.0" }
+}
