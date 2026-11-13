@@ -2,7 +2,7 @@
  * Local persistence. The game state is plain JSON stored in localStorage.
  * Every access is wrapped: storage may be unavailable (private mode, blocked).
  */
-import { constants as C, type GameState } from '@futbolchi/engine';
+import { normalizeAppearance, type GameState } from '@futbolchi/engine';
 
 const SAVE_KEY = 'futbolchi.save.v1';
 const USER_KEY = 'futbolchi.userId';
@@ -14,8 +14,8 @@ export function loadGame(): GameState | null {
     if (!raw) return null;
     const s = JSON.parse(raw) as GameState;
     if (s.version !== 1) return null;
-    // Saves made before appearance existed.
-    if (!s.persona.appearance) s.persona.appearance = { ...C.DEFAULT_APPEARANCE };
+    // Saves made before appearance (or some of its options) existed.
+    s.persona.appearance = normalizeAppearance(s.persona.appearance);
     return s;
   } catch {
     return null;

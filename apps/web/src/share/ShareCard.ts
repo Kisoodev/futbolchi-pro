@@ -77,7 +77,7 @@ export async function renderShareCard(
   drawSprite(ctx, CLOUD, 560, 40, 12);
   drawSprite(ctx, CLOUD, -40, 380, 9);
   // The player's avatar stands on the white panel, top right.
-  if (appearance) drawAvatar(ctx, appearance, clubColor, 760, 540 - 46 * 8, 8);
+  if (appearance) drawAvatar(ctx, appearance, clubColor, 760, 540 - 93 * 4, 4, appearance.celebration);
   else drawSprite(ctx, CLOUD, 820, 420, 8);
 
   // Brand

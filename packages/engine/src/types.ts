@@ -19,15 +19,44 @@ export type StatKey = (typeof STAT_KEYS)[number];
 /** Stats are floats in [1, 99]; the UI shows them rounded. */
 export type Stats = Record<StatKey, number>;
 
-/** Cosmetic body options chosen at creation. They do not affect simulation. */
-export const HEAD_SHAPES = ['round', 'oval', 'square'] as const;
+/** Cosmetic options chosen at creation. They never affect the simulation. */
+export const HEAD_SHAPES = ['round', 'oval', 'square', 'angular'] as const;
 export type HeadShape = (typeof HEAD_SHAPES)[number];
-export const SKIN_TONES = ['light', 'medium', 'tan', 'dark'] as const;
+export const SKIN_TONES = ['pale', 'light', 'medium', 'olive', 'tan', 'brown', 'dark'] as const;
 export type SkinTone = (typeof SKIN_TONES)[number];
-export const HAIR_STYLES = ['short', 'buzz', 'curly', 'long', 'mohawk', 'bald'] as const;
+export const HAIR_STYLES = [
+  'short',
+  'sidepart',
+  'spiky',
+  'buzz',
+  'curly',
+  'afro',
+  'long',
+  'dreads',
+  'bun',
+  'mohawk',
+  'bald',
+] as const;
 export type HairStyle = (typeof HAIR_STYLES)[number];
-export const HAIR_COLORS = ['black', 'brown', 'blonde', 'red', 'gray', 'white'] as const;
+export const HAIR_COLORS = ['black', 'chestnut', 'brown', 'blonde', 'platinum', 'red', 'gray', 'white'] as const;
 export type HairColor = (typeof HAIR_COLORS)[number];
+export const EYE_COLORS = ['dark', 'brown', 'hazel', 'green', 'blue', 'gray'] as const;
+export type EyeColor = (typeof EYE_COLORS)[number];
+export const BROWS = ['thin', 'normal', 'thick'] as const;
+export type Brows = (typeof BROWS)[number];
+export const NOSES = ['small', 'medium', 'large'] as const;
+export type Nose = (typeof NOSES)[number];
+export const FACIAL_HAIR = ['none', 'stubble', 'mustache', 'goatee', 'beard'] as const;
+export type FacialHair = (typeof FACIAL_HAIR)[number];
+export const BOOT_COLORS = ['black', 'white', 'red', 'gold', 'blue', 'orange'] as const;
+export type BootColor = (typeof BOOT_COLORS)[number];
+export const SLEEVES = ['short', 'long'] as const;
+export type Sleeves = (typeof SLEEVES)[number];
+export const ACCESSORIES = ['none', 'headband', 'wristbands'] as const;
+export type Accessory = (typeof ACCESSORIES)[number];
+/** Goal celebration: shown in the creator preview and on the season card. */
+export const CELEBRATIONS = ['arms_up', 'point_sky', 'ear_cup', 'fists'] as const;
+export type Celebration = (typeof CELEBRATIONS)[number];
 export const FEET = ['right', 'left'] as const;
 export type Foot = (typeof FEET)[number];
 
@@ -36,9 +65,17 @@ export interface Appearance {
   skinTone: SkinTone;
   hairStyle: HairStyle;
   hairColor: HairColor;
+  eyeColor: EyeColor;
+  brows: Brows;
+  nose: Nose;
+  facialHair: FacialHair;
   heightCm: number;
   weightKg: number;
   foot: Foot;
+  boots: BootColor;
+  sleeves: Sleeves;
+  accessory: Accessory;
+  celebration: Celebration;
 }
 
 export interface CareerStats {

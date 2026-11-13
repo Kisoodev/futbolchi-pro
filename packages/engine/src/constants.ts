@@ -41,9 +41,17 @@ export const DEFAULT_APPEARANCE: Appearance = {
   skinTone: 'medium',
   hairStyle: 'short',
   hairColor: 'black',
+  eyeColor: 'brown',
+  brows: 'normal',
+  nose: 'medium',
+  facialHair: 'none',
   heightCm: 178,
   weightKg: 72,
   foot: 'right',
+  boots: 'black',
+  sleeves: 'short',
+  accessory: 'none',
+  celebration: 'arms_up',
 };
 
 /** Hidden potential: triangular(min, mode, max). */

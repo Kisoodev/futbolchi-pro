@@ -30,7 +30,7 @@ export function StatBars({ persona }: { persona: PersonaView }) {
 export function PersonaHeader({ persona, club }: { persona: PersonaView; club: Club }) {
   return (
     <div className="persona-header" style={{ borderColor: club.color }}>
-      <Avatar appearance={persona.appearance} kit={club.color} scale={1.6} className="mini-avatar" />
+      <Avatar appearance={persona.appearance} kit={club.color} scale={1.6} crop="bust" className="mini-avatar" />
       <div className="ovr">
         <strong>{Math.round(personaOvr(persona))}</strong>
         <small>{tx.ovr}</small>

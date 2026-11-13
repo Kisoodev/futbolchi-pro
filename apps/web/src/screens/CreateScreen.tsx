@@ -1,14 +1,22 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   computeOvr,
   newGame,
   validatePersonaInput,
+  ACCESSORIES,
+  BOOT_COLORS,
+  BROWS,
+  CELEBRATIONS,
+  EYE_COLORS,
+  FACIAL_HAIR,
   FEET,
   HAIR_COLORS,
   HAIR_STYLES,
   HEAD_SHAPES,
+  NOSES,
   POSITIONS,
   SKIN_TONES,
+  SLEEVES,
   STAT_KEYS,
   constants as C,
   type Appearance,
@@ -20,7 +28,7 @@ import { tx } from '../i18n';
 import { api } from '../state/api';
 import { getUserId } from '../state/store';
 import { Avatar } from '../art/Avatar';
-import { HAIR_HEX, SKIN_HEX } from '../art/avatarRects';
+import { BOOT_HEX, EYE_HEX, HAIR_HEX, SKIN_HEX } from '../art/avatarRects';
 
 interface Props {
   /** Registered on the main menu. */
@@ -32,22 +40,87 @@ interface Props {
 
 /** Kit shown in the preview; the real club colour is only known after creation. */
 const PREVIEW_KIT = '#2f78b7';
+/** How long the preview plays the goal celebration. */
+const CELEBRATE_MS = 2200;
 const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0];
+const pick = <T,>(list: readonly T[]): T => list[Math.floor(Math.random() * list.length)];
 
-function Choice<T extends string>({ label, options, value, names, onChange }: {
+type LookTab = 'face' | 'hair' | 'body' | 'kit';
+const LOOK_TABS: LookTab[] = ['face', 'hair', 'body', 'kit'];
+
+/** A random, valid look (cosmetic only, so Math.random is fine here). */
+function randomLook(prev: Appearance): Appearance {
+  const tall = C.HEIGHT_MIN_CM + Math.round(Math.random() * (C.HEIGHT_MAX_CM - C.HEIGHT_MIN_CM));
+  // Weight loosely follows height so random players look plausible.
+  const base = 55 + (tall - C.HEIGHT_MIN_CM) * 0.75;
+  const weight = Math.max(C.WEIGHT_MIN_KG, Math.min(C.WEIGHT_MAX_KG, Math.round(base + (Math.random() - 0.3) * 14)));
+  return {
+    ...prev,
+    headShape: pick(HEAD_SHAPES),
+    skinTone: pick(SKIN_TONES),
+    hairStyle: pick(HAIR_STYLES),
+    hairColor: pick(HAIR_COLORS),
+    eyeColor: pick(EYE_COLORS),
+    brows: pick(BROWS),
+    nose: pick(NOSES),
+    facialHair: Math.random() < 0.55 ? 'none' : pick(FACIAL_HAIR),
+    heightCm: tall,
+    weightKg: weight,
+    boots: pick(BOOT_COLORS),
+    sleeves: Math.random() < 0.75 ? 'short' : 'long',
+    accessory: Math.random() < 0.6 ? 'none' : pick(ACCESSORIES),
+    celebration: pick(CELEBRATIONS),
+  };
+}
+
+function Choice<T extends string>({ label, options, value, names, onChange, cols, inline }: {
   label: string;
   options: readonly T[];
   value: T;
   names: Record<T, string>;
   onChange: (v: T) => void;
+  cols?: number;
+  /** Label on the left, chips on the right (saves height). */
+  inline?: boolean;
 }) {
   return (
-    <div className="field">
+    <div className={inline ? 'field inline' : 'field'}>
       <span>{label}</span>
-      <div className="chips tight">
+      <div className="chips tight" style={cols ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` } : undefined}>
         {options.map((o) => (
           <button key={o} type="button" className={o === value ? 'chip on' : 'chip'} aria-pressed={o === value} onClick={() => onChange(o)}>
             {names[o]}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Chips that show a small portrait of the player with that option applied. */
+function Portraits<K extends 'hairStyle' | 'facialHair' | 'headShape'>({ label, field, options, look, names, onChange }: {
+  label: string;
+  field: K;
+  options: readonly Appearance[K][];
+  look: Appearance;
+  names: Record<Appearance[K], string>;
+  onChange: (v: Appearance[K]) => void;
+}) {
+  return (
+    <div className="field">
+      <span>{label}: <b>{names[look[field]]}</b></span>
+      <div className="portraits">
+        {options.map((o) => (
+          <button
+            key={o}
+            type="button"
+            className={o === look[field] ? 'portrait on' : 'portrait'}
+            aria-pressed={o === look[field]}
+            aria-label={names[o]}
+            title={names[o]}
+            onClick={() => onChange(o)}
+          >
+            <Avatar appearance={{ ...look, [field]: o }} kit={PREVIEW_KIT} scale={1.25} crop="bust" />
           </button>
         ))}
       </div>
@@ -74,6 +147,7 @@ function Swatches<T extends string>({ label, options, value, names, colors, onCh
             className={o === value ? 'swatch on' : 'swatch'}
             style={{ background: colors[o] }}
             aria-label={names[o]}
+            title={names[o]}
             aria-pressed={o === value}
             onClick={() => onChange(o)}
           />
@@ -101,11 +175,21 @@ function Slider({ label, value, min, max, text, onChange }: {
 
 export function CreateScreen({ name, entitlementId, onCreated }: Props) {
   const [look, setLook] = useState<Appearance>({ ...C.DEFAULT_APPEARANCE });
+  const [tab, setTab] = useState<LookTab>('face');
+  const [celebrating, setCelebrating] = useState(false);
   const [position, setPosition] = useState<Position>('ST');
   const [bonus, setBonus] = useState<Partial<Stats>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const timer = useRef<number | undefined>(undefined);
   const set = <K extends keyof Appearance>(k: K, v: Appearance[K]) => setLook((prev) => ({ ...prev, [k]: v }));
+
+  const celebrate = () => {
+    window.clearTimeout(timer.current);
+    setCelebrating(true);
+    timer.current = window.setTimeout(() => setCelebrating(false), CELEBRATE_MS);
+  };
+  useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const used = STAT_KEYS.reduce((a, k) => a + (bonus[k] ?? 0), 0);
   const left = C.BONUS_POINTS_TOTAL - used;
@@ -144,7 +228,9 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
       <div className="panel-body create-grid">
         <section className="create-preview">
           <div className="avatar-stage">
-            <Avatar appearance={look} kit={PREVIEW_KIT} scale={4} />
+            <button type="button" className="stage-btn left" title={tx.lookRandom} aria-label={tx.lookRandom} onClick={() => setLook((prev) => randomLook(prev))}>🎲</button>
+            <button type="button" className="stage-btn right" title={tx.lookCelebrate} aria-label={tx.lookCelebrate} onClick={celebrate}>⚽</button>
+            <Avatar appearance={look} kit={PREVIEW_KIT} scale={2} pose={celebrating ? look.celebration : 'stand'} className="avatar-big" />
             <strong>{name}</strong>
             <span className="muted small">
               {tx.heightValue(look.heightCm)} · {tx.weightValue(look.weightKg)}
@@ -162,21 +248,62 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
         </section>
 
         <section className="create-look">
-          <h2>{tx.appearanceTitle}</h2>
-          {/* Paired rows keep the whole column on screen at 1366×768 */}
-          <div className="look-row head-foot">
-            <Choice label={tx.headShapeLabel} options={HEAD_SHAPES} value={look.headShape} names={tx.headShapes} onChange={(v) => set('headShape', v)} />
-            <Choice label={tx.footLabel} options={FEET} value={look.foot} names={tx.feet} onChange={(v) => set('foot', v)} />
+          <div className="look-head">
+            <h2>{tx.appearanceTitle}</h2>
+            <nav className="look-tabs" role="tablist">
+              {LOOK_TABS.map((t) => (
+                <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
+                  {tx.lookTabs[t]}
+                </button>
+              ))}
+            </nav>
           </div>
-          <Choice label={tx.hairStyleLabel} options={HAIR_STYLES} value={look.hairStyle} names={tx.hairStyles} onChange={(v) => set('hairStyle', v)} />
-          <div className="look-row colors">
-            <Swatches label={tx.skinToneLabel} options={SKIN_TONES} value={look.skinTone} names={tx.skinTones} colors={SKIN_HEX} onChange={(v) => set('skinTone', v)} />
-            <Swatches label={tx.hairColorLabel} options={HAIR_COLORS} value={look.hairColor} names={tx.hairColors} colors={HAIR_HEX} onChange={(v) => set('hairColor', v)} />
-          </div>
-          <div className="slider-pair">
-            <Slider label={tx.heightLabel} value={look.heightCm} min={C.HEIGHT_MIN_CM} max={C.HEIGHT_MAX_CM} text={tx.heightValue(look.heightCm)} onChange={(v) => set('heightCm', v)} />
-            <Slider label={tx.weightLabel} value={look.weightKg} min={C.WEIGHT_MIN_KG} max={C.WEIGHT_MAX_KG} text={tx.weightValue(look.weightKg)} onChange={(v) => set('weightKg', v)} />
-          </div>
+
+          {tab === 'face' && (
+            <>
+              <Choice label={tx.headShapeLabel} options={HEAD_SHAPES} value={look.headShape} names={tx.headShapes} onChange={(v) => set('headShape', v)} cols={4} />
+              <Swatches label={tx.skinToneLabel} options={SKIN_TONES} value={look.skinTone} names={tx.skinTones} colors={SKIN_HEX} onChange={(v) => set('skinTone', v)} />
+              <Swatches label={tx.eyeColorLabel} options={EYE_COLORS} value={look.eyeColor} names={tx.eyeColors} colors={EYE_HEX} onChange={(v) => set('eyeColor', v)} />
+              <Choice label={tx.browsLabel} options={BROWS} value={look.brows} names={tx.browsNames} onChange={(v) => set('brows', v)} cols={3} inline />
+              <Choice label={tx.noseLabel} options={NOSES} value={look.nose} names={tx.noses} onChange={(v) => set('nose', v)} cols={3} inline />
+              <Portraits label={tx.facialHairLabel} field="facialHair" options={FACIAL_HAIR} look={look} names={tx.facialHairNames} onChange={(v) => set('facialHair', v)} />
+            </>
+          )}
+
+          {tab === 'hair' && (
+            <>
+              <Portraits label={tx.hairStyleLabel} field="hairStyle" options={HAIR_STYLES} look={look} names={tx.hairStyles} onChange={(v) => set('hairStyle', v)} />
+              <Swatches label={tx.hairColorLabel} options={HAIR_COLORS} value={look.hairColor} names={tx.hairColors} colors={HAIR_HEX} onChange={(v) => set('hairColor', v)} />
+            </>
+          )}
+
+          {tab === 'body' && (
+            <>
+              <Slider label={tx.heightLabel} value={look.heightCm} min={C.HEIGHT_MIN_CM} max={C.HEIGHT_MAX_CM} text={tx.heightValue(look.heightCm)} onChange={(v) => set('heightCm', v)} />
+              <Slider label={tx.weightLabel} value={look.weightKg} min={C.WEIGHT_MIN_KG} max={C.WEIGHT_MAX_KG} text={tx.weightValue(look.weightKg)} onChange={(v) => set('weightKg', v)} />
+              <Choice label={tx.footLabel} options={FEET} value={look.foot} names={tx.feet} onChange={(v) => set('foot', v)} cols={2} />
+            </>
+          )}
+
+          {tab === 'kit' && (
+            <>
+              <Swatches label={tx.bootsLabel} options={BOOT_COLORS} value={look.boots} names={tx.bootColors} colors={BOOT_HEX} onChange={(v) => set('boots', v)} />
+              <Choice label={tx.sleevesLabel} options={SLEEVES} value={look.sleeves} names={tx.sleevesNames} onChange={(v) => set('sleeves', v)} cols={2} />
+              <Choice label={tx.accessoryLabel} options={ACCESSORIES} value={look.accessory} names={tx.accessories} onChange={(v) => set('accessory', v)} cols={3} />
+              <Choice
+                label={tx.celebrationLabel}
+                options={CELEBRATIONS}
+                value={look.celebration}
+                names={tx.celebrations}
+                cols={2}
+                onChange={(v) => {
+                  set('celebration', v);
+                  celebrate();
+                }}
+              />
+              <p className="muted small">{tx.lookKitNote}</p>
+            </>
+          )}
         </section>
 
         <section className="create-skills">

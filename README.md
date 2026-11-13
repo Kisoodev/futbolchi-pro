@@ -24,7 +24,7 @@ The game ships in **Uzbek (default), English and Russian**. The UZ / EN / RU swi
 1. **Loading** — a rolling counter shows how many players have registered (`GET /api/stats`, a real count).
 2. **Main menu** — the player enters a name; the price (5 000 so'm) appears next to *Davom etish*.
 3. **Payment** — the player transfers to the card shown, uploads a receipt image ("chek") and waits. The page polls and continues by itself once an admin approves.
-4. **Persona** — appearance (head shape, skin, hair style and colour, height, weight, strong foot) with a live pixel avatar, then position and bonus points. Appearance is cosmetic only.
+4. **Persona** — a 64×96 shaded pixel avatar that updates live. Appearance is split into tabs: face (head shape, skin, eyes, brows, nose, facial hair), hair (11 styles with portrait previews, 8 colours), body (height, weight, strong foot) and kit (boots, sleeves, accessory, goal celebration). A random button and a celebration preview sit on the avatar. Then position and bonus points. Appearance is cosmetic only; older saves get defaults for new options (`normalizeAppearance`). Kits are plain colours: no real clubs, sponsors or logos.
 5. **Game.**
 
 ## Server settings (environment variables)

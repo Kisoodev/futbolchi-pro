@@ -8,6 +8,7 @@ import {
   offerTraining,
   personaOvr,
   personaView,
+  normalizeAppearance,
   validatePersonaInput,
   weeklyRecovery,
   POSITIONS,
@@ -51,8 +52,21 @@ describe('persona creation', () => {
     const bad = (over: object) => validatePersonaInput({ name: 'Aziz', position: 'ST', bonus: {}, appearance: { ...C.DEFAULT_APPEARANCE, ...over } as never });
     expect(bad({ heightCm: 230 })).toBe('bad_appearance');
     expect(bad({ weightKg: 54.5 })).toBe('bad_appearance');
-    expect(bad({ hairStyle: 'spiky' })).toBe('bad_appearance');
+    expect(bad({ hairStyle: 'pompadour' })).toBe('bad_appearance');
+    expect(bad({ facialHair: 'sideburns' })).toBe('bad_appearance');
+    expect(bad({ celebration: 'backflip' })).toBe('bad_appearance');
+    expect(bad({ boots: 'green' })).toBe('bad_appearance');
+    expect(bad({ eyeColor: undefined })).toBe('bad_appearance');
     expect(bad({})).toBeNull();
+  });
+
+  it('fills old or broken appearances with defaults, keeping valid fields', () => {
+    expect(normalizeAppearance(undefined)).toEqual(C.DEFAULT_APPEARANCE);
+    const old = { headShape: 'oval', skinTone: 'dark', hairStyle: 'curly', hairColor: 'red', heightCm: 190, weightKg: 80, foot: 'left' };
+    const n = normalizeAppearance(old as never);
+    expect(n).toMatchObject(old);
+    expect(n.facialHair).toBe(C.DEFAULT_APPEARANCE.facialHair);
+    expect(normalizeAppearance({ hairStyle: 'nope', heightCm: 999 } as never)).toEqual(C.DEFAULT_APPEARANCE);
   });
 
   it('appearance does not change stats or potential', () => {

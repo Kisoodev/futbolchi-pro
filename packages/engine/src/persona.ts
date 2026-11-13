@@ -2,6 +2,14 @@ import * as C from './constants';
 import { computeOvr, topStats } from './positions';
 import { clamp, createRng, hashSeed, triangular } from './rng';
 import {
+  ACCESSORIES,
+  BOOT_COLORS,
+  BROWS,
+  CELEBRATIONS,
+  EYE_COLORS,
+  FACIAL_HAIR,
+  NOSES,
+  SLEEVES,
   FEET,
   HAIR_COLORS,
   HAIR_STYLES,
@@ -46,9 +54,31 @@ export function isValidAppearance(a: Appearance): boolean {
     HAIR_STYLES.includes(a.hairStyle) &&
     HAIR_COLORS.includes(a.hairColor) &&
     FEET.includes(a.foot) &&
+    EYE_COLORS.includes(a.eyeColor) &&
+    BROWS.includes(a.brows) &&
+    NOSES.includes(a.nose) &&
+    FACIAL_HAIR.includes(a.facialHair) &&
+    BOOT_COLORS.includes(a.boots) &&
+    SLEEVES.includes(a.sleeves) &&
+    ACCESSORIES.includes(a.accessory) &&
+    CELEBRATIONS.includes(a.celebration) &&
     int(a.heightCm, C.HEIGHT_MIN_CM, C.HEIGHT_MAX_CM) &&
     int(a.weightKg, C.WEIGHT_MIN_KG, C.WEIGHT_MAX_KG)
   );
+}
+
+/**
+ * Fills fields missing from older saves (and drops unknown values) so an old
+ * persona always renders. Each field falls back to DEFAULT_APPEARANCE.
+ */
+export function normalizeAppearance(a: Partial<Appearance> | null | undefined): Appearance {
+  const out: Appearance = { ...C.DEFAULT_APPEARANCE };
+  if (!a || typeof a !== 'object') return out;
+  for (const key of Object.keys(out) as (keyof Appearance)[]) {
+    const candidate = { ...out, [key]: a[key] } as Appearance;
+    if (a[key] !== undefined && isValidAppearance(candidate)) (out as unknown as Record<string, unknown>)[key] = a[key];
+  }
+  return out;
 }
 
 export const NAME_MIN = 2;
