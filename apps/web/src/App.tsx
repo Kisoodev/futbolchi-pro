@@ -83,8 +83,14 @@ export function App() {
   }
 
   let body: JSX.Element;
+  /**
+   * The language switch shows only at the entrance (loading, name, main menu).
+   * Once the game has started it would distract, so it is hidden there.
+   */
+  let showLangSwitch = false;
   switch (route.name) {
     case 'name':
+      showLangSwitch = true;
       body = (
         <NameScreen
           onDone={(n) => {
@@ -144,6 +150,7 @@ export function App() {
       }
     // falls through when there is no game
     default:
+      showLangSwitch = true;
       body = (
         <MenuScreen
           name={userName}
@@ -163,7 +170,7 @@ export function App() {
         <button className="brand" onClick={() => setRoute(home)}>
           <PixelArt sprite={BALL} scale={2} /> {tx.appName}
         </button>
-        <LangSwitch />
+        {showLangSwitch && <LangSwitch />}
       </header>
       <main>{body}</main>
     </div>
