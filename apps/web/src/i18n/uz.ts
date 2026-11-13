@@ -168,6 +168,12 @@ export const uz = {
   payRejectedNote: (note: string) => `Sabab: ${note}`,
   payRetry: "Qaytadan urinish",
   payNoCard: "To'lov kartasi hali sozlanmagan. Keyinroq urinib ko'ring.",
+  payStages: ["O'tkazma", 'Chek', 'Tasdiq'],
+  payExactHint: "Aynan shu summani o'tkazing — chekdagi summa va karta raqami ko'rinib tursin.",
+  payRejectedHint: "Yangi chek yuklab, qaytadan yuboring.",
+  payBackToMenu: 'Menyuga qaytish',
+  payAdminSkip: "Admin: to'lovsiz o'tish",
+  payAdminSkipHint: "Faqat sizga ko'rinadi. 0 so'mlik chek bilan bepul joy ochiladi.",
   serverDown: "Server bilan aloqa yo'q. Birozdan so'ng qayta urinib ko'ring.",
 
   // Week / training
@@ -279,7 +285,7 @@ export const uz = {
   adminShowProof: "Chekni ko'rish",
   adminApprove: 'Tasdiqlash',
   adminReject: 'Rad etish',
-  adminRejectPrompt: 'Rad etish sababi (foydalanuvchi ko\'radi):',
+  adminRejectPrompt: "Sabab (o'yinchi ko'radi)",
   adminStatus: { pending: 'Kutilmoqda', paid: 'Tasdiqlangan', failed: 'Rad etilgan' } as Record<string, string>,
   adminWaiting: 'Tekshirish kerak',
   adminHighlightsTitle: 'Highlightlar',
@@ -288,6 +294,22 @@ export const uz = {
   adminSave: 'Highlightlarni saqlash',
   adminSaved: 'Saqlandi',
   adminNoMatches: "Hali o'yinlar yo'q. Avval o'yinda bir necha hafta o'ynang.",
+  adminRememberHint: "Bir marta kirsangiz, shu brauzer sizni eslab qoladi.",
+  adminLogout: 'Chiqish',
+  adminStatPlayers: "O'yinchilar",
+  adminStatWaiting: 'Kutayotgan cheklar',
+  adminStatPaid: 'Tasdiqlangan',
+  adminStatRevenue: 'Tushum',
+  adminTabs: { payments: "To'lovlar", free: "To'lovsiz kirish", highlights: 'Highlightlar' },
+  adminFilter: { waiting: 'Tekshirish kerak', all: 'Hammasi' },
+  adminNothingWaiting: "Tekshiriladigan chek yo'q. Yangilari o'zi paydo bo'ladi.",
+  adminProvider: { manual: 'karta', admin: 'bepul', mock: 'sinov' } as Record<string, string>,
+  adminCancel: 'Bekor qilish',
+  adminWaysIn: [
+    "Ism sahifasida maxfiy nikni yozing (serverda ADMIN_NICK) — admin kirish oynasi ochiladi.",
+    'Yoki istalgan joyda Ctrl+Shift+A bosing.',
+    "Kirgandan keyin to'lov sahifasida faqat sizga ko'rinadigan «to'lovsiz o'tish» tugmasi chiqadi.",
+  ],
 };
 
 export type Messages = typeof uz;

@@ -101,3 +101,21 @@ describe('admin highlight stub', () => {
     await app.close();
   });
 });
+
+describe('secret admin nickname', () => {
+  it('opens the admin door without registering the name, only when admin is enabled', async () => {
+    const store = new JsonStore(null);
+    const { app } = buildApp({ store, provider: new MockPaymentProvider('x'), adminToken: TOKEN, adminNick: 'Boss77' });
+    const secret = await app.inject({ method: 'POST', url: '/api/users', payload: { userId: 'u9', name: ' boss77 ' } });
+    expect(secret.json()).toEqual({ admin: true });
+    expect(store.read((db) => db.users.u9)).toBeUndefined();
+    const normal = await app.inject({ method: 'POST', url: '/api/users', payload: { userId: 'u9', name: 'Jasur' } });
+    expect(normal.json().user.name).toBe('Jasur');
+    await app.close();
+
+    const disabled = buildApp({ store: new JsonStore(null), provider: new MockPaymentProvider('x'), adminToken: null, adminNick: 'Boss77' }).app;
+    const r = await disabled.inject({ method: 'POST', url: '/api/users', payload: { userId: 'u9', name: 'Boss77' } });
+    expect(r.json().user.name).toBe('Boss77');
+    await disabled.close();
+  });
+});

@@ -325,3 +325,60 @@ a.button:hover { filter: brightness(1.05); }
   .bank-card { padding: 14px; }
   .amount { padding: 8px 14px; margin-bottom: 0.6rem; }
 }
+
+/* ---------- Payment page ---------- */
+.pay-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.pay-head h1 { margin-bottom: 0; }
+.stepper { list-style: none; display: flex; gap: 6px; margin: 0; padding: 0; }
+.stepper li { display: flex; align-items: center; gap: 6px; padding: 4px 10px 4px 4px; border-radius: 999px; background: var(--sky-pale); color: var(--ink-muted); font-weight: 700; font-size: 0.85rem; }
+.stepper li b { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #fff; border: 2px solid var(--line); font-size: 0.8rem; }
+.stepper li.on { background: var(--grass-pale); color: var(--grass-ink); }
+.stepper li.on b { background: var(--grass); border-color: var(--grass-shadow); color: #fff; }
+.stepper li.done b { background: var(--sky); border-color: var(--sky-deep); color: #fff; }
+.amount strong { margin-right: auto; }
+.small-btn { padding: 0.25rem 0.6rem; font-size: 0.8rem; }
+.upload.drag { border-color: var(--grass); background: var(--grass-pale); }
+.pay-alert { display: grid; gap: 2px; background: var(--danger-pale); border: 2px solid var(--danger); color: var(--danger); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; }
+.pay-alert span { color: var(--ink); }
+.review { display: flex; align-items: center; justify-content: center; gap: 24px; text-align: left; padding: 1rem 0; }
+.review h2 { display: flex; align-items: center; gap: 10px; }
+.review-proof { max-height: 260px; max-width: 40%; border-radius: 10px; border: 2px solid var(--line); }
+.dot-pulse { width: 12px; height: 12px; border-radius: 50%; background: var(--grass); animation: pulse 1.2s ease-in-out infinite; flex: none; }
+@keyframes pulse { 50% { opacity: 0.3; transform: scale(0.7); } }
+.pay .panel-foot { display: flex; gap: 12px; align-items: stretch; }
+.pay .panel-foot button.big { flex: 1; width: auto; }
+.admin-skip { flex: none; border: 2px dashed var(--warn); background: #fdf1d8; color: #8a5a00; font-weight: 800; box-shadow: none; }
+.admin-skip:hover:not(:disabled) { border-color: #b97400; }
+
+/* ---------- Admin ---------- */
+.screen.panel.admin { max-width: 1040px; }
+.admin-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+.admin-top h1 { margin: 0; }
+.admin-top .row { margin: 0; }
+.admin-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.admin-stats div { display: grid; background: var(--sky-pale); border: 2px solid var(--line); border-radius: 10px; padding: 6px 12px; }
+.admin-stats span { font-size: 0.78rem; font-weight: 700; color: var(--ink-muted); }
+.admin-stats strong { font-size: 1.3rem; }
+.admin-stats .hot { background: #fdf1d8; border-color: var(--warn); }
+.admin-tabs { display: flex; gap: 6px; border-bottom: 2px solid var(--line); }
+.admin-tabs button { border-radius: 8px 8px 0 0; border-bottom: none; box-shadow: none; display: flex; align-items: center; gap: 6px; }
+.admin-tabs button.on { background: var(--sky-pale); border-color: var(--sky-deep); color: var(--sky-deep); }
+.admin-tabs .count { background: var(--warn); color: #fff; border-radius: 999px; font-size: 0.72rem; padding: 0 7px; }
+.admin .card-head { margin-top: 10px; }
+.admin .card-head .row { margin: 0; }
+.pay-list li { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+.pay-list .pay-info { grid-column: 2; display: grid; gap: 4px; }
+.pay-list .pay-info .row { margin: 4px 0 0; }
+.proof-thumb { width: 96px; height: 96px; padding: 0; overflow: hidden; display: grid; place-items: center; font-size: 0.72rem; }
+.proof-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.reject-form input { flex: 1; min-width: 160px; }
+button.danger { background: var(--danger); border-color: #8f2018; color: #fff; }
+.proof-big { max-height: calc(100vh - 140px); max-width: 100%; border-radius: 8px; display: block; margin-bottom: 8px; }
+.admin-free { max-width: 620px; padding-top: 12px; }
+.admin-tips { padding-left: 1.2rem; color: var(--ink-muted); }
+.admin-tips li { margin: 4px 0; }
+.hl-grid { display: grid; gap: 12px; }
+@media (min-width: 900px) {
+  .hl-grid { grid-template-columns: 300px minmax(0, 1fr); align-items: start; }
+}
+.hl-save { position: sticky; bottom: 0; background: #fff; padding: 8px 0; border-top: 2px solid var(--line); }

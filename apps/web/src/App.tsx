@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { playWeek, startNextSeason, type GameState, type TrainingId } from '@futbolchi/engine';
 import { tx, useLang } from './i18n';
 import { api } from './state/api';
+import { openAdmin } from './state/admin';
 import { getUserId, getUserName, loadGame, saveGame } from './state/store';
 import { LoadingScreen } from './screens/LoadingScreen';
 import { NameScreen } from './screens/NameScreen';
@@ -56,6 +57,17 @@ export function App() {
     saveGame(next);
     void api.syncSave(getUserId(), next);
   };
+  // Hidden owner shortcut: Ctrl+Shift+A opens the admin panel (login is still required).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.code === 'KeyA') {
+        e.preventDefault();
+        openAdmin();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const home: Route = userName ? { name: 'menu' } : { name: 'name' };
 
   if (hash === '#/admin') {

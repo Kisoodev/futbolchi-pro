@@ -33,6 +33,7 @@ The game ships in **Uzbek (default), English and Russian**. The UZ / EN / RU swi
 |---|---|---|
 | `PAYMENT_CARD_NUMBER`, `PAYMENT_CARD_HOLDER` | Card shown to players on the payment page | placeholder `0000 0000 0000 0000` |
 | `PERSONA_PRICE_MINOR` | Price in tiyin | `500000` (5 000 so'm) |
+| `ADMIN_NICK` | Secret nickname that opens the admin login from the name screen | `admin1121` (off in production if unset) |
 | `ADMIN_TOKEN` | Admin panel token | `dev-admin-token` (admin is disabled in production if unset) |
 | `PAYMENT_EVENT_SECRET` | Signs admin payment decisions | dev value (required in production) |
 | `DATA_DIR` | Where `db.json` and receipt images are stored | `apps/server/data` |
@@ -45,10 +46,18 @@ npx tsx packages/engine/scripts/balance-report.ts 200 6
 
 ## Admin panel
 
-Open `http://localhost:5173/#/admin` and enter the admin token. It has three parts:
+Three hidden ways in (normal players never see them):
 
-- **To'lovsiz kirish** — gives this browser a free persona slot, so the owner can play without paying. It is recorded as a 0 so'm receipt.
-- **To'lovlar** — uploaded receipts with their images; approve or reject (a rejection reason is shown to the player).
+- type the secret nickname (`ADMIN_NICK`) on the name screen — it is checked by the server, never registered as a name, and only opens the login form;
+- press **Ctrl+Shift+A** anywhere;
+- open `http://localhost:5173/#/admin`.
+
+The admin token is still required once. After that this browser remembers it (`Chiqish` forgets it), and the payment page shows an extra **Admin: to'lovsiz o'tish** button that grants a free slot (a 0 so'm receipt) and goes straight to persona creation. The nickname alone never grants access: it is easy to guess or leak, and anyone typing it would get in for free.
+
+The panel has a stats row (players, receipts waiting, approved, revenue) and three tabs:
+
+- **To'lovlar** — receipts waiting for review first, with the image shown right away (click to enlarge). Approve, or reject with a reason typed inline; the player sees the reason and can send a new receipt on the same page. The list refreshes every 10 s.
+- **To'lovsiz kirish** — a free persona slot for this browser.
 - **Highlightlar** — mark match events as highlights.
 
 ## Layout

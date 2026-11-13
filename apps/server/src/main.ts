@@ -11,6 +11,9 @@ const dataDir = process.env.DATA_DIR ?? fileURLToPath(new URL('../data', import.
 const adminToken = process.env.ADMIN_TOKEN ?? (isProd ? null : 'dev-admin-token');
 if (!process.env.ADMIN_TOKEN && !isProd) console.warn('[admin] using dev token "dev-admin-token" — set ADMIN_TOKEN');
 
+// Typing this nickname on the name screen opens the admin login (the token is still required).
+const adminNick = process.env.ADMIN_NICK ?? (isProd ? null : 'admin1121');
+
 // Manual payments: card transfer + receipt upload + admin approval.
 // TODO(payme/click): choose an automatic provider from env once one exists.
 const secret = process.env.PAYMENT_EVENT_SECRET ?? (isProd ? null : 'dev-manual-secret');
@@ -29,6 +32,7 @@ const { app } = buildApp({
   proofs: new DiskProofStorage(`${dataDir}/proofs`),
   provider,
   adminToken,
+  adminNick,
   paymentCard,
   // In dev the game runs on Vite (port 5173). Set WEB_URL when it lives elsewhere.
   webUrl: process.env.WEB_URL ?? (isProd ? null : 'http://localhost:5173'),

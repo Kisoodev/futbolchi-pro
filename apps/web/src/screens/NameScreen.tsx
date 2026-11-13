@@ -4,6 +4,7 @@ import { api } from '../state/api';
 import { getUserId, getUserName, setUserName } from '../state/store';
 import { PixelArt } from '../art/PixelArt';
 import { BALL } from '../art/sprites';
+import { openAdmin } from '../state/admin';
 
 const NAME_MIN = 2;
 const NAME_MAX = 24;
@@ -21,7 +22,14 @@ export function NameScreen({ onDone }: { onDone: (name: string) => void }) {
     setBusy(true);
     setError(null);
     try {
-      await api.register(getUserId(), clean);
+      const res = await api.register(getUserId(), clean);
+      if (res.admin) {
+        // Secret owner nickname: open the admin login instead of saving the name.
+        setBusy(false);
+        setName(getUserName());
+        openAdmin();
+        return;
+      }
       setUserName(clean);
       onDone(clean);
     } catch {

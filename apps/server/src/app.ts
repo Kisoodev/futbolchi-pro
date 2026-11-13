@@ -28,6 +28,11 @@ export interface AppOptions {
    * in a browser redirects there instead of showing a bare 404.
    */
   webUrl?: string | null;
+  /**
+   * Secret nickname that opens the admin login from the name screen. It only
+   * reveals the login form; the admin token is still required. Null disables it.
+   */
+  adminNick?: string | null;
   logger?: boolean;
 }
 
@@ -88,6 +93,10 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
     const clean = typeof name === 'string' ? name.trim() : '';
     if (!isString(userId) || clean.length < USER_NAME_MIN || clean.length > USER_NAME_MAX) {
       return reply.code(400).send({ error: 'bad_request' });
+    }
+    // The secret nickname is never registered as a player name.
+    if (opts.adminNick && opts.adminToken && clean.toLowerCase() === opts.adminNick.toLowerCase()) {
+      return { admin: true };
     }
     const user = opts.store.transaction((db) => {
       const existing = db.users[userId];
