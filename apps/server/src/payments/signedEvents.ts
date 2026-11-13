@@ -1,16 +1,36 @@
-/** HMAC-signed provider events, shared by the mock and manual providers. */
-import { createHmac, timingSafeEqual } from 'node:crypto';
+/**
+ * HMAC-signed provider events, shared by the mock and manual providers.
+ * Uses WebCrypto, so it runs in Node and in the Supabase Edge Function (Deno).
+ */
 import { InvalidWebhookError, type ProviderWebhookEvent, type WebhookHeaders } from './PaymentProvider';
 
-export const signBody = (secret: string, rawBody: string): string =>
-  createHmac('sha256', secret).update(rawBody).digest('hex');
+const enc = new TextEncoder();
+const toHex = (buf: ArrayBuffer) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('');
 
-export function verifySignedEvent(secret: string, headerName: string, rawBody: string, headers: WebhookHeaders): ProviderWebhookEvent {
+export async function hmacHex(secret: string, message: string): Promise<string> {
+  const key = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return toHex(await crypto.subtle.sign('HMAC', key, enc.encode(message)));
+}
+
+export const signBody = (secret: string, rawBody: string): Promise<string> => hmacHex(secret, rawBody);
+
+/** Constant-time comparison of two hex strings. */
+const sameHex = (a: string, b: string) => {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+};
+
+export async function verifySignedEvent(
+  secret: string,
+  headerName: string,
+  rawBody: string,
+  headers: WebhookHeaders,
+): Promise<ProviderWebhookEvent> {
   const sig = headers[headerName];
   if (typeof sig !== 'string') throw new InvalidWebhookError('missing signature');
-  const expected = Buffer.from(signBody(secret, rawBody), 'hex');
-  const given = Buffer.from(sig, 'hex');
-  if (given.length !== expected.length || !timingSafeEqual(given, expected)) throw new InvalidWebhookError('bad signature');
+  if (!sameHex(sig.toLowerCase(), await signBody(secret, rawBody))) throw new InvalidWebhookError('bad signature');
   let body: unknown;
   try {
     body = JSON.parse(rawBody);

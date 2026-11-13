@@ -14,7 +14,8 @@
     "dev:phone": "node scripts/dev.mjs --phone",
     "dev:web": "npm -w @futbolchi/web run dev",
     "dev:server": "npm -w @futbolchi/server run dev",
-    "build": "npm -w @futbolchi/web run build"
+    "build": "npm -w @futbolchi/web run build",
+    "build:supabase": "node scripts/build-supabase.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",

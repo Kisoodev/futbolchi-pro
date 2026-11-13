@@ -16,11 +16,16 @@
  * linked group every member can press the buttons, and each decision shows
  * who made it. /stop unlinks a chat.
  *
- * No public URL is needed: the server asks Telegram for updates (long polling).
+ * Two ways to receive Telegram updates:
+ *  - webhook (production, Supabase): Telegram calls POST /api/telegram/webhook;
+ *    ensureWebhook() registers that address once per server instance.
+ *  - long polling (local dev): start() asks Telegram in a loop.
+ *
+ * Runtime-neutral (Node and Deno).
  */
+import type { Db, ProofMime } from '../db';
 import { REJECT_REASONS, type BotLang, type RejectReason } from '../domain';
-import type { JsonStore } from '../store/jsonStore';
-import type { ProofMime } from '../store/proofStorage';
+import { hmacHex } from '../payments/signedEvents';
 import { BOT_TEXT, botLang } from './botText';
 
 // ---------- Telegram HTTP API ----------
@@ -58,11 +63,14 @@ export class TelegramHttp implements TelegramApi {
   }
 }
 
+/** Secret Telegram sends back with every webhook call; derived from the bot token, so no extra setting. */
+export const webhookSecretFor = async (botToken: string) => (await hmacHex(botToken, 'futbolchi-telegram-webhook')).slice(0, 48);
+
 // ---------- Bot ----------
 export interface ProofNotice {
   paymentId: string;
   mime: ProofMime;
-  data: Buffer;
+  data: Uint8Array;
 }
 
 type Decision = 'approve' | 'reject';
@@ -71,14 +79,13 @@ export type DecideResult = 'ok' | 'already' | 'not_found';
 
 export interface AdminBotOptions {
   api: TelegramApi;
-  store: JsonStore;
+  db: Db;
   adminToken: string | null;
   /** TELEGRAM_CHAT_ID: always an admin chat. */
   chatId: string | null;
   /** Link to the admin panel, shown in details. */
   adminUrl: string | null;
   decide: (paymentId: string, decision: Decision, reason?: RejectReason, by?: string) => Promise<DecideResult>;
-  readProof: (paymentId: string) => { mime: ProofMime; data: Buffer } | null;
   log?: { info: (msg: string) => void; warn: (msg: string) => void };
 }
 
@@ -109,42 +116,40 @@ const TIME = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Tashkent', day: 
 const time = (iso: string) => TIME.format(new Date(iso)).replace(',', '');
 /** Failed token guesses allowed per chat per hour. */
 const MAX_TRIES = 5;
+const HOUR = 3_600_000;
 
 export class AdminBot {
   private running = false;
-  private tries = new Map<string, { n: number; since: number }>();
+  private webhookReady: Promise<void> | null = null;
 
   constructor(private readonly o: AdminBotOptions) {}
 
   // ----- admin chats -----
-  private admins(): { chatId: string; lang: BotLang }[] {
-    const linked = this.o.store.read((db) => Object.values(db.telegram.admins));
-    const list = linked.map((a) => ({ chatId: a.chatId, lang: a.lang }));
-    if (this.o.chatId && !list.some((a) => a.chatId === this.o.chatId)) list.unshift({ chatId: this.o.chatId, lang: 'uz' });
+  private async admins(): Promise<{ chatId: string; lang: BotLang; kind?: string }[]> {
+    const list = (await this.o.db.listBotAdmins()).map((a) => ({ chatId: a.chatId, lang: a.lang, kind: a.kind }));
+    if (this.o.chatId && !list.some((a) => a.chatId === this.o.chatId)) list.unshift({ chatId: this.o.chatId, lang: 'uz', kind: undefined });
     return list;
   }
-  private isAdmin(chatId: string) {
-    return this.admins().some((a) => a.chatId === chatId);
+  private async isAdmin(chatId: string) {
+    return (await this.admins()).some((a) => a.chatId === chatId);
   }
 
   // ----- texts and buttons -----
-  caption(paymentId: string, lang: BotLang): string {
+  async caption(paymentId: string, lang: BotLang): Promise<string> {
     const t = BOT_TEXT[lang];
-    return this.o.store.read((db) => {
-      const p = db.payments[paymentId];
-      const proof = db.proofs[paymentId];
-      const lines = [
-        t.newReceipt,
-        `👤 ${t.player}: ${(p && db.users[p.userId]?.name) ?? '—'}`,
-        `💰 ${t.amount}: ${p ? money(p.amountMinor) : '—'}`,
-        ...(proof ? [`🕒 ${t.sent}: ${time(proof.uploadedAt)}`] : []),
-        `🆔 ${paymentId}`,
-      ];
-      const by = proof?.reviewedBy ? ` — ${proof.reviewedBy}` : '';
-      if (proof?.status === 'approved') lines.push('', t.approved + by);
-      if (proof?.status === 'rejected') lines.push('', t.rejected(proof.reason ? t.reasons[proof.reason] : (proof.note ?? '—')) + by);
-      return lines.join('\n');
-    });
+    const [p, proof] = await Promise.all([this.o.db.getPayment(paymentId), this.o.db.getProof(paymentId)]);
+    const user = p ? await this.o.db.getUser(p.userId) : null;
+    const lines = [
+      t.newReceipt,
+      `👤 ${t.player}: ${user?.name ?? '—'}`,
+      `💰 ${t.amount}: ${p ? money(p.amountMinor) : '—'}`,
+      ...(proof ? [`🕒 ${t.sent}: ${time(proof.uploadedAt)}`] : []),
+      `🆔 ${paymentId}`,
+    ];
+    const by = proof?.reviewedBy ? ` — ${proof.reviewedBy}` : '';
+    if (proof?.status === 'approved') lines.push('', t.approved + by);
+    if (proof?.status === 'rejected') lines.push('', t.rejected(proof.reason ? t.reasons[proof.reason] : (proof.note ?? '—')) + by);
+    return lines.join('\n');
   }
 
   keyboard(paymentId: string, lang: BotLang, mode: 'main' | 'reasons'): { inline_keyboard: Button[][] } {
@@ -169,73 +174,73 @@ export class AdminBot {
     return { inline_keyboard: rows };
   }
 
-  details(paymentId: string, lang: BotLang): string {
+  async details(paymentId: string, lang: BotLang): Promise<string> {
     const t = BOT_TEXT[lang];
-    return this.o.store.read((db) => {
-      const p = db.payments[paymentId];
-      const proof = db.proofs[paymentId];
-      if (!p || !proof) return t.notFound;
-      const name = db.users[p.userId]?.name ?? '—';
-      const minutes = Math.max(0, Math.round((Date.now() - Date.parse(proof.uploadedAt)) / 60_000));
-      const mine = Object.values(db.payments).filter((x) => x.userId === p.userId && x.id !== p.id && db.proofs[x.id]);
-      const approved = mine.filter((x) => db.proofs[x.id].status === 'approved').length;
-      const rejected = mine.filter((x) => db.proofs[x.id].status === 'rejected').length;
-      const same = proof.sha256
-        ? Object.values(db.proofs).filter((x) => x.paymentId !== paymentId && x.sha256 === proof.sha256)
-        : [];
-      const sameLines = same
-        .slice(0, 5)
-        .map((x) => {
-          const owner = db.payments[x.paymentId] ? (db.users[db.payments[x.paymentId].userId]?.name ?? '—') : '—';
-          return `• ${owner} — ${time(x.uploadedAt)} — ${x.status} — ${x.paymentId}`;
-        })
-        .join('\n');
-      return [
-        `${t.detailsTitle} — 🆔 ${paymentId}`,
-        `👤 ${t.player}: ${name} (${p.userId})`,
-        `💰 ${t.amount}: ${money(p.amountMinor)}`,
-        `🕒 ${t.sent}: ${time(proof.uploadedAt)} (${t.minutesAgo(minutes)})`,
-        '',
-        `📜 ${mine.length ? t.history(mine.length, approved, rejected) : t.firstPayment}`,
-        same.length ? t.imageDuplicate(sameLines) : t.imageNew,
-        ...(this.o.adminUrl ? ['', `🖥 ${this.o.adminUrl}`] : []),
-      ].join('\n');
-    });
+    const db = this.o.db;
+    const [p, proof] = await Promise.all([db.getPayment(paymentId), db.getProof(paymentId)]);
+    if (!p || !proof) return t.notFound;
+    const name = (await db.getUser(p.userId))?.name ?? '—';
+    const minutes = Math.max(0, Math.round((Date.now() - Date.parse(proof.uploadedAt)) / 60_000));
+    const mine = (await db.listPaymentsByUser(p.userId)).filter((x) => x.id !== p.id);
+    const mineProofs = await db.getProofs(mine.map((x) => x.id));
+    const approved = mineProofs.filter((x) => x.status === 'approved').length;
+    const rejected = mineProofs.filter((x) => x.status === 'rejected').length;
+    const same = proof.sha256 ? (await db.findProofsBySha(proof.sha256)).filter((x) => x.paymentId !== paymentId) : [];
+    const sameLines: string[] = [];
+    for (const x of same.slice(0, 5)) {
+      const pay = await db.getPayment(x.paymentId);
+      const owner = pay ? ((await db.getUser(pay.userId))?.name ?? '—') : '—';
+      sameLines.push(`• ${owner} — ${time(x.uploadedAt)} — ${x.status} — ${x.paymentId}`);
+    }
+    return [
+      `${t.detailsTitle} — 🆔 ${paymentId}`,
+      `👤 ${t.player}: ${name} (${p.userId})`,
+      `💰 ${t.amount}: ${money(p.amountMinor)}`,
+      `🕒 ${t.sent}: ${time(proof.uploadedAt)} (${t.minutesAgo(minutes)})`,
+      '',
+      `📜 ${mineProofs.length ? t.history(mineProofs.length, approved, rejected) : t.firstPayment}`,
+      same.length ? t.imageDuplicate(sameLines.join('\n')) : t.imageNew,
+      ...(this.o.adminUrl ? ['', `🖥 ${this.o.adminUrl}`] : []),
+    ].join('\n');
   }
 
   // ----- outgoing -----
-  private async sendReceipt(chatId: string, lang: BotLang, paymentId: string, image?: { mime: ProofMime; data: Buffer }) {
-    const file = image ?? this.o.readProof(paymentId);
-    if (!file) return;
+  private async sendReceipt(chatId: string, lang: BotLang, paymentId: string, image?: { mime: ProofMime; data: Uint8Array }) {
+    let file = image;
+    if (!file) {
+      const proof = await this.o.db.getProof(paymentId);
+      const data = proof ? await this.o.db.readImage(paymentId, proof.mime) : null;
+      if (!proof || !data) return;
+      file = { mime: proof.mime, data };
+    }
     const form = new FormData();
     form.set('chat_id', chatId);
-    form.set('caption', this.caption(paymentId, lang));
+    form.set('caption', await this.caption(paymentId, lang));
     form.set('reply_markup', JSON.stringify(this.keyboard(paymentId, lang, 'main')));
     const ext = file.mime === 'image/png' ? 'png' : file.mime === 'image/webp' ? 'webp' : 'jpg';
     form.set('photo', new Blob([new Uint8Array(file.data)], { type: file.mime }), `chek.${ext}`);
     const msg = await this.o.api.call<TgMessage>('sendPhoto', form);
-    this.o.store.transaction((db) => {
-      const proof = db.proofs[paymentId];
-      if (proof) proof.telegram = [...(proof.telegram ?? []), { chatId, messageId: msg.message_id }];
-    });
+    await this.o.db.addProofMessage(paymentId, chatId, msg.message_id);
   }
 
   /** New receipt: send it to every admin chat. */
   async proofSubmitted(n: ProofNotice): Promise<void> {
-    const results = await Promise.allSettled(this.admins().map((a) => this.sendReceipt(a.chatId, a.lang, n.paymentId, n)));
+    const results = await Promise.allSettled((await this.admins()).map((a) => this.sendReceipt(a.chatId, a.lang, n.paymentId, n)));
     for (const r of results) if (r.status === 'rejected') this.o.log?.warn(`[telegram] receipt not sent: ${String(r.reason)}`);
   }
 
   /** A receipt was decided: update every message about it and drop the buttons. */
   async decided(paymentId: string): Promise<void> {
-    const messages = this.o.store.read((db) => db.proofs[paymentId]?.telegram ?? []);
-    const langOf = new Map(this.admins().map((a) => [a.chatId, a.lang]));
+    const messages = await this.o.db.listProofMessages(paymentId);
+    const langOf = new Map((await this.admins()).map((a) => [a.chatId, a.lang]));
+    const captions = new Map<BotLang, string>();
+    for (const lang of new Set(messages.map((m) => langOf.get(m.chatId) ?? 'uz'))) captions.set(lang, await this.caption(paymentId, lang));
     await Promise.allSettled(
       messages.map((m) =>
         this.o.api.call('editMessageCaption', {
           chat_id: m.chatId,
           message_id: m.messageId,
-          caption: this.caption(paymentId, langOf.get(m.chatId) ?? 'uz'),
+          caption: captions.get(langOf.get(m.chatId) ?? 'uz'),
           reply_markup: { inline_keyboard: [] },
         }),
       ),
@@ -261,16 +266,11 @@ export class AdminBot {
     const [rawCmd, ...rest] = text.split(/\s+/);
     // In groups commands come as "/link@BotName".
     const cmd = rawCmd.replace(/@\w+$/, '');
-    const admin = this.isAdmin(chatId);
     if (isGroup) return this.onGroup(m, chatId, cmd, lang);
+    const admin = await this.isAdmin(chatId);
 
     if (cmd === '/stop') {
-      const had = this.o.store.transaction((db) => {
-        const had = !!db.telegram.admins[chatId];
-        delete db.telegram.admins[chatId];
-        return had;
-      });
-      if (had) await this.send(chatId, t.unlinked);
+      if (await this.o.db.deleteBotAdmin(chatId)) await this.send(chatId, t.unlinked);
       return;
     }
     if (cmd === '/pending' && admin) return this.sendPending(chatId, lang);
@@ -284,12 +284,7 @@ export class AdminBot {
 
   private async sendPending(chatId: string, lang: BotLang) {
     const t = BOT_TEXT[lang];
-    const waiting = this.o.store.read((db) =>
-      Object.values(db.proofs)
-        .filter((p) => p.status === 'submitted' && db.payments[p.paymentId]?.status === 'pending')
-        .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt))
-        .map((p) => p.paymentId),
-    );
+    const waiting = (await this.o.db.listWaitingProofs()).map((p) => p.paymentId);
     if (!waiting.length) return void (await this.send(chatId, t.noneWaiting));
     await this.send(chatId, t.waitingCount(waiting.length));
     for (const id of waiting.slice(0, 10)) await this.sendReceipt(chatId, lang, id);
@@ -303,32 +298,27 @@ export class AdminBot {
   private async onGroup(m: TgMessage, chatId: string, cmd: string, lang: BotLang) {
     const t = BOT_TEXT[lang];
     const sender = m.from ? String(m.from.id) : '';
-    const senderIsAdmin = this.o.store.read((db) => db.telegram.admins[sender]?.kind !== 'group' && !!db.telegram.admins[sender]) || sender === this.o.chatId;
+    const admins = await this.admins();
+    const senderIsAdmin = sender !== '' && admins.some((a) => a.chatId === sender && a.kind !== 'group');
     if (cmd === '/link') {
       if (!senderIsAdmin) return void (await this.send(chatId, t.linkFirst));
-      this.o.store.transaction((db) => {
-        db.telegram.admins[chatId] = { chatId, lang, linkedAt: new Date().toISOString(), kind: 'group' };
-      });
+      await this.o.db.putBotAdmin({ chatId, lang, linkedAt: new Date().toISOString(), kind: 'group' });
       this.o.log?.info('[telegram] admin group linked');
       return void (await this.send(chatId, t.groupLinked));
     }
     if ((cmd === '/stop' || cmd === '/unlink') && senderIsAdmin) {
-      this.o.store.transaction((db) => {
-        delete db.telegram.admins[chatId];
-      });
+      await this.o.db.deleteBotAdmin(chatId);
       return void (await this.send(chatId, t.unlinked));
     }
-    if (cmd === '/pending' && this.isAdmin(chatId)) return this.sendPending(chatId, lang);
+    if (cmd === '/pending' && admins.some((a) => a.chatId === chatId)) return this.sendPending(chatId, lang);
   }
 
   /** A group turned into a supergroup: keep it linked under its new id. */
-  private migrate(from: string, to: string) {
-    this.o.store.transaction((db) => {
-      const a = db.telegram.admins[from];
-      if (!a) return;
-      delete db.telegram.admins[from];
-      db.telegram.admins[to] = { ...a, chatId: to };
-    });
+  private async migrate(from: string, to: string) {
+    const a = (await this.o.db.listBotAdmins()).find((x) => x.chatId === from);
+    if (!a) return;
+    await this.o.db.putBotAdmin({ ...a, chatId: to });
+    await this.o.db.deleteBotAdmin(from);
   }
 
   private async tryLink(m: TgMessage, chatId: string, lang: BotLang, guess: string) {
@@ -336,19 +326,19 @@ export class AdminBot {
     if (!this.o.adminToken) return void (await this.send(chatId, t.adminOff));
     // The token must not stay in the chat history.
     await this.o.api.call('deleteMessage', { chat_id: chatId, message_id: m.message_id }).catch(() => null);
+    // Wrong guesses are counted in the Db, so the limit holds across server instances.
+    const key = `link_tries:${chatId}`;
     const now = Date.now();
-    const tr = this.tries.get(chatId);
-    const fresh = tr && now - tr.since < 3_600_000 ? tr : { n: 0, since: now };
-    if (fresh.n >= MAX_TRIES) return;
+    const saved = JSON.parse((await this.o.db.getMeta(key)) ?? 'null') as { n: number; since: number } | null;
+    const tries = saved && now - saved.since < HOUR ? saved : { n: 0, since: now };
+    if (tries.n >= MAX_TRIES) return;
     if (guess !== this.o.adminToken) {
-      this.tries.set(chatId, { ...fresh, n: fresh.n + 1 });
+      await this.o.db.setMeta(key, JSON.stringify({ ...tries, n: tries.n + 1 }));
       return void (await this.send(chatId, t.badToken));
     }
-    this.tries.delete(chatId);
-    this.o.store.transaction((db) => {
-      db.telegram.admins[chatId] = { chatId, lang, linkedAt: new Date().toISOString(), kind: 'private' };
-    });
-    this.o.log?.info(`[telegram] admin chat linked`);
+    await this.o.db.setMeta(key, JSON.stringify({ n: 0, since: now }));
+    await this.o.db.putBotAdmin({ chatId, lang, linkedAt: new Date().toISOString(), kind: 'private' });
+    this.o.log?.info('[telegram] admin chat linked');
     await this.send(chatId, t.linked);
   }
 
@@ -357,7 +347,7 @@ export class AdminBot {
     const lang = botLang(q.from.language_code);
     const t = BOT_TEXT[lang];
     const answer = (text = '') => this.o.api.call('answerCallbackQuery', { callback_query_id: q.id, text }).catch(() => null);
-    if (!this.isAdmin(chatId)) return void (await answer(t.notAllowed));
+    if (!(await this.isAdmin(chatId))) return void (await answer(t.notAllowed));
     const [kind, a, b] = (q.data ?? '').split(':');
     const paymentId = kind === 'R' ? b : a;
     if (!paymentId) return void (await answer());
@@ -369,7 +359,7 @@ export class AdminBot {
 
     try {
       if (kind === 'r' || kind === 'b') {
-        const open = this.o.store.read((db) => db.proofs[paymentId]?.status === 'submitted');
+        const open = (await this.o.db.getProof(paymentId))?.status === 'submitted';
         if (!open) {
           await this.decided(paymentId);
           return void (await answer(t.alreadyDecided));
@@ -378,7 +368,7 @@ export class AdminBot {
         return void (await answer(kind === 'r' ? t.chooseReason : ''));
       }
       if (kind === 'i') {
-        await this.send(chatId, this.details(paymentId, lang), msg ? { reply_parameters: { message_id: msg.message_id } } : {});
+        await this.send(chatId, await this.details(paymentId, lang), msg ? { reply_parameters: { message_id: msg.message_id } } : {});
         return void (await answer());
       }
       if (kind === 'a' || kind === 'R') {
@@ -398,23 +388,42 @@ export class AdminBot {
     }
   }
 
-  // ----- long polling -----
+  // ----- webhook (production) -----
+  /**
+   * Registers the webhook address with Telegram once per server instance
+   * (skipped when it is already set). Safe to call on every request.
+   */
+  ensureWebhook(url: string, secret: string): Promise<void> {
+    this.webhookReady ??= (async () => {
+      const info = await this.o.api.call<{ url?: string }>('getWebhookInfo', {});
+      if (info.url === url) return;
+      await this.o.api.call('setWebhook', { url, secret_token: secret, allowed_updates: ['message', 'callback_query'] });
+      this.o.log?.info('[telegram] webhook set');
+    })().catch((err) => {
+      this.webhookReady = null; // try again on the next request
+      this.o.log?.warn(`[telegram] webhook not set: ${String(err)}`);
+    });
+    return this.webhookReady;
+  }
+
+  // ----- long polling (local dev) -----
   async start(): Promise<void> {
+    let username: string;
     try {
-      const me = await this.o.api.call<{ username: string }>('getMe', {});
-      this.o.log?.info(`[telegram] bot @${me.username} is on; admin chats: ${this.admins().length}`);
-      // A chat id the bot cannot reach yet: the owner has not pressed Start, or the id is wrong.
-      if (this.o.chatId) {
-        await this.o.api.call('getChat', { chat_id: this.o.chatId }).catch(() =>
-          this.o.log?.warn(
-            `[telegram] TELEGRAM_CHAT_ID is not reachable — open https://t.me/${me.username}, press Start and send the admin token to link your chat`,
-          ),
-        );
-      }
+      username = (await this.o.api.call<{ username: string }>('getMe', {})).username;
+      this.o.log?.info(`[telegram] bot @${username} is on; admin chats: ${(await this.admins()).length}`);
     } catch (err) {
       const hint = err instanceof TelegramError && (err.code === 401 || err.code === 404) ? ' — check TELEGRAM_BOT_TOKEN (format 123456789:AA...)' : '';
       this.o.log?.warn(`[telegram] bot is off: ${String(err)}${hint}`);
       return;
+    }
+    // A chat id the bot cannot reach yet: the owner has not pressed Start, or the id is wrong.
+    if (this.o.chatId) {
+      await this.o.api.call('getChat', { chat_id: this.o.chatId }).catch(() =>
+        this.o.log?.warn(
+          `[telegram] TELEGRAM_CHAT_ID is not reachable — open https://t.me/${username}, press Start and send the admin token to link your chat`,
+        ),
+      );
     }
     this.running = true;
     void this.loop();
@@ -427,16 +436,14 @@ export class AdminBot {
   private async loop() {
     while (this.running) {
       try {
-        const offset = this.o.store.read((db) => db.telegram.offset);
+        const offset = Number((await this.o.db.getMeta('telegram_offset')) ?? 0);
         const updates = await this.o.api.call<TgUpdate[]>('getUpdates', {
           offset,
           timeout: 25,
           allowed_updates: ['message', 'callback_query'],
         });
         for (const u of updates) {
-          this.o.store.transaction((db) => {
-            db.telegram.offset = u.update_id + 1;
-          });
+          await this.o.db.setMeta('telegram_offset', String(u.update_id + 1));
           await this.handleUpdate(u).catch((err) => this.o.log?.warn(`[telegram] update failed: ${String(err)}`));
         }
       } catch (err) {
@@ -445,8 +452,13 @@ export class AdminBot {
           this.o.log?.warn('[telegram] token rejected — bot stopped');
           return;
         }
-        // Network hiccup or another copy polling (409): wait and retry.
-        await new Promise((r) => setTimeout(r, 5000).unref());
+        if (err instanceof TelegramError && err.code === 409) {
+          // A webhook is set (production runs this bot): local polling must not steal its updates.
+          this.o.log?.warn('[telegram] the bot is served by a webhook (production) — local polling stopped');
+          return;
+        }
+        // Network hiccup: wait and retry.
+        await new Promise((r) => setTimeout(r, 5000));
       }
     }
   }

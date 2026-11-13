@@ -1,4 +1,8 @@
-/** Server-side records. Plain JSON, stored by JsonStore. */
+/**
+ * Server-side records. Plain JSON: stored by JsonStore locally and in
+ * Supabase Postgres in production (see db.ts). No Node-only imports here:
+ * this file also runs in the Supabase Edge Function (Deno).
+ */
 import type { GameState } from '@futbolchi/engine';
 
 export type ProductId = 'persona_slot';
@@ -13,14 +17,11 @@ export interface Product {
   currency: 'UZS';
 }
 
-/** Persona price: 5 000 so'm. Override with PERSONA_PRICE_MINOR (in tiyin). */
-export const PRODUCTS: Record<ProductId, Product> = {
-  persona_slot: {
-    id: 'persona_slot',
-    amountMinor: Number(process.env.PERSONA_PRICE_MINOR ?? 500_000),
-    currency: 'UZS',
-  },
-};
+/** Persona price: 5 000 so'm by default. Set PERSONA_PRICE_MINOR (in tiyin) to change it. */
+export const DEFAULT_PRICE_MINOR = 500_000;
+export const productsFor = (priceMinor: number = DEFAULT_PRICE_MINOR): Record<ProductId, Product> => ({
+  persona_slot: { id: 'persona_slot', amountMinor: priceMinor, currency: 'UZS' },
+});
 
 export interface Payment {
   id: string;
@@ -131,6 +132,8 @@ export interface DbShape {
   /** key: `${userId}:${matchId}` → highlighted event ids */
   highlights: Record<string, string[]>;
   telegram: { admins: Record<string, BotAdmin>; offset: number };
+  /** Small key/value settings (e.g. bot link attempts). */
+  meta: Record<string, string>;
 }
 
 export const emptyDb = (): DbShape => ({
@@ -143,4 +146,5 @@ export const emptyDb = (): DbShape => ({
   saves: {},
   highlights: {},
   telegram: { admins: {}, offset: 0 },
+  meta: {},
 });

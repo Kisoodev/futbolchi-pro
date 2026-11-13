@@ -35,10 +35,10 @@ export class ManualPaymentProvider implements PaymentProvider {
   }
 
   /** Builds the signed event for an admin decision. */
-  decisionWebhook(
+  async decisionWebhook(
     payment: { providerPaymentId: string; amountMinor: number },
     decision: 'approve' | 'reject',
-  ): { rawBody: string; headers: Record<string, string> } {
+  ): Promise<{ rawBody: string; headers: Record<string, string> }> {
     const event: ProviderWebhookEvent = {
       eventId: `manual_${decision}_${payment.providerPaymentId}`,
       type: decision === 'approve' ? 'payment.succeeded' : 'payment.failed',
@@ -47,6 +47,6 @@ export class ManualPaymentProvider implements PaymentProvider {
       providerTxnId: `manualtxn_${payment.providerPaymentId}`,
     };
     const rawBody = JSON.stringify(event);
-    return { rawBody, headers: { 'content-type': 'application/json', [MANUAL_SIGNATURE_HEADER]: signBody(this.secret, rawBody) } };
+    return { rawBody, headers: { 'content-type': 'application/json', [MANUAL_SIGNATURE_HEADER]: await signBody(this.secret, rawBody) } };
   }
 }

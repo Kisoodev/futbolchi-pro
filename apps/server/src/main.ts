@@ -1,13 +1,21 @@
+/**
+ * Local server (Node): `npm run dev`. Data lives in apps/server/data
+ * (db.json + receipt images). Production runs the same API as a Supabase
+ * Edge Function instead (supabase.ts).
+ */
 import './env';
 import { fileURLToPath } from 'node:url';
-import { buildApp } from './app';
+import { serve } from '@hono/node-server';
+import { buildApp, type Logger } from './app';
+import { DEFAULT_PRICE_MINOR } from './domain';
 import { ManualPaymentProvider } from './payments/ManualPaymentProvider';
 import { JsonStore } from './store/jsonStore';
 import { DiskProofStorage } from './store/proofStorage';
+import { StoreDb } from './store/storeDb';
 import { TelegramHttp } from './notify/telegram';
 
 const PORT = Number(process.env.PORT ?? 8787);
-// Production hosts (Railway, Render, Docker) need the server reachable from outside.
+// Production hosts (Docker, VPS) need the server reachable from outside.
 const HOST = process.env.HOST ?? (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
 const isProd = process.env.NODE_ENV === 'production';
 const dataDir = process.env.DATA_DIR ?? fileURLToPath(new URL('../data', import.meta.url));
@@ -22,7 +30,6 @@ const adminNick = process.env.ADMIN_NICK ?? (isProd ? null : 'admin1121');
 // TODO(payme/click): choose an automatic provider from env once one exists.
 const secret = process.env.PAYMENT_EVENT_SECRET ?? (isProd ? null : 'dev-manual-secret');
 if (!secret) throw new Error('PAYMENT_EVENT_SECRET is required in production.');
-const provider = new ManualPaymentProvider(secret);
 
 // The card players transfer to. Set both in the environment; the default is an obvious placeholder.
 const paymentCard = {
@@ -37,35 +44,35 @@ const webUrl = process.env.WEB_URL ?? (isProd ? null : 'http://localhost:5173');
 // Players who wait too long can message the admin here (shown next to the receipt upload).
 const contactUrl = process.env.ADMIN_CONTACT_URL ?? 'https://t.me/futproadmin';
 
-// Optional admin bot: receipts arrive in Telegram with approve / reject buttons.
-// TELEGRAM_CHAT_ID is optional: any chat can link by sending the admin token to the bot.
+// Optional admin bot (long polling here). Leave TELEGRAM_BOT_TOKEN empty locally while production runs the bot.
 const tgToken = process.env.TELEGRAM_BOT_TOKEN;
 const telegram = tgToken
-  ? {
-      api: new TelegramHttp(tgToken),
-      chatId: process.env.TELEGRAM_CHAT_ID ?? null,
-      adminUrl: webUrl ? `${webUrl}/#/admin` : null,
-    }
+  ? { api: new TelegramHttp(tgToken), chatId: process.env.TELEGRAM_CHAT_ID ?? null, adminUrl: webUrl ? `${webUrl}/#/admin` : null }
   : null;
 
+const stamp = () => new Date().toISOString().slice(11, 19);
+const logger: Logger = {
+  info: (m) => console.log(`${stamp()} ${m}`),
+  warn: (m) => console.warn(`${stamp()} ${m}`),
+  error: (m) => console.error(`${stamp()} ${m}`),
+};
+
 const { app, bot } = buildApp({
-  store: new JsonStore(`${dataDir}/db.json`),
-  proofs: new DiskProofStorage(`${dataDir}/proofs`),
-  provider,
+  db: new StoreDb(new JsonStore(`${dataDir}/db.json`), new DiskProofStorage(`${dataDir}/proofs`)),
+  provider: new ManualPaymentProvider(secret),
+  priceMinor: Number(process.env.PERSONA_PRICE_MINOR ?? DEFAULT_PRICE_MINOR),
   adminToken,
   adminNick,
   paymentCard,
   contactUrl,
   telegram,
   webUrl,
-  // The game page (e.g. on Vercel) calls this API from the browser.
+  // The game page calls this API from the browser.
   corsOrigins: [webUrl, ...(process.env.CORS_ORIGINS ?? '').split(',')].filter((o): o is string => !!o && o.trim() !== ''),
-  logger: true,
+  logger,
 });
-app
-  .listen({ port: PORT, host: HOST })
-  .then(() => bot?.start())
-  .catch((err) => {
-    app.log.error(err);
-    process.exit(1);
-  });
+
+serve({ fetch: app.fetch, port: PORT, hostname: HOST }, (info) => {
+  logger.info(`API listening at http://${HOST}:${info.port}`);
+  void bot?.start();
+});

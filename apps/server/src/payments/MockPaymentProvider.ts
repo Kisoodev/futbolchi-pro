@@ -2,7 +2,6 @@
  * Mock provider for the MVP. No money moves. Webhooks are HMAC-signed so the
  * verification path is exercised exactly like a real provider's would be.
  */
-import { randomUUID } from 'node:crypto';
 import type { PaymentStatus } from '../domain';
 import type { CreatePaymentInput, CreatePaymentResult, PaymentProvider, ProviderWebhookEvent, WebhookHeaders } from './PaymentProvider';
 import { signBody, verifySignedEvent } from './signedEvents';
@@ -32,7 +31,7 @@ export class MockPaymentProvider implements PaymentProvider {
     return { status: p?.status ?? ('failed' as PaymentStatus), providerTxnId: p?.txnId };
   }
 
-  sign(rawBody: string): string {
+  sign(rawBody: string): Promise<string> {
     return signBody(this.secret, rawBody);
   }
 
@@ -44,21 +43,21 @@ export class MockPaymentProvider implements PaymentProvider {
    * Dev/test helper: the user "completes" checkout. Returns the signed webhook
    * the provider would deliver to us.
    */
-  simulateCheckout(providerPaymentId: string, outcome: 'success' | 'fail'): { rawBody: string; headers: Record<string, string> } {
+  async simulateCheckout(providerPaymentId: string, outcome: 'success' | 'fail'): Promise<{ rawBody: string; headers: Record<string, string> }> {
     const p = this.payments.get(providerPaymentId);
     if (!p) throw new Error('unknown mock payment');
     if (p.status === 'pending') {
       p.status = outcome === 'success' ? 'paid' : 'failed';
-      p.txnId = `mocktxn_${randomUUID()}`;
+      p.txnId = `mocktxn_${crypto.randomUUID()}`;
     }
     const event: ProviderWebhookEvent = {
-      eventId: `evt_${randomUUID()}`,
+      eventId: `evt_${crypto.randomUUID()}`,
       type: p.status === 'paid' ? 'payment.succeeded' : 'payment.failed',
       providerPaymentId,
       amountMinor: p.amountMinor,
       providerTxnId: p.txnId!,
     };
     const rawBody = JSON.stringify(event);
-    return { rawBody, headers: { 'content-type': 'application/json', [MOCK_SIGNATURE_HEADER]: this.sign(rawBody) } };
+    return { rawBody, headers: { 'content-type': 'application/json', [MOCK_SIGNATURE_HEADER]: await this.sign(rawBody) } };
   }
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../src/app';
+import { buildApp } from './helpers';
 import { ManualPaymentProvider } from '../src/payments/ManualPaymentProvider';
 import { JsonStore } from '../src/store/jsonStore';
 import { PROOF_MAX_BYTES, parseProofDataUrl } from '../src/store/proofStorage';

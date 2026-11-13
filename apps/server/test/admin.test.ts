@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newGame, playWeek, trainingOffer, type GameState } from '@futbolchi/engine';
-import { buildApp } from '../src/app';
+import { buildApp } from './helpers';
 import { MockPaymentProvider } from '../src/payments/MockPaymentProvider';
 import { JsonStore } from '../src/store/jsonStore';
 

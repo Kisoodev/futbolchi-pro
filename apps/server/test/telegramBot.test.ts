@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildApp } from '../src/app';
+import { buildApp } from './helpers';
 import { ManualPaymentProvider } from '../src/payments/ManualPaymentProvider';
 import { JsonStore } from '../src/store/jsonStore';
 import { BOT_TEXT } from '../src/notify/botText';
@@ -143,11 +143,11 @@ describe('admin Telegram bot', () => {
     const first = await ctx.upload('u1', 'Aziz', PNG_A);
     await ctx.press(`R:1:${first}`);
     const other = await ctx.upload('u2', 'Sardor', PNG_B);
-    expect(ctx.bot.details(other, 'uz')).toContain(uz.imageNew);
-    expect(ctx.bot.details(other, 'uz')).toContain(uz.firstPayment);
+    expect(await ctx.bot.details(other, 'uz')).toContain(uz.imageNew);
+    expect(await ctx.bot.details(other, 'uz')).toContain(uz.firstPayment);
 
     const copy = await ctx.upload('u3', 'Botir', PNG_A);
-    const text = ctx.bot.details(copy, 'uz');
+    const text = await ctx.bot.details(copy, 'uz');
     expect(text).toContain('⚠️');
     expect(text).toContain('Aziz');
     expect(text).toContain(first);

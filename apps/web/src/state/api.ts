@@ -1,12 +1,12 @@
 /**
  * Thin client for the server (registration, payments, saves).
  * Dev: Vite proxies /api to the local server. Production: the game is served
- * by Vercel and the API lives elsewhere, set at build time with VITE_API_URL
- * (e.g. https://futbolchi-api.up.railway.app).
+ * by Vercel and the API is the Supabase Edge Function, set at build time with
+ * VITE_API_BASE (apps/web/.env.production).
  */
 import type { GameState } from '@futbolchi/engine';
 
-export const API_BASE = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '');
+export const API_BASE = (import.meta.env.VITE_API_BASE ?? '').trim().replace(/\/+$/, '');
 /** Full address of an API path such as "/api/stats". */
 export const apiUrl = (path: string) => API_BASE + path;
 

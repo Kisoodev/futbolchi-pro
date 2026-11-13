@@ -2,25 +2,27 @@
  * Provider-agnostic payment logic.
  *
  * Idempotency is enforced at three levels:
- *  1. Event level: each (provider, eventId) is processed at most once.
+ *  1. Event level: each (provider, eventId) is processed at most once
+ *     (insert-if-absent on processed events).
  *  2. Payment level: entitlement and receipt ids are derived from paymentId,
  *     so even two *different* success events for one payment grant once.
- *  3. State machine: a payment only moves pending → paid | failed.
- * Activation is immediate: the entitlement is written in the same
- * synchronous transaction that marks the payment paid.
+ *  3. State machine: a payment only moves pending → paid | failed
+ *     (update-if-pending).
+ * All three are atomic in the Db, so this also holds on Postgres with
+ * concurrent requests. Activation is immediate: the entitlement is written
+ * right after the payment is marked paid.
  */
-import { randomUUID } from 'node:crypto';
+import type { Db } from '../db';
 import {
-  PRODUCTS,
-  type DbShape,
+  productsFor,
   type Entitlement,
   type Payment,
   type PaymentStatus,
+  type Product,
   type ProductId,
   type Receipt,
   type WebhookOutcome,
 } from '../domain';
-import type { JsonStore } from '../store/jsonStore';
 import type { PaymentProvider, WebhookHeaders } from './PaymentProvider';
 
 export interface WebhookResult {
@@ -33,22 +35,23 @@ export const entitlementIdFor = (paymentId: string) => `ent_${paymentId}`;
 export const receiptIdFor = (paymentId: string) => `rcpt_${paymentId}`;
 
 export class PaymentService {
+  readonly products: Record<ProductId, Product>;
+
   constructor(
-    private readonly store: JsonStore,
+    private readonly db: Db,
     private readonly provider: PaymentProvider,
-  ) {}
+    priceMinor?: number,
+  ) {
+    this.products = productsFor(priceMinor);
+  }
 
   async createPayment(userId: string, productId: ProductId): Promise<{ payment: Payment; checkoutUrl: string }> {
-    const product = PRODUCTS[productId];
+    const product = this.products[productId];
     if (!product) throw new Error('unknown product');
     // One open payment per user and product: returning to the pay page must not pile up payments.
-    const open = this.store.read((db) =>
-      Object.values(db.payments).find(
-        (p) => p.userId === userId && p.product === productId && p.provider === this.provider.name && p.status === 'pending',
-      ),
-    );
+    const open = await this.db.findOpenPayment(userId, productId, this.provider.name);
     if (open) return { payment: open, checkoutUrl: open.checkoutUrl ?? '' };
-    const id = `pay_${randomUUID()}`;
+    const id = `pay_${crypto.randomUUID()}`;
     const res = await this.provider.createPayment({
       paymentId: id,
       userId,
@@ -69,9 +72,7 @@ export class PaymentService {
       createdAt: now(),
       updatedAt: now(),
     };
-    this.store.transaction((db) => {
-      db.payments[id] = payment;
-    });
+    await this.db.insertPayment(payment);
     return { payment, checkoutUrl: res.checkoutUrl };
   }
 
@@ -79,54 +80,38 @@ export class PaymentService {
   async handleWebhook(rawBody: string, headers: WebhookHeaders): Promise<WebhookResult> {
     const event = await this.provider.parseWebhook(rawBody, headers);
     const key = `${this.provider.name}:${event.eventId}`;
+    const payment = await this.db.findPaymentByProvider(this.provider.name, event.providerPaymentId);
 
-    // Everything below is synchronous → atomic with respect to other requests.
-    return this.store.transaction((db): WebhookResult => {
-      const seen = db.processedEvents[key];
-      if (seen) return { outcome: 'duplicate', paymentId: seen.paymentId };
+    // Claim the event first: only one delivery of it is ever processed.
+    const first = await this.db.insertProcessedEvent({ key, paymentId: payment?.id ?? null, result: 'ignored', receivedAt: now() });
+    if (!first) return { outcome: 'duplicate', paymentId: payment?.id ?? null };
 
-      const payment = Object.values(db.payments).find(
-        (p) => p.provider === this.provider.name && p.providerPaymentId === event.providerPaymentId,
-      );
-      let outcome: WebhookOutcome;
-      if (!payment) outcome = 'unknown_payment';
-      else if (event.type === 'payment.failed') {
-        if (payment.status === 'pending') {
-          payment.status = 'failed';
-          payment.updatedAt = now();
-          outcome = 'failed';
-        } else outcome = 'ignored';
-      } else if (event.amountMinor !== payment.amountMinor) {
-        outcome = 'amount_mismatch';
-      } else {
-        outcome = this.grant(db, payment, event.providerTxnId);
-      }
-      db.processedEvents[key] = { key, paymentId: payment?.id ?? null, result: outcome, receivedAt: now() };
-      return { outcome, paymentId: payment?.id ?? null };
-    });
+    let outcome: WebhookOutcome;
+    if (!payment) outcome = 'unknown_payment';
+    else if (event.type === 'payment.failed') outcome = (await this.db.settlePayment(payment.id, 'failed', now())) ? 'failed' : 'ignored';
+    else if (event.amountMinor !== payment.amountMinor) outcome = 'amount_mismatch';
+    else outcome = await this.grant(payment, event.providerTxnId);
+
+    await this.db.setProcessedEventResult(key, outcome, payment?.id ?? null);
+    return { outcome, paymentId: payment?.id ?? null };
   }
 
   /** Status for the client. If still pending, reconcile with the provider (late/lost webhook). */
   async getStatus(paymentId: string): Promise<PaymentStatus | null> {
-    const payment = this.store.read((db) => db.payments[paymentId]);
+    const payment = await this.db.getPayment(paymentId);
     if (!payment) return null;
     if (payment.status !== 'pending') return payment.status;
     const remote = await this.provider.getStatus(payment.providerPaymentId);
-    if (remote.status === 'paid' && remote.providerTxnId) {
-      this.store.transaction((db) => this.grant(db, db.payments[paymentId], remote.providerTxnId!));
-    }
-    return this.store.read((db) => db.payments[paymentId].status);
+    if (remote.status === 'paid' && remote.providerTxnId) await this.grant(payment, remote.providerTxnId);
+    return (await this.db.getPayment(paymentId))?.status ?? null;
   }
 
-  /** Marks paid + writes entitlement + receipt. Idempotent per payment. Must run inside a transaction. */
-  private grant(db: DbShape, payment: Payment, providerTxnId: string): WebhookOutcome {
-    const entId = entitlementIdFor(payment.id);
-    if (db.entitlements[entId]) return 'already_granted';
-    if (payment.status === 'failed') return 'ignored';
-    payment.status = 'paid';
-    payment.updatedAt = now();
+  /** Marks paid + writes entitlement + receipt. Idempotent per payment; a failed payment is never granted. */
+  private async grant(payment: Payment, providerTxnId: string): Promise<WebhookOutcome> {
+    const settled = await this.db.settlePayment(payment.id, 'paid', now());
+    if (!settled && (await this.db.getPayment(payment.id))?.status !== 'paid') return 'ignored';
     const entitlement: Entitlement = {
-      id: entId,
+      id: entitlementIdFor(payment.id),
       userId: payment.userId,
       product: payment.product,
       paymentId: payment.id,
@@ -144,9 +129,10 @@ export class PaymentService {
       providerTxnId,
       createdAt: now(),
     };
-    db.entitlements[entId] = entitlement;
-    db.receipts[receipt.id] = receipt;
-    return 'granted';
+    const granted = await this.db.insertEntitlement(entitlement);
+    // Always attempted: also repairs a receipt lost between the two writes.
+    await this.db.insertReceipt(receipt);
+    return granted ? 'granted' : 'already_granted';
   }
 
   /**
@@ -154,48 +140,47 @@ export class PaymentService {
    * a 0-amount Receipt so every grant is auditable. If the user already has an
    * unused slot, that one is returned instead of creating another.
    */
-  adminGrant(userId: string, productId: ProductId): Entitlement {
-    return this.store.transaction((db) => {
-      const unused = Object.values(db.entitlements).find(
-        (e) => e.userId === userId && e.product === productId && e.consumedByPersonaId === null,
-      );
-      if (unused) return unused;
-      const id = `pay_${randomUUID()}`;
-      const payment: Payment = {
-        id,
-        userId,
-        product: productId,
-        amountMinor: 0,
-        currency: 'UZS',
-        provider: 'admin',
-        providerPaymentId: `admin_${id}`,
-        status: 'pending',
-        checkoutUrl: '',
-        createdAt: now(),
-        updatedAt: now(),
-      };
-      db.payments[id] = payment;
-      this.grant(db, payment, `admingrant_${id}`);
-      return db.entitlements[entitlementIdFor(id)];
-    });
+  async adminGrant(userId: string, productId: ProductId): Promise<Entitlement> {
+    const unused = (await this.db.listEntitlements(userId)).find((e) => e.product === productId && e.consumedByPersonaId === null);
+    if (unused) return unused;
+    const id = `pay_${crypto.randomUUID()}`;
+    const payment: Payment = {
+      id,
+      userId,
+      product: productId,
+      amountMinor: 0,
+      currency: 'UZS',
+      provider: 'admin',
+      providerPaymentId: `admin_${id}`,
+      status: 'pending',
+      checkoutUrl: '',
+      createdAt: now(),
+      updatedAt: now(),
+    };
+    await this.db.insertPayment(payment);
+    await this.grant(payment, `admingrant_${id}`);
+    const ent = await this.db.getEntitlement(entitlementIdFor(id));
+    if (!ent) throw new Error('admin grant failed');
+    return ent;
   }
 
-  entitlements(userId: string): Entitlement[] {
-    return this.store.read((db) => Object.values(db.entitlements).filter((e) => e.userId === userId));
+  entitlements(userId: string): Promise<Entitlement[]> {
+    return this.db.listEntitlements(userId);
   }
 
-  receipts(userId: string): Receipt[] {
-    return this.store.read((db) => Object.values(db.receipts).filter((r) => r.userId === userId));
+  receipts(userId: string): Promise<Receipt[]> {
+    return this.db.listReceipts(userId);
   }
 
   /** Spend a persona slot. Idempotent for the same personaId. */
-  consume(entitlementId: string, userId: string, personaId: string): { ok: true; entitlement: Entitlement } | { ok: false; code: 404 | 409 } {
-    return this.store.transaction((db) => {
-      const e = db.entitlements[entitlementId];
-      if (!e || e.userId !== userId) return { ok: false as const, code: 404 as const };
-      if (e.consumedByPersonaId && e.consumedByPersonaId !== personaId) return { ok: false as const, code: 409 as const };
-      e.consumedByPersonaId = personaId;
-      return { ok: true as const, entitlement: e };
-    });
+  async consume(
+    entitlementId: string,
+    userId: string,
+    personaId: string,
+  ): Promise<{ ok: true; entitlement: Entitlement } | { ok: false; code: 404 | 409 }> {
+    const e = await this.db.getEntitlement(entitlementId);
+    if (!e || e.userId !== userId) return { ok: false, code: 404 };
+    const used = await this.db.consumeEntitlement(entitlementId, userId, personaId);
+    return used ? { ok: true, entitlement: used } : { ok: false, code: 409 };
   }
 }

@@ -83,27 +83,21 @@ The same site adapts to phone screens (below 900 px wide) with no separate app. 
 
 ## Deploy
 
-The game page and the API are deployed separately:
+- **Game → Vercel.** A static Vite build (`vercel.json`; any Root Directory works). The API address is baked in from `apps/web/.env.production` (`VITE_API_BASE`).
+- **API + Telegram bot → Supabase.** One Edge Function `api` (Deno) running the same Hono app as local dev, with Postgres tables and a private Storage bucket `proofs` for receipt images. The bot runs in webhook mode: the function registers `…/functions/v1/api/telegram/webhook` with Telegram by itself.
 
-- **Game → Vercel.** A static Vite build (`vercel.json` at the repo root).
-- **API + Telegram bot → a host that keeps a process running and has a disk** (Railway, Render, Fly.io or a VPS; `Dockerfile` at the repo root). Vercel cannot run it: its functions stop after each request, so the bot cannot poll Telegram, and files written to disk do not persist.
+**First setup (once)**
 
-**1. API (example: Railway).** New project → *Deploy from GitHub repo* → it builds the `Dockerfile`. Add a **Volume** mounted at `/data` (players, payments and receipt images live there). Set the variables, then *Generate domain*:
+1. **Database.** Supabase → SQL Editor → run `supabase/migrations/0001_init.sql` (tables, Row Level Security on with no policies, the `proofs` bucket). Safe to run again.
+2. **Function.** `npm run build:supabase` bundles `apps/server/src/supabase.ts` into `supabase/functions/api/index.ts`. Deploy it as a function named `api` (dashboard editor: paste the file; or Supabase CLI: `supabase functions deploy api --no-verify-jwt`). Turn **Verify JWT** off: the game and Telegram call it without a Supabase key.
+3. **Secrets** (Edge Functions → Secrets): `ADMIN_TOKEN` (long and random), `PAYMENT_CARD_NUMBER`, `PAYMENT_CARD_HOLDER`, `WEB_URL` (the game's address, allowed by CORS), optional `TELEGRAM_BOT_TOKEN`, `ADMIN_NICK`, `ADMIN_CONTACT_URL`, `PERSONA_PRICE_MINOR`, `CORS_ORIGINS`, `TELEGRAM_CHAT_ID`. `SUPABASE_URL` and the service key come from Supabase; the payment-event secret is derived from it.
+4. **Game.** `VITE_API_BASE` in `apps/web/.env.production` = `https://<project>.supabase.co/functions/v1`; push, Vercel rebuilds.
 
-| Variable | Value |
-|---|---|
-| `ADMIN_TOKEN` | a long random secret (not the dev one) |
-| `PAYMENT_EVENT_SECRET` | another long random secret |
-| `PAYMENT_CARD_NUMBER`, `PAYMENT_CARD_HOLDER` | the card players pay to |
-| `TELEGRAM_BOT_TOKEN` | the bot token (optional) |
-| `WEB_URL` | the game's address, e.g. `https://futbolchi-pro.vercel.app` (allowed by CORS) |
-| `CORS_ORIGINS` | optional: more allowed sites, comma-separated |
+**Updating the API**: change the code, `npm run build:supabase`, redeploy the `api` function.
 
-`NODE_ENV`, `HOST`, `PORT` and `DATA_DIR` are set by the Dockerfile; Railway's own `PORT` wins.
+**One bot, one server.** Telegram sends a bot's updates either to a webhook (production) or to polling (local), not both. While production runs the bot, leave `TELEGRAM_BOT_TOKEN` empty in the local `.env` (or use a second bot for development); local polling stops by itself when it sees the webhook.
 
-**2. Game (Vercel).** Import the repo with **Root Directory = the repository root** (not `apps/server`); `vercel.json` sets the build. Add the environment variable `VITE_API_URL` = the API's address (e.g. `https://futbolchi-api.up.railway.app`), then redeploy — the address is baked in at build time.
-
-**One bot, one server.** Telegram lets only one server read a bot's updates. While production runs the bot, leave `TELEGRAM_BOT_TOKEN` empty in the local `.env` (or use a second bot for development).
+The `Dockerfile` still runs the Node version of the API (JSON file storage) on any Docker host, if Supabase is ever not wanted.
 
 ## Layout
 
@@ -111,7 +105,7 @@ The game page and the API are deployed separately:
 |---|---|
 | `packages/engine` | Pure, deterministic simulation (no DOM, no I/O, no `Math.random`). Persona, training, match, league, season, story. |
 | `apps/web` | Vite + React SPA. Game state lives in `localStorage` as plain JSON. Includes the canvas replay and share card. |
-| `apps/server` | Fastify. `PaymentProvider` interface with a manual provider (receipt upload + admin approval) and a mock (tests), idempotent payment events, receipts, save sync, admin. JSON-file store and receipt images in `apps/server/data/` (git-ignored). |
+| `apps/server` | Hono API (runs on Node locally and as a Supabase Edge Function). `Db` interface with two stores: JSON file + disk images (local, tests) and Supabase Postgres + Storage (production). `PaymentProvider` interface with a manual provider (receipt upload + admin approval) and a mock (tests), idempotent payment events, receipts, save sync, admin, Telegram bot. |
 | `BALANCE.md` | Every formula and tunable number. |
 
 ## Stack rationale
