@@ -30,6 +30,8 @@ const { app } = buildApp({
   provider,
   adminToken,
   paymentCard,
+  // In dev the game runs on Vite (port 5173). Set WEB_URL when it lives elsewhere.
+  webUrl: process.env.WEB_URL ?? (isProd ? null : 'http://localhost:5173'),
   logger: true,
 });
 app.listen({ port: PORT, host: '127.0.0.1' }).catch((err) => {

@@ -21,6 +21,23 @@ async function setup() {
   return { app, game, headers: { 'x-admin-token': TOKEN } };
 }
 
+describe('browser landing', () => {
+  it('redirects / to the game when webUrl is set, and never 404s', async () => {
+    const withWeb = buildApp({ store: new JsonStore(null), provider: new MockPaymentProvider('x'), adminToken: null, webUrl: 'http://localhost:5173' }).app;
+    const r = await withWeb.inject({ method: 'GET', url: '/' });
+    expect(r.statusCode).toBe(302);
+    expect(r.headers.location).toBe('http://localhost:5173');
+    expect((await withWeb.inject({ method: 'GET', url: '/favicon.ico' })).statusCode).toBe(204);
+
+    const apiOnly = buildApp({ store: new JsonStore(null), provider: new MockPaymentProvider('x'), adminToken: null }).app;
+    const r2 = await apiOnly.inject({ method: 'GET', url: '/' });
+    expect(r2.statusCode).toBe(200);
+    expect(r2.json()).toEqual({ ok: true, service: 'futbolchi-api' });
+    await withWeb.close();
+    await apiOnly.close();
+  });
+});
+
 describe('admin highlight stub', () => {
   it('requires the admin token', async () => {
     const { app } = await setup();

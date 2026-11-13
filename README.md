@@ -6,9 +6,10 @@ A browser football career game. You create a fictional footballer, pick one trai
 
 ```bash
 npm install
-npm run dev:server   # API on :8787 (registration, payments, saves, admin)
-npm run dev:web      # game on http://localhost:5173
+npm run dev          # starts both: API on :8787 and the game on http://localhost:5173
 ```
+
+Open the game at **http://localhost:5173**. Port 8787 is the API server only; opening it in a browser redirects to the game. To run the two separately: `npm run dev:server` and `npm run dev:web`.
 
 ## New player flow
 

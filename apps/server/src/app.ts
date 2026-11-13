@@ -23,6 +23,11 @@ export interface AppOptions {
   proofs?: ProofStorage;
   /** Shown to players on the payment page. */
   paymentCard?: PaymentCard | null;
+  /**
+   * Where the game (web app) is served. This server is API-only, so opening it
+   * in a browser redirects there instead of showing a bare 404.
+   */
+  webUrl?: string | null;
   logger?: boolean;
 }
 
@@ -52,6 +57,14 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
       done(err as Error, undefined);
     }
   });
+
+  // ---------- Browser landing ----------
+  // This is the API server; the game lives on the web app. Send people there.
+  app.get('/', async (_req, reply) => {
+    if (opts.webUrl) return reply.redirect(opts.webUrl);
+    return { ok: true, service: 'futbolchi-api' };
+  });
+  app.get('/favicon.ico', async (_req, reply) => reply.code(204).send());
 
   // ---------- Public info ----------
   /** Shown on the loading screen. */
