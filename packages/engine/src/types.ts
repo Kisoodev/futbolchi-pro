@@ -57,7 +57,7 @@ export type Sleeves = (typeof SLEEVES)[number];
 export const ACCESSORIES = ['none', 'headband', 'wristbands'] as const;
 export type Accessory = (typeof ACCESSORIES)[number];
 /** Goal celebration: shown in the creator preview and on the season card. */
-export const CELEBRATIONS = ['arms_up', 'point_sky', 'ear_cup', 'fists'] as const;
+export const CELEBRATIONS = ['arms_up', 'point_sky', 'ear_cup', 'fists', 'shush'] as const;
 export type Celebration = (typeof CELEBRATIONS)[number];
 export const FEET = ['right', 'left'] as const;
 export type Foot = (typeof FEET)[number];

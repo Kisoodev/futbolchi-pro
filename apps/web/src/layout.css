@@ -702,3 +702,87 @@ button.danger { background: var(--danger); border-color: #8f2018; color: #fff; }
   .create .look-controls .field,
   .create .create-look .field { margin: 0.25rem 0; }
 }
+
+/* ---------- Persona creator: the preview camera glides between face, head and body ---------- */
+.avatar-camera { transition: transform 0.6s cubic-bezier(0.22, 0.8, 0.25, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .avatar-camera { transition: none; }
+}
+
+/* ---------- Persona creator: position cards and bonus points ---------- */
+.pos-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.pos-card {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 0.45rem 0.6rem;
+  text-align: left;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: #fff;
+  box-shadow: 0 2px 0 var(--card-shadow);
+}
+.pos-card .pos-icon { font-size: 1.05rem; line-height: 1; }
+.pos-card b { font-family: var(--pixel); color: var(--sky-deep); font-size: 0.95rem; }
+.pos-card .pos-name { font-size: 0.82rem; font-weight: 700; line-height: 1.2; }
+.pos-card.on {
+  color: #fff;
+  border-color: var(--grass-shadow);
+  background: linear-gradient(180deg, var(--grass-hi), var(--grass));
+  box-shadow: 0 3px 0 var(--grass-shadow);
+}
+.pos-card.on b { color: #fff; }
+
+.points-box {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 2px solid var(--line);
+  background: var(--sky-pale);
+}
+.points-box.has-left { border-color: var(--grass-hi); background: var(--grass-pale); }
+.points-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.points-head strong { font-size: 0.92rem; color: var(--grass-ink); }
+.points-box:not(.has-left) .points-head strong { color: var(--sky-deep); }
+.pips { display: inline-flex; gap: 3px; }
+.pips i { width: 9px; height: 9px; border-radius: 50%; background: #d6e4ef; }
+.pips i.on { background: var(--grass); box-shadow: 0 0 0 1px var(--grass-shadow) inset; }
+.points-box.has-left .pips i.on:first-child { animation: pulse 1.4s ease-in-out infinite; }
+.points-hint { margin: 4px 0 6px; font-size: 0.76rem; color: var(--ink-muted); line-height: 1.35; }
+.create .points-box .stat-edit { gap: 4px; margin: 0; }
+.create .points-box .stat-edit li { grid-template-columns: minmax(0, 1fr) 30px 56px 30px; gap: 6px; padding: 2px 4px; border-radius: 8px; }
+.create .points-box .stat-edit li.boosted { background: rgba(79, 174, 36, 0.12); }
+.stat-edit .star { color: #e3a21a; margin-right: 3px; }
+.stat-edit .step { width: 30px; height: 30px; padding: 0; border-radius: 50%; font-weight: 800; line-height: 1; box-shadow: none; }
+.stat-edit .step.plus { color: #fff; background: var(--grass); border-color: var(--grass-shadow); box-shadow: 0 2px 0 var(--grass-shadow); }
+.stat-edit .step.minus { color: var(--ink-muted); background: #fff; }
+.stat-edit .step:disabled { opacity: 0.35; }
+.stat-edit .val { font-family: var(--pixel); font-size: 1.05rem; }
+@media (prefers-reduced-motion: reduce) {
+  .points-box.has-left .pips i.on:first-child { animation: none; }
+}
+@media (min-width: 900px) and (max-height: 760px) {
+  .pos-card { padding: 0.3rem 0.5rem; }
+  .points-box { padding: 8px 10px; margin-top: 6px; }
+  .points-hint { margin: 2px 0 4px; }
+  .create .points-box .stat-edit li { padding: 1px 4px; }
+  .stat-edit .step { width: 26px; height: 26px; }
+  .create .points-box .stat-edit li { grid-template-columns: minmax(0, 1fr) 26px 52px 26px; }
+}
+@media (max-width: 899px) {
+  .pos-card { padding: 0.6rem 0.7rem; }
+  .pos-card .pos-name { font-size: 0.86rem; }
+  .stat-edit .step { width: 34px; height: 34px; font-size: 1.1rem; }
+  .create .points-box .stat-edit li { grid-template-columns: minmax(0, 1fr) 34px 56px 34px; padding: 3px 4px; }
+}
+/* Short PC windows: keep the creator columns inside the window */
+@media (min-width: 900px) and (max-height: 760px) {
+  .create .pos-card { padding: 0.22rem 0.5rem; }
+  .create .pos-cards { gap: 4px; }
+  .create .points-box .stat-edit { gap: 1px; }
+  .create .points-box .stat-edit li { padding: 0 4px; grid-template-columns: minmax(0, 1fr) 24px 50px 24px; }
+  .create .stat-edit .step { width: 24px; height: 24px; font-size: 0.95rem; }
+  .points-hint { font-size: 0.72rem; margin: 1px 0 3px; }
+  .create .kit-note { display: none; }
+}

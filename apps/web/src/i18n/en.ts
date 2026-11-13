@@ -92,7 +92,7 @@ export const en: Messages = {
   accessoryLabel: 'Accessory',
   accessories: { none: 'None', headband: 'Headband', wristbands: 'Wristbands' },
   celebrationLabel: 'Goal celebration',
-  celebrations: { arms_up: 'Arms up', point_sky: 'Point to the sky', ear_cup: "Can't hear you!", fists: 'Fist pump' },
+  celebrations: { arms_up: 'Arms up', point_sky: 'Point to the sky', ear_cup: "Can't hear you!", fists: 'Fist pump', shush: 'Finger on lips' },
   lookTabs: { face: 'Face', hair: 'Hair', body: 'Body', kit: 'Kit' },
   lookRandom: 'Random',
   lookPose: 'Another pose',
@@ -109,6 +109,7 @@ export const en: Messages = {
   skillsTitle: 'Position and skills',
   positionLabel: 'Position',
   bonusLabel: (left) => `Bonus points left: ${left}`,
+  skillsHint: '★ marks the skills that matter most for this position. Spread your points as you like.',
   createButton: 'Step into the academy',
   errors: {
     name_length: 'The name must be 2 to 24 characters long.',

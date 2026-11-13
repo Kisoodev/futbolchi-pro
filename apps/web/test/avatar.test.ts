@@ -22,7 +22,7 @@ const base = C.DEFAULT_APPEARANCE;
 const sig = (a: Appearance, pose: Parameters<typeof avatarPixels>[2] = 'stand') => avatarPixels(a, KIT, pose).join('|');
 
 describe('pixel avatar', () => {
-  it('is deterministic and stays inside the 64×96 grid', () => {
+  it('is deterministic and stays inside the 64×128 grid', () => {
     expect(sig(base)).toBe(sig(base));
     for (const r of avatarRects(base, KIT)) {
       expect(r.x).toBeGreaterThanOrEqual(0);

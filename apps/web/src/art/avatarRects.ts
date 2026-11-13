@@ -1,5 +1,7 @@
 /**
- * Pixel avatar built from the persona's appearance, on a 64×96 grid.
+ * Pixel avatar built from the persona's appearance, on a 64×128 grid.
+ * Proportions follow a real athlete (head about 1/6 of the height): long legs,
+ * shoulders wider than the waist, knees and calves, deltoids and hands.
  *
  * Pure and deterministic: the figure is painted part by part into layers
  * (hair, legs, kit, arms, head…). Each layer is shaded automatically (light
@@ -20,7 +22,7 @@ import {
 } from '@futbolchi/engine';
 
 export const AVATAR_W = 64;
-export const AVATAR_H = 96;
+export const AVATAR_H = 128;
 /** Preview-only football poses (not saved; the saved one is the celebration). */
 export const EXTRA_POSES = ['hands_hips', 'arms_crossed', 'ball_arm', 'thumbs_up', 'ball_foot'] as const;
 export type ExtraPose = (typeof EXTRA_POSES)[number];
@@ -170,7 +172,12 @@ export interface AvatarLayout {
   headRows: number[];
   torsoTop: number;
   torsoLen: number;
+  /** Waist width; the shoulders are wider (shoulderW). */
   torsoW: number;
+  shoulderW: number;
+  /** Upper arm and forearm length. */
+  upperArm: number;
+  foreArm: number;
   legTop: number;
   shortsLen: number;
   sockLen: number;
@@ -182,15 +189,15 @@ export function avatarLayout(a: Appearance): AvatarLayout {
   const th = (a.heightCm - C.HEIGHT_MIN_CM) / (C.HEIGHT_MAX_CM - C.HEIGHT_MIN_CM);
   const tw = (a.weightKg - C.WEIGHT_MIN_KG) / (C.WEIGHT_MAX_KG - C.WEIGHT_MIN_KG);
   const cx = 32;
-  const ground = 92;
-  const legLen = Math.round(25 + 9 * th);
-  const torsoLen = Math.round(19 + 5 * th);
+  const ground = 122;
+  const legLen = Math.round(47 + 10 * th);
+  const torsoLen = Math.round(24 + 6 * th);
   // Always an athlete: weight widens the frame a little, never into a belly.
   const torsoW = 2 * Math.round((17 + 5 * tw) / 2);
   const legTop = ground - legLen + 1;
   const torsoTop = legTop - torsoLen;
   const headRows = HEAD_ROWS[a.headShape];
-  const headTop = torsoTop - 3 - headRows.length + 1;
+  const headTop = torsoTop - 4 - headRows.length + 1;
   return {
     cx,
     ground,
@@ -199,10 +206,13 @@ export function avatarLayout(a: Appearance): AvatarLayout {
     torsoTop,
     torsoLen,
     torsoW,
+    shoulderW: torsoW + 6,
+    upperArm: Math.round(torsoLen * 0.58),
+    foreArm: Math.round(torsoLen * 0.56),
     legTop,
-    shortsLen: 9 + Math.round(2 * th),
-    sockLen: 10 + Math.round(3 * th),
-    legW: Math.max(6, torsoW / 2 - 3),
+    shortsLen: 11 + Math.round(2 * th),
+    sockLen: 17 + Math.round(4 * th),
+    legW: Math.max(7, torsoW / 2 - 2),
     limb: tw < 0.5 ? 5 : 6,
   };
 }
@@ -222,7 +232,7 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   const hair = HAIR_HEX[a.hairColor];
   const boot = BOOT_HEX[a.boots];
   const trim = luminance(kit) < 0.62 ? WHITE : '#1d3a5c';
-  const celebrating = (CELEBRATIONS as readonly string[]).includes(pose);
+  const celebrating = (CELEBRATIONS as readonly string[]).includes(pose) && pose !== 'shush';
   const headH = headRows.length;
   const maxW = Math.max(...headRows);
   const rowX0 = (i: number) => cx - headRows[Math.max(0, Math.min(headH - 1, i))] / 2;
@@ -243,32 +253,55 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   }
   back.paint(out);
 
-  // ---- legs: skin, socks, boots ----
+  // ---- legs: thighs, knees, calves (in socks), boots ----
   const legSkin = new Layer(skin);
   const socks = new Layer(kit);
   const boots = new Layer(boot, 0.7);
   const shortsBottom = L.legTop + L.shortsLen;
   const sockTop = L.ground - 2 - L.sockLen;
   const legXs = [cx - 1 - L.legW, cx + 1];
-  for (const lx of legXs) {
-    legSkin.rect(lx, shortsBottom - 1, L.legW, sockTop - shortsBottom + 1);
-    socks.rect(lx, sockTop, L.legW, L.sockLen);
-  }
+  /** Leg width per row: a slimmer knee, a calf that bulges outwards, a thin ankle. */
+  const legRow = (y: number, lx: number, side: -1 | 1, layer: Layer) => {
+    let w = L.legW;
+    const knee = sockTop - 2;
+    if (y >= knee - 1 && y <= knee) w -= 1;
+    if (y > sockTop) {
+      const t = (y - sockTop) / L.sockLen;
+      if (t > 0.15 && t < 0.45) w += 1; // calf
+      if (t >= 0.7) w -= 2; // ankle
+    }
+    // The inner edge stays straight; the outer side grows or shrinks.
+    const shift = side < 0 ? L.legW - w : 0;
+    layer.rect(lx + shift, y, w, 1);
+  };
+  legXs.forEach((lx, i) => {
+    const side = i === 0 ? -1 : 1;
+    for (let y = shortsBottom - 1; y < sockTop; y++) legRow(y, lx, side, legSkin);
+    for (let y = sockTop; y < L.ground - 2; y++) legRow(y, lx, side, socks);
+  });
   legSkin.paint(out);
   socks.paint(out);
-  for (const lx of legXs) {
-    for (let x = lx; x < lx + L.legW; x++) put(out, x, sockTop + 1, trim); // sock band
-  }
-  // Boots point outwards a little
-  boots.rect(legXs[0] - 1, L.ground - 2, L.legW + 1, 3);
-  boots.rect(legXs[1], L.ground - 2, L.legW + 1, 3);
+  // Knee highlight and sock bands
+  legXs.forEach((lx) => {
+    put(out, lx + Math.floor(L.legW / 2), sockTop - 3, shade(skin, 0.18));
+    for (let x = lx; x < lx + L.legW; x++) {
+      put(out, x, sockTop + 1, trim);
+      put(out, x, sockTop + 2, trim);
+    }
+  });
+  // Boots point outwards
+  boots.rect(legXs[0] - 2, L.ground - 3, L.legW + 1, 2);
+  boots.rect(legXs[0] - 3, L.ground - 1, L.legW + 2, 2);
+  boots.rect(legXs[1] + 1, L.ground - 3, L.legW + 1, 2);
+  boots.rect(legXs[1] + 1, L.ground - 1, L.legW + 2, 2);
   boots.paint(out);
   const stud = a.boots === 'white' ? '#3a4150' : WHITE;
-  put(out, legXs[0] + 1, L.ground - 1, stud);
-  put(out, legXs[0] + 2, L.ground - 1, stud);
-  put(out, legXs[1] + L.legW - 3, L.ground - 1, stud);
-  put(out, legXs[1] + L.legW - 2, L.ground - 1, stud);
-  for (const lx of [legXs[0] - 1, legXs[1]]) for (let x = lx; x <= lx + L.legW; x++) put(out, x, L.ground, shade(boot, -0.45));
+  put(out, legXs[0] - 1, L.ground, stud);
+  put(out, legXs[0] + L.legW - 3, L.ground, stud);
+  put(out, legXs[1] + 2, L.ground, stud);
+  put(out, legXs[1] + L.legW, L.ground, stud);
+  // A plain stripe on each boot (no brand marks)
+  for (const x0 of [legXs[0] - 1, legXs[1] + 2]) for (let x = x0; x < x0 + 3; x++) put(out, x, L.ground - 2, shade(boot, a.boots === 'white' ? -0.25 : 0.35));
 
   // ---- shorts ----
   const shorts = new Layer(SHORTS);
@@ -286,10 +319,22 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
 
   // ---- shirt ----
   const shirt = new Layer(kit);
-  shirt.rect(tl, L.torsoTop, L.torsoW, L.torsoLen + 1);
-  shirt.unset(tl, L.torsoTop);
-  shirt.unset(tl + L.torsoW - 1, L.torsoTop);
+  /** Torso width per row: broad shoulders tapering to the waist (a V shape). */
+  const torsoRowW = (i: number) => {
+    const t = i / L.torsoLen;
+    const spread = L.shoulderW - L.torsoW;
+    const extra = t < 0.15 ? spread : t < 0.6 ? Math.round(spread * (1 - (t - 0.15) / 0.45)) : 0;
+    return 2 * Math.round((L.torsoW + extra) / 2);
+  };
+  for (let i = 0; i <= L.torsoLen; i++) {
+    const w = torsoRowW(i) - (i === 0 ? 4 : i === 1 ? 2 : 0);
+    shirt.rect(cx - w / 2, L.torsoTop + i, w, 1);
+  }
   shirt.paint(out);
+  // Chest and centre shading: pecs and a soft fold
+  const chestShade = shade(kit, -0.12);
+  for (let x = cx - 5; x <= cx + 4; x++) if (x !== cx - 1 && x !== cx) put(out, x, L.torsoTop + 9, chestShade);
+  for (let y = L.torsoTop + 12; y < L.torsoTop + L.torsoLen - 2; y += 3) put(out, cx - 1, y, chestShade);
   // V-neck collar
   for (let x = cx - 3; x <= cx + 2; x++) put(out, x, L.torsoTop, trim);
   put(out, cx - 2, L.torsoTop + 1, trim);
@@ -300,21 +345,25 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   put(out, cx, L.torsoTop + 2, trim);
   // Fictional crest: small shield on the left chest
   const crestX = tl + 3;
-  const crestY = L.torsoTop + 5;
+  const crestY = L.torsoTop + 6;
   for (const [dx, dy] of [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [1, 2]]) put(out, crestX + dx, crestY + dy, '#f2c94c');
   put(out, crestX + 1, crestY, shade('#f2c94c', -0.35));
   // Fabric folds and hem
   const fold = shade(kit, -0.16);
-  put(out, cx + 3, L.torsoTop + L.torsoLen - 6, fold);
-  put(out, cx + 4, L.torsoTop + L.torsoLen - 5, fold);
+  put(out, cx + 4, L.torsoTop + L.torsoLen - 8, fold);
+  put(out, cx + 5, L.torsoTop + L.torsoLen - 7, fold);
+  put(out, cx - 5, L.torsoTop + L.torsoLen - 4, fold);
   put(out, cx - 4, L.torsoTop + L.torsoLen - 3, fold);
   for (let x = tl + 1; x < tl + L.torsoW - 1; x++) put(out, x, L.torsoTop + L.torsoLen, shade(kit, -0.28));
 
   // ---- neck ----
   const neck = new Layer(skin, 0.6);
-  neck.rect(cx - 3, L.torsoTop - 3, 6, 4);
+  neck.rect(cx - 3, L.torsoTop - 4, 6, 5);
+  neck.rect(cx - 4, L.torsoTop - 1, 8, 1); // trapezius slope into the collar
   neck.paint(out);
-  for (let x = cx - 3; x <= cx + 2; x++) put(out, x, L.torsoTop - 3, shade(skin, -0.3));
+  for (let x = cx - 3; x <= cx + 2; x++) put(out, x, L.torsoTop - 4, shade(skin, -0.3));
+  put(out, cx - 2, L.torsoTop - 2, shade(skin, -0.12)); // neck muscle lines
+  put(out, cx + 1, L.torsoTop - 2, shade(skin, -0.12));
 
   // ---- head and ears ----
   const head = new Layer(skin, 0.75);
@@ -555,54 +604,65 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   // ---- arms ----
   const torsoL = tl;
   const torsoR = tl + L.torsoW - 1;
-  const sy = L.torsoTop + 2;
-  const hang = L.torsoTop + L.torsoLen + 2;
+  const sy = L.torsoTop + 3;
+  /** Scale for pose offsets (they were designed for a torso of 21 rows). */
+  const u = L.torsoLen / 21;
+  const k = (n: number) => n * u;
+  /** Sideways offsets grow less, so raised arms stay inside the picture. */
+  const kx = (n: number) => n * Math.min(u, 1.1);
   type Pt = [number, number];
-  const leftDown: Pt[] = [[torsoL - L.limb / 2 + 1, sy], [torsoL - L.limb / 2 - 0.5, sy + 10], [torsoL - L.limb / 2 - 1, hang]];
+  const shoulderL: Pt = [cx - L.shoulderW / 2 + L.limb / 2 - 1, sy];
+  const shoulderR: Pt = [2 * cx - 1 - shoulderL[0], sy];
+  const leftDown: Pt[] = [shoulderL, [shoulderL[0] - 1.5, sy + L.upperArm], [shoulderL[0] - 2, sy + L.upperArm + L.foreArm]];
   const mirror = (pts: Pt[]): Pt[] => pts.map(([x, y]) => [2 * cx - 1 - x, y]);
   let left: Pt[] = leftDown;
   let right: Pt[] = mirror(leftDown);
-  const shoulderL: Pt = [torsoL - L.limb / 2 + 1, sy];
   let fingerUp = false;
   let thumbUp = false;
+  let shush = false;
   let ball: { x: number; y: number; r: number; front: boolean } | null = null;
   switch (pose) {
     case 'hands_hips':
-      left = [shoulderL, [shoulderL[0] - 6, sy + 8], [torsoL + 1, L.legTop - 3]];
+      left = [shoulderL, [shoulderL[0] - kx(7), sy + k(9)], [torsoL + 1, L.legTop - 3]];
       right = mirror(left);
       break;
     case 'arms_crossed':
-      left = [shoulderL, [torsoL - 1, sy + 10], [cx + 5, sy + 8]];
-      right = mirror([shoulderL, [torsoL - 1, sy + 12], [cx + 5, sy + 11]]);
+      left = [shoulderL, [shoulderL[0] - 1, sy + k(11)], [cx + kx(6), sy + k(9)]];
+      right = mirror([shoulderL, [shoulderL[0] - 1, sy + k(13)], [cx + kx(6), sy + k(12)]]);
       break;
     case 'ball_arm':
-      ball = { x: torsoR + 7, y: L.legTop - 1, r: 6.5, front: false };
-      right = [[torsoR + L.limb / 2, sy], [torsoR + 5, sy + 8], [torsoR + 8, L.legTop - 8]];
+      ball = { x: torsoR + 9, y: L.legTop - 2, r: 7.5, front: false };
+      right = [shoulderR, [torsoR + kx(6), sy + k(9)], [torsoR + kx(9), L.legTop - k(8)]];
       break;
     case 'thumbs_up':
-      right = mirror([shoulderL, [shoulderL[0] - 4, sy + 10], [shoulderL[0] + 2, sy + 3]]);
+      right = mirror([shoulderL, [shoulderL[0] - kx(4), sy + k(11)], [shoulderL[0] + kx(2), sy + k(3)]]);
       thumbUp = true;
       break;
     case 'ball_foot':
-      ball = { x: cx + 1 + L.legW + 7, y: L.ground - 4.5, r: 5.5, front: true };
-      left = [shoulderL, [shoulderL[0] - 6, sy + 8], [torsoL + 1, L.legTop - 3]];
+      ball = { x: cx + 1 + L.legW + 9, y: L.ground - 5.5, r: 6.5, front: true };
+      left = [shoulderL, [shoulderL[0] - kx(7), sy + k(9)], [torsoL + 1, L.legTop - 3]];
       right = mirror(left);
       break;
     case 'arms_up':
-      left = [shoulderL, [shoulderL[0] - 6, sy - 8], [shoulderL[0] - 10, sy - 17]];
+      left = [shoulderL, [shoulderL[0] - kx(6), sy - k(9)], [shoulderL[0] - kx(10), sy - k(18)]];
       right = mirror(left);
       break;
     case 'point_sky':
-      right = mirror([shoulderL, [shoulderL[0] - 1, sy - 9], [shoulderL[0] - 1, sy - 18]]);
+      right = mirror([shoulderL, [shoulderL[0] - 1, sy - k(10)], [shoulderL[0] - 1, sy - k(19)]]);
       fingerUp = true;
       break;
     case 'ear_cup':
-      left = [shoulderL, [shoulderL[0] - 7, sy - 5], [rowX0(9) - 4, headTop + 9]];
+      left = [shoulderL, [shoulderL[0] - kx(7), sy - k(5)], [rowX0(9) - 4, headTop + 9]];
       right = mirror(left);
       break;
     case 'fists':
-      left = [shoulderL, [shoulderL[0] - 5, sy + 8], [shoulderL[0] - 6, sy - 3]];
+      left = [shoulderL, [shoulderL[0] - kx(5), sy + k(9)], [shoulderL[0] - kx(6), sy - k(3)]];
       right = mirror(left);
+      break;
+    case 'shush':
+      // Right hand under the chin, index finger on the lips.
+      right = [shoulderR, [shoulderR[0] + kx(4), sy + k(9)], [cx + 1, headTop + headH + 2]];
+      shush = true;
       break;
     default:
       break;
@@ -639,8 +699,10 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
         const d = walked + g.len * t;
         const isSleeve = d <= sleeveEnd;
         const isBand = (a.accessory === 'wristbands' && d > total - 5 && d <= total - 3) || (a.sleeves === 'long' && d > total - 4.5 && d <= total - 3);
-        for (let j = -r; j < r; j++) {
-          for (let i = -r; i < r; i++) {
+        // Deltoid: the arm is a little thicker near the shoulder.
+        const rr = d < L.upperArm * 0.35 ? r + 0.5 : r;
+        for (let j = -rr; j < rr; j++) {
+          for (let i = -rr; i < rr; i++) {
             const px = x + i + 0.5;
             const py = y + j + 0.5;
             if (isBand) {
@@ -656,9 +718,10 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
       }
       walked += g.len;
     }
-    // Fist
+    // Hand: a palm with a thumb on the body side
     const [hx, hy] = pts[pts.length - 1];
-    armSkin.rect(Math.round(hx - r - 0.5), Math.round(hy - r), L.limb + 1, L.limb);
+    armSkin.rect(Math.round(hx - r - 0.5), Math.round(hy - r), L.limb + 1, L.limb + 1);
+    armSkin.set(hx < cx ? Math.round(hx + r + 0.5) : Math.round(hx - r - 1.5), Math.round(hy - r + 1));
     armSkin.paint(out);
     sleeve.paint(out);
     cuffs.paint(out);
@@ -676,6 +739,33 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
     const t = new Layer(skin, 0.6);
     t.rect(Math.round(hx - L.limb / 2), Math.round(hy - L.limb / 2) - 4, 2, 4);
     t.paint(out);
+  }
+  if (shush) {
+    // Pursed lips peeking out on both sides of the finger
+    put(out, cx - 2, headTop + 14, MOUTH);
+    put(out, cx + 1, headTop + 14, MOUTH);
+    // Fist under the chin, with a dark edge so it reads apart from the face
+    const fy = headTop + headH;
+    const fist = new Layer(shade(skin, 0.05), 0.5);
+    fist.rect(cx - 3, fy - 1, 6, 5);
+    fist.paint(out);
+    const edge = shade(skin, -0.42);
+    for (let x = cx - 3; x <= cx + 2; x++) put(out, x, fy - 2, edge);
+    for (let y = fy - 1; y <= fy + 3; y++) {
+      put(out, cx - 4, y, edge);
+      put(out, cx + 3, y, edge);
+    }
+    for (const y of [fy + 1, fy + 3]) for (let x = cx - 2; x <= cx + 1; x++) put(out, x, y, shade(skin, -0.2)); // curled fingers
+    // Index finger upright over the lips, outlined
+    for (let y = headTop + 12; y < fy - 1; y++) {
+      put(out, cx - 1, y, shade(skin, 0.12));
+      put(out, cx, y, skin);
+      put(out, cx - 2, y, y === headTop + 14 ? MOUTH : edge);
+      put(out, cx + 1, y, y === headTop + 14 ? MOUTH : edge);
+    }
+    put(out, cx - 1, headTop + 11, edge);
+    put(out, cx, headTop + 11, edge);
+    put(out, cx - 1, headTop + 12, shade(skin, 0.3)); // fingernail
   }
   if (fingerUp) {
     // Open palm raised to the sky: three spread fingers and a thumb (never a single finger).

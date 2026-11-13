@@ -47,6 +47,7 @@ const pick = <T,>(list: readonly T[]): T => list[Math.floor(Math.random() * list
 type LookTab = 'face' | 'hair' | 'body' | 'kit';
 const LOOK_TABS: LookTab[] = ['face', 'hair', 'body', 'kit'];
 const TAB_ICONS: Record<LookTab, string> = { face: '🙂', hair: '💇', body: '📏', kit: '👕' };
+const POSITION_ICONS: Record<string, string> = { GK: '🧤', CB: '🛡️', FB: '🏃', CM: '🎯', W: '⚡', ST: '⚽' };
 
 /** A random, valid look (cosmetic only, so Math.random is fine here). */
 function randomLook(prev: Appearance): Appearance {
@@ -202,6 +203,9 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
   };
   const poseName = pose === 'stand' ? null : (tx.poseNames as Record<string, string>)[pose] ?? tx.celebrations[pose as keyof typeof tx.celebrations];
 
+  // Camera follows the open tab: close-up on the face, the head for hair, the whole body otherwise.
+  // A pose (arms up, ball…) always shows the whole body.
+  const camera = pose !== 'stand' ? 'full' : tab === 'face' ? 'face' : tab === 'hair' ? 'head' : 'full';
   const used = STAT_KEYS.reduce((a, k) => a + (bonus[k] ?? 0), 0);
   const left = C.BONUS_POINTS_TOTAL - used;
   const preview = { ...C.STAT_TEMPLATES[position] };
@@ -242,7 +246,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
             <button type="button" className="stage-btn left" title={tx.lookRandom} aria-label={tx.lookRandom} onClick={() => setLook((prev) => randomLook(prev))}>🎲</button>
             <button type="button" className="stage-btn right" title={tx.lookPose} aria-label={tx.lookPose} onClick={nextPose}>⚽</button>
             {poseName && <span className="pose-name">{poseName}</span>}
-            <Avatar appearance={look} kit={PREVIEW_KIT} scale={2} pose={pose} className="avatar-big" />
+            <Avatar appearance={look} kit={PREVIEW_KIT} scale={2} pose={pose} focus={camera} className="avatar-big" />
             <strong>{name}</strong>
             <span className="muted small">
               {tx.heightValue(look.heightCm)} · {tx.weightValue(look.weightKg)}
@@ -335,7 +339,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
                   setPose(v);
                 }}
               />
-              <p className="muted small">{tx.lookKitNote}</p>
+              <p className="muted small kit-note">{tx.lookKitNote}</p>
             </>
           )}
           {nextTab && (
@@ -348,28 +352,62 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
         <section className="create-skills">
           <h2>{tx.skillsTitle}</h2>
           <div className="field">
-            <div className="chips pos-chips" role="group" aria-label={tx.positionLabel}>
+            <div className="pos-cards" role="radiogroup" aria-label={tx.positionLabel}>
               {POSITIONS.map((p) => (
-                <button key={p} type="button" className={p === position ? 'chip on' : 'chip'} aria-pressed={p === position} onClick={() => { setPosition(p); setBonus({}); }}>
-                  <b>{p}</b> {tx.positions[p]}
+                <button
+                  key={p}
+                  type="button"
+                  role="radio"
+                  aria-checked={p === position}
+                  className={p === position ? 'pos-card on' : 'pos-card'}
+                  onClick={() => {
+                    setPosition(p);
+                    setBonus({});
+                  }}
+                >
+                  <span className="pos-icon" aria-hidden>{POSITION_ICONS[p]}</span>
+                  <b>{p}</b>
+                  <span className="pos-name">{tx.positions[p]}</span>
                 </button>
               ))}
             </div>
           </div>
-          <div className="field">
-            <span>{tx.bonusLabel(left)}</span>
+          <div className={left > 0 ? 'points-box has-left' : 'points-box'}>
+            <div className="points-head">
+              <strong>{tx.bonusLabel(left)}</strong>
+              <span className="pips" aria-hidden>
+                {Array.from({ length: C.BONUS_POINTS_TOTAL }, (_, i) => (
+                  <i key={i} className={i < left ? 'on' : ''} />
+                ))}
+              </span>
+            </div>
+            <p className="points-hint">{tx.skillsHint}</p>
             <ul className="stat-edit">
-              {STAT_KEYS.map((k) => (
-                <li key={k} className={C.POSITION_WEIGHTS[position][k] >= 0.15 ? 'key' : ''}>
-                  <span className="label">{tx.stats[k]}</span>
-                  <button type="button" onClick={() => adjust(k, -1)} disabled={!bonus[k]} aria-label={`${tx.stats[k]} −`}>−</button>
-                  <span className="val">
-                    {preview[k]}
-                    {bonus[k] ? <small> +{bonus[k]}</small> : null}
-                  </span>
-                  <button type="button" onClick={() => adjust(k, 1)} disabled={left <= 0 || (bonus[k] ?? 0) >= C.BONUS_POINTS_PER_STAT_MAX} aria-label={`${tx.stats[k]} +`}>+</button>
-                </li>
-              ))}
+              {STAT_KEYS.map((k) => {
+                const isKey = C.POSITION_WEIGHTS[position][k] >= 0.15;
+                return (
+                  <li key={k} className={`${isKey ? 'key' : ''} ${bonus[k] ? 'boosted' : ''}`}>
+                    <span className="label">
+                      {isKey && <span className="star" aria-hidden>★</span>}
+                      {tx.stats[k]}
+                    </span>
+                    <button type="button" className="step minus" onClick={() => adjust(k, -1)} disabled={!bonus[k]} aria-label={`${tx.stats[k]} −`}>−</button>
+                    <span className="val">
+                      {preview[k]}
+                      {bonus[k] ? <small> +{bonus[k]}</small> : null}
+                    </span>
+                    <button
+                      type="button"
+                      className="step plus"
+                      onClick={() => adjust(k, 1)}
+                      disabled={left <= 0 || (bonus[k] ?? 0) >= C.BONUS_POINTS_PER_STAT_MAX}
+                      aria-label={`${tx.stats[k]} +`}
+                    >
+                      +
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         </section>

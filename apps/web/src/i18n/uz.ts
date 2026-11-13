@@ -140,6 +140,7 @@ export const uz = {
     point_sky: 'Osmonga ishora',
     ear_cup: 'Eshitmayapman!',
     fists: 'Mushtlar',
+    shush: "Barmoq lablarda",
   } satisfies Record<Celebration, string>,
   lookTabs: { face: 'Yuz', hair: 'Soch', body: 'Tana', kit: 'Forma' },
   lookRandom: 'Tasodifiy',
@@ -157,6 +158,7 @@ export const uz = {
   skillsTitle: "Pozitsiya va ko'rsatkichlar",
   positionLabel: 'Pozitsiya',
   bonusLabel: (left: number) => `Qo'shimcha ochkolar: ${left} ta qoldi`,
+  skillsHint: "★ — bu pozitsiya uchun eng muhim ko'rsatkichlar. Ochkolarni o'zingiz taqsimlang.",
   createButton: 'Akademiyaga qadam qo\'yish',
   errors: {
     name_length: "Ism 2 dan 24 gacha belgidan iborat bo'lishi kerak.",

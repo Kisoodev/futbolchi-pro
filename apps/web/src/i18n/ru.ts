@@ -88,7 +88,7 @@ export const ru: Messages = {
   accessoryLabel: 'Аксессуар',
   accessories: { none: 'Нет', headband: 'Повязка', wristbands: 'Напульсники' },
   celebrationLabel: 'Празднование гола',
-  celebrations: { arms_up: 'Руки вверх', point_sky: 'Палец в небо', ear_cup: 'Не слышу!', fists: 'Кулаки' },
+  celebrations: { arms_up: 'Руки вверх', point_sky: 'Палец в небо', ear_cup: 'Не слышу!', fists: 'Кулаки', shush: 'Палец у губ' },
   lookTabs: { face: 'Лицо', hair: 'Волосы', body: 'Тело', kit: 'Форма' },
   lookRandom: 'Случайно',
   lookPose: 'Другая поза',
@@ -105,6 +105,7 @@ export const ru: Messages = {
   skillsTitle: 'Позиция и навыки',
   positionLabel: 'Позиция',
   bonusLabel: (left) => `Осталось бонусных очков: ${left}`,
+  skillsHint: '★ — самые важные навыки для этой позиции. Распределите очки как хотите.',
   createButton: 'Шагнуть в академию',
   errors: {
     name_length: 'Имя должно содержать от 2 до 24 символов.',
