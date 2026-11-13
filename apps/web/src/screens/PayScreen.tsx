@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatMoney, tx } from '../i18n';
-import { adminApi, api, type AppConfig } from '../state/api';
+import { adminApi, api, type AppConfig, type RejectReason } from '../state/api';
 import { verifiedAdminToken } from '../state/admin';
 import { getUserId } from '../state/store';
 import { prepareReceipt } from '../state/receiptImage';
@@ -39,6 +39,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
   const [sending, setSending] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [note, setNote] = useState<string | null>(null);
+  const [reason, setReason] = useState<RejectReason | null>(null);
   const [copied, setCopied] = useState<'card' | 'amount' | null>(null);
   const [dragging, setDragging] = useState(false);
   const [adminToken, setAdminToken] = useState<string | null>(null);
@@ -66,6 +67,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
     setStep('loading');
     setImage(null);
     setNote(null);
+    setReason(null);
     try {
       if (await checkAccess()) return;
       const [cfg, payment] = await Promise.all([api.config(), api.createPayment(userId)]);
@@ -99,6 +101,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
           setPaymentId(next.paymentId);
           setAmount(next.amountMinor);
           setNote(state.note);
+          setReason(state.reason);
           setImage(null);
           setStep('rejected');
         }
@@ -216,7 +219,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
             {step === 'rejected' && (
               <div className="pay-alert" role="alert">
                 <strong>{tx.payRejectedTitle}</strong>
-                <span>{note ? tx.payRejectedNote(note) : tx.payRejectedHint}</span>
+                <span>{reason ? tx.payRejectedNote(tx.payRejectReasons[reason]) : note ? tx.payRejectedNote(note) : tx.payRejectedHint}</span>
               </div>
             )}
             <div className="pay-grid">

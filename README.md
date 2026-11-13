@@ -38,11 +38,20 @@ The game ships in **Uzbek (default), English and Russian**. The UZ / EN / RU swi
 | `PAYMENT_EVENT_SECRET` | Signs admin payment decisions | dev value (required in production) |
 | `DATA_DIR` | Where `db.json` and receipt images are stored | `apps/server/data` |
 | `ADMIN_CONTACT_URL` | Where players can message the admin (shown next to the receipt upload) | `https://t.me/futproadmin` |
-| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Optional: every uploaded receipt is sent to this Telegram chat within seconds | off |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Optional admin bot: receipts arrive in Telegram with approve / reject buttons (chat id optional) | off |
 
 Put these in `apps/server/.env` (copy `apps/server/.env.example`; git-ignored). It is read on start in any shell — PowerShell, cmd or bash — and the dev server restarts when it changes. Variables set in the shell win; an empty value means "use the default".
 
-**Receipt alerts in Telegram (optional).** Create a bot with @BotFather and copy its token into `TELEGRAM_BOT_TOKEN`. Send the bot any message from your own Telegram account, then open `https://api.telegram.org/bot<TOKEN>/getUpdates` in a browser: the number at `message.chat.id` is your `TELEGRAM_CHAT_ID`. After that every receipt arrives in that chat as a photo with the player name, amount and a link to the admin panel. If Telegram is down, the upload still works and the receipt waits in the admin panel as usual.
+**Admin Telegram bot (optional).** Create a bot with @BotFather and put its full token (`123456789:AA...`) into `TELEGRAM_BOT_TOKEN`; the dev server restarts by itself. Open the bot in Telegram and send it the admin token once — that links the chat (the message is deleted right away; 5 wrong guesses lock a chat for an hour). `TELEGRAM_CHAT_ID` is optional: a chat set there is always an admin chat. No public URL is needed; the server asks Telegram for updates (long polling).
+
+- Every uploaded receipt arrives as a photo with **✅ Qabul qilish**, **❌ Rad etish** and **🔍 Batafsil** buttons.
+- *Rad etish* asks for a reason (wrong amount, unreadable, money not received, receipt already used). The player sees it on the payment page in their own language and can send a new receipt.
+- *Batafsil* shows the player's earlier payments and whether the same image was sent before (receipts are fingerprinted with SHA-256).
+- When a receipt is decided — in the bot or in the admin panel — every Telegram message about it is updated and its buttons disappear. Pressing twice never grants twice.
+- **Group review:** add the bot to a Telegram group and type `/link` there (only someone whose private chat is already linked can do it, so the admin token is never typed in the group). Receipts then go to the group, any member can press the buttons, and each decision shows who made it (e.g. `✅ QABUL QILINDI — @kassir`). Add only people you trust.
+- `/pending` re-sends receipts still waiting, `/stop` unlinks the chat. The bot speaks uz, en or ru, following your Telegram language.
+
+If Telegram is down or the token is wrong, uploads still work and receipts wait in the admin panel; the server log says why the bot is off.
 
 ```bash
 npm test             # all unit tests (engine, server, replay timeline)

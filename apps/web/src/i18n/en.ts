@@ -202,6 +202,13 @@ export const en: Messages = {
     'Your receipt has been received. As soon as it is confirmed, this page continues on its own — you can keep it open or come back later.',
   payRejectedTitle: 'Receipt not accepted',
   payRejectedNote: (note) => `Reason: ${note}`,
+  /** Reason picked by the admin (Telegram bot). */
+  payRejectReasons: {
+    amount: "Wrong amount — transfer exactly the amount shown",
+    unreadable: "The receipt could not be read — send a clearer screenshot",
+    not_received: "The money has not arrived on the card",
+    duplicate: "This receipt was already used",
+  },
   payRetry: 'Try again',
   payNoCard: 'The payment card is not set up yet. Please try again later.',
   payStages: ['Transfer', 'Receipt', 'Approval'],

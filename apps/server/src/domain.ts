@@ -43,6 +43,10 @@ export interface User {
   createdAt: string;
 }
 
+/** Why a receipt was rejected. Shown to the player in their own language. */
+export const REJECT_REASONS = ['amount', 'unreadable', 'not_received', 'duplicate'] as const;
+export type RejectReason = (typeof REJECT_REASONS)[number];
+
 /** Uploaded receipt image for a manual payment. The file itself lives in ProofStorage. */
 export interface PaymentProof {
   paymentId: string;
@@ -51,7 +55,29 @@ export interface PaymentProof {
   uploadedAt: string;
   status: 'submitted' | 'approved' | 'rejected';
   reviewedAt?: string;
+  /** Free text from the admin panel. */
   note?: string;
+  /** Who decided it in Telegram (shown in group chats). */
+  reviewedBy?: string;
+  /** Chosen reason (e.g. from the Telegram bot). */
+  reason?: RejectReason;
+  /** Image fingerprint: the same screenshot sent twice is flagged to the admin. */
+  sha256?: string;
+  /** Telegram messages showing this receipt, updated when it is decided. */
+  telegram?: { chatId: string; messageId: number }[];
+}
+
+export type BotLang = 'uz' | 'en' | 'ru';
+
+/**
+ * Telegram chats allowed to review receipts: private chats linked with the
+ * admin token, and groups linked with /link by such an admin.
+ */
+export interface BotAdmin {
+  chatId: string;
+  lang: BotLang;
+  linkedAt: string;
+  kind?: 'private' | 'group';
 }
 
 /** Access granted by a paid payment. Unique per paymentId. */
@@ -104,6 +130,7 @@ export interface DbShape {
   saves: Record<string, SaveRecord>;
   /** key: `${userId}:${matchId}` → highlighted event ids */
   highlights: Record<string, string[]>;
+  telegram: { admins: Record<string, BotAdmin>; offset: number };
 }
 
 export const emptyDb = (): DbShape => ({
@@ -115,4 +142,5 @@ export const emptyDb = (): DbShape => ({
   processedEvents: {},
   saves: {},
   highlights: {},
+  telegram: { admins: {}, offset: 0 },
 });

@@ -22,6 +22,8 @@ export class ApiError extends Error {
 
 export type PaymentStatus = 'pending' | 'paid' | 'failed';
 export type ProofStatus = 'submitted' | 'approved' | 'rejected';
+/** Why the admin rejected a receipt (same codes as the server). */
+export type RejectReason = 'amount' | 'unreadable' | 'not_received' | 'duplicate';
 
 export interface AppConfig {
   provider: string;
@@ -40,6 +42,7 @@ export interface PaymentState {
   status: PaymentStatus;
   proof: ProofStatus | null;
   note: string | null;
+  reason: RejectReason | null;
 }
 export interface Entitlement {
   id: string;

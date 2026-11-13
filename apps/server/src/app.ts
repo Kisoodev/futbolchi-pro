@@ -1,13 +1,14 @@
+import { createHash } from 'node:crypto';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import type { GameState, MatchEvent } from '@futbolchi/engine';
-import { PRODUCTS, type ProductId } from './domain';
+import { PRODUCTS, REJECT_REASONS, type ProductId, type RejectReason } from './domain';
 import { InvalidWebhookError, type PaymentProvider } from './payments/PaymentProvider';
 import { ManualPaymentProvider } from './payments/ManualPaymentProvider';
 import { MockPaymentProvider } from './payments/MockPaymentProvider';
 import { PaymentService } from './payments/paymentService';
 import type { JsonStore } from './store/jsonStore';
 import { MemoryProofStorage, parseProofDataUrl, type ProofStorage } from './store/proofStorage';
-import type { ProofNotifier } from './notify/telegram';
+import { AdminBot, type DecideResult, type TelegramApi } from './notify/telegram';
 
 export interface PaymentCard {
   /** Card the player transfers to (manual payments). */
@@ -36,8 +37,11 @@ export interface AppOptions {
   adminNick?: string | null;
   /** Where players can message the admin (e.g. a Telegram link). Shown on the payment page. */
   contactUrl?: string | null;
-  /** Told about every uploaded receipt (e.g. Telegram), so the admin reacts fast. */
-  notifier?: ProofNotifier | null;
+  /**
+   * Admin Telegram bot: every receipt arrives with approve / reject buttons.
+   * chatId = TELEGRAM_CHAT_ID (more chats can link with the admin token).
+   */
+  telegram?: { api: TelegramApi; chatId: string | null; adminUrl: string | null } | null;
   logger?: boolean;
 }
 
@@ -51,11 +55,60 @@ const isString = (v: unknown): v is string => typeof v === 'string' && v.length 
 export const USER_NAME_MIN = 2;
 export const USER_NAME_MAX = 24;
 
-export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: PaymentService } {
+export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: PaymentService; bot: AdminBot | null } {
   const app = Fastify({ logger: opts.logger ?? false, bodyLimit: 8 * 1024 * 1024 });
   const payments = new PaymentService(opts.store, opts.provider);
   const proofs = opts.proofs ?? new MemoryProofStorage();
   const now = () => new Date().toISOString();
+
+  /**
+   * Approve or reject a manual payment (admin panel and Telegram bot).
+   * Goes through the signed webhook path, so a double decision grants once.
+   */
+  async function decide(paymentId: string, decision: 'approve' | 'reject', extra: { note?: string; reason?: RejectReason; by?: string } = {}) {
+    if (!(opts.provider instanceof ManualPaymentProvider)) return { error: 'not_manual_provider' as const, code: 409 };
+    const payment = opts.store.read((db) => db.payments[paymentId]);
+    if (!payment || payment.provider !== 'manual') return { error: 'not_found' as const, code: 404 };
+    const hook = opts.provider.decisionWebhook(payment, decision);
+    const result = await payments.handleWebhook(hook.rawBody, hook.headers);
+    let changed = false;
+    const status = opts.store.transaction((db) => {
+      const proof = db.proofs[payment.id];
+      const final = db.payments[payment.id].status;
+      if (proof && proof.status === 'submitted' && final !== 'pending') {
+        proof.status = final === 'paid' ? 'approved' : 'rejected';
+        proof.reviewedAt = now();
+        if (extra.note) proof.note = extra.note;
+        if (extra.reason && final === 'failed') proof.reason = extra.reason;
+        if (extra.by) proof.reviewedBy = extra.by.slice(0, 64);
+        changed = true;
+      }
+      return final;
+    });
+    // Update the Telegram messages about this receipt (drop their buttons).
+    if (changed && bot) void bot.decided(payment.id).catch(() => null);
+    return { outcome: result.outcome, status, changed };
+  }
+
+  const bot = opts.telegram
+    ? new AdminBot({
+        api: opts.telegram.api,
+        store: opts.store,
+        adminToken: opts.adminToken,
+        chatId: opts.telegram.chatId,
+        adminUrl: opts.telegram.adminUrl,
+        decide: async (id, decision, reason, by): Promise<DecideResult> => {
+          const r = await decide(id, decision, { reason, by });
+          return 'error' in r ? 'not_found' : r.changed ? 'ok' : 'already';
+        },
+        readProof: (id) => {
+          const proof = opts.store.read((db) => db.proofs[id]);
+          const data = proof ? proofs.read(proof.paymentId, proof.mime) : null;
+          return proof && data ? { mime: proof.mime, data } : null;
+        },
+        log: { info: (m) => app.log.info(m), warn: (m) => app.log.warn(m) },
+      })
+    : null;
 
   // Keep the raw body: webhook signatures are computed over the exact bytes.
   app.addContentTypeParser('application/json', { parseAs: 'string' }, (req, body, done) => {
@@ -124,7 +177,7 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
     const status = await payments.getStatus(req.params.id);
     if (!status) return reply.code(404).send({ error: 'not_found' });
     const proof = opts.store.read((db) => db.proofs[req.params.id]);
-    return { status, proof: proof?.status ?? null, note: proof?.note ?? null };
+    return { status, proof: proof?.status ?? null, note: proof?.note ?? null, reason: proof?.reason ?? null };
   });
 
   /** Player uploads the receipt image ("chek") for a manual payment. Re-upload is allowed while pending. */
@@ -143,13 +196,13 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
         size: parsed.data.length,
         uploadedAt: now(),
         status: 'submitted',
+        sha256: createHash('sha256').update(parsed.data).digest('hex'),
       };
     });
-    // Tell the admin right away. Never blocks or fails the upload.
-    if (opts.notifier) {
-      const userName = opts.store.read((db) => db.users[payment.userId]?.name ?? null);
-      opts.notifier
-        .proofSubmitted({ paymentId: payment.id, userName, amountMinor: payment.amountMinor, mime: parsed.mime, data: parsed.data })
+    // Send it to the admin's Telegram right away. Never blocks or fails the upload.
+    if (bot) {
+      bot
+        .proofSubmitted({ paymentId: payment.id, mime: parsed.mime, data: parsed.data })
         .catch((err: unknown) => req.log.warn({ err }, 'receipt notification failed'));
     }
     return { ok: true, proof: 'submitted' };
@@ -246,29 +299,17 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
       return reply.header('content-type', proof.mime).header('cache-control', 'no-store').send(data);
     });
 
-    admin.post<{ Params: { id: string }; Body: { decision?: unknown; note?: unknown } }>(
+    admin.post<{ Params: { id: string }; Body: { decision?: unknown; note?: unknown; reason?: unknown } }>(
       '/api/admin/payments/:id/decision',
       async (req, reply) => {
         const decision = req.body?.decision;
         if (decision !== 'approve' && decision !== 'reject') return reply.code(400).send({ error: 'bad_request' });
-        if (!(opts.provider instanceof ManualPaymentProvider)) return reply.code(409).send({ error: 'not_manual_provider' });
-        const payment = opts.store.read((db) => db.payments[req.params.id]);
-        if (!payment || payment.provider !== 'manual') return reply.code(404).send({ error: 'not_found' });
+        const note = typeof req.body?.note === 'string' ? req.body.note.trim().slice(0, 200) || undefined : undefined;
+        const reason = REJECT_REASONS.find((r) => r === req.body?.reason);
         // Same path as any provider webhook → same idempotency guarantees.
-        const hook = opts.provider.decisionWebhook(payment, decision);
-        const result = await payments.handleWebhook(hook.rawBody, hook.headers);
-        const note = typeof req.body?.note === 'string' ? req.body.note.slice(0, 200) : undefined;
-        const status = opts.store.transaction((db) => {
-          const proof = db.proofs[payment.id];
-          const final = db.payments[payment.id].status;
-          if (proof && proof.status === 'submitted' && final !== 'pending') {
-            proof.status = final === 'paid' ? 'approved' : 'rejected';
-            proof.reviewedAt = now();
-            if (note) proof.note = note;
-          }
-          return final;
-        });
-        return { outcome: result.outcome, status };
+        const r = await decide(req.params.id, decision, { note, reason });
+        if ('error' in r) return reply.code(r.code ?? 500).send({ error: r.error });
+        return { outcome: r.outcome, status: r.status };
       },
     );
 
@@ -330,5 +371,5 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
     );
   });
 
-  return { app, payments };
+  return { app, payments, bot };
 }

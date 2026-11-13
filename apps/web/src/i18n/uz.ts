@@ -24,6 +24,7 @@ import type {
   StatKey,
   TrainingId,
 } from '@futbolchi/engine';
+import type { RejectReason } from '../state/api';
 
 export const uz = {
   appName: 'Futbolchi Pro',
@@ -252,6 +253,13 @@ export const uz = {
   payReviewText: "Chekingiz qabul qilindi. Tasdiqlanishi bilan bu sahifa o'zi davom etadi — yopmasangiz ham, keyinroq qaytsangiz ham bo'ladi.",
   payRejectedTitle: 'Chek tasdiqlanmadi',
   payRejectedNote: (note: string) => `Sabab: ${note}`,
+  /** Reason picked by the admin (Telegram bot). */
+  payRejectReasons: {
+    amount: "Summa noto'g'ri — aynan ko'rsatilgan summani o'tkazing",
+    unreadable: "Chekni o'qib bo'lmadi — aniqroq skrinshot yuboring",
+    not_received: "Pul kartaga kelib tushmagan",
+    duplicate: "Bu chek avval yuborilgan",
+  } satisfies Record<RejectReason, string>,
   payRetry: "Qaytadan urinish",
   payNoCard: "To'lov kartasi hali sozlanmagan. Keyinroq urinib ko'ring.",
   payStages: ["O'tkazma", 'Chek', 'Tasdiq'],

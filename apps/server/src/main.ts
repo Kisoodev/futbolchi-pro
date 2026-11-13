@@ -4,7 +4,7 @@ import { buildApp } from './app';
 import { ManualPaymentProvider } from './payments/ManualPaymentProvider';
 import { JsonStore } from './store/jsonStore';
 import { DiskProofStorage } from './store/proofStorage';
-import { TelegramNotifier } from './notify/telegram';
+import { TelegramHttp } from './notify/telegram';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const isProd = process.env.NODE_ENV === 'production';
@@ -35,14 +35,18 @@ const webUrl = process.env.WEB_URL ?? (isProd ? null : 'http://localhost:5173');
 // Players who wait too long can message the admin here (shown next to the receipt upload).
 const contactUrl = process.env.ADMIN_CONTACT_URL ?? 'https://t.me/futproadmin';
 
-// Optional: forward every uploaded receipt to the admin's Telegram within seconds.
+// Optional admin bot: receipts arrive in Telegram with approve / reject buttons.
+// TELEGRAM_CHAT_ID is optional: any chat can link by sending the admin token to the bot.
 const tgToken = process.env.TELEGRAM_BOT_TOKEN;
-const tgChat = process.env.TELEGRAM_CHAT_ID;
-const notifier = tgToken && tgChat ? new TelegramNotifier(tgToken, tgChat, webUrl ? `${webUrl}/#/admin` : null) : null;
-if (tgToken && !tgChat) console.warn('[telegram] TELEGRAM_CHAT_ID is not set — receipt alerts are off');
-if (notifier) console.log('[telegram] receipt alerts are on');
+const telegram = tgToken
+  ? {
+      api: new TelegramHttp(tgToken),
+      chatId: process.env.TELEGRAM_CHAT_ID ?? null,
+      adminUrl: webUrl ? `${webUrl}/#/admin` : null,
+    }
+  : null;
 
-const { app } = buildApp({
+const { app, bot } = buildApp({
   store: new JsonStore(`${dataDir}/db.json`),
   proofs: new DiskProofStorage(`${dataDir}/proofs`),
   provider,
@@ -50,11 +54,14 @@ const { app } = buildApp({
   adminNick,
   paymentCard,
   contactUrl,
-  notifier,
+  telegram,
   webUrl,
   logger: true,
 });
-app.listen({ port: PORT, host: '127.0.0.1' }).catch((err) => {
-  app.log.error(err);
-  process.exit(1);
-});
+app
+  .listen({ port: PORT, host: '127.0.0.1' })
+  .then(() => bot?.start())
+  .catch((err) => {
+    app.log.error(err);
+    process.exit(1);
+  });
