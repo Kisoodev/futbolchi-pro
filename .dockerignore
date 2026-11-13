@@ -4,3 +4,4 @@
 apps/server/data
 .git
 .claude
+apps/server/public

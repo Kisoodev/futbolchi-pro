@@ -3,3 +3,4 @@ dist
 apps/server/data
 *.log
 apps/server/.env
+apps/server/public
