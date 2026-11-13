@@ -17,6 +17,7 @@ import { AdminScreen } from './screens/AdminScreen';
 import { PixelArt, SkyBackdrop } from './art/PixelArt';
 import { BALL } from './art/sprites';
 import { LangSwitch } from './components/LangSwitch';
+import { SettingsButton } from './components/Settings';
 
 /**
  * Flow: loading (counter) → name (first visit only) → menu
@@ -182,7 +183,7 @@ export function App() {
         <button className="brand" onClick={() => setRoute(home)}>
           <PixelArt sprite={BALL} scale={2} /> {tx.appName}
         </button>
-        {showLangSwitch && <LangSwitch />}
+        {showLangSwitch ? <LangSwitch /> : <SettingsButton />}
       </header>
       <main>{body}</main>
     </div>

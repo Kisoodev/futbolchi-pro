@@ -786,3 +786,37 @@ button.danger { background: var(--danger); border-color: #8f2018; color: #fff; }
   .points-hint { font-size: 0.72rem; margin: 1px 0 3px; }
   .create .kit-note { display: none; }
 }
+
+/* ---------- In-game settings (⚙️) ---------- */
+.settings-btn { width: 40px; height: 40px; padding: 0; border-radius: 12px; font-size: 1.15rem; line-height: 1; }
+.settings-sheet { width: min(360px, 100%); gap: 12px; padding: 18px; }
+.settings-sheet h2 { margin: 0; }
+.settings-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-weight: 800; }
+.settings-sheet button.big { margin-top: 4px; }
+@media (max-width: 899px) {
+  .settings-modal { place-items: end center; padding: 0; }
+  .settings-sheet { width: 100%; border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
+}
+
+/* ---------- Week (phone): richer status bar and match card ---------- */
+@media (max-width: 899px) {
+  .m-status-main span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .m-pos { font-family: var(--pixel); color: var(--sky-deep); margin-right: 2px; }
+  .m-place { font-size: 0.7rem; font-weight: 800; color: var(--ink-muted); white-space: nowrap; }
+  .m-status { padding: 8px 10px; }
+  .m-status-avatar { width: 46px; height: 46px; }
+
+  .fixture-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .fixture-league { font-size: 0.7rem; font-weight: 700; color: #cfe6fa; text-align: right; }
+  .fixture-team .fixture-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fixture-team small { flex: none; font-size: 0.72rem; font-weight: 800; color: #cfe6fa; background: rgba(255, 255, 255, 0.14); border-radius: 6px; padding: 0 6px; }
+  .fixture-team.me small { color: var(--ink); background: var(--sun); }
+  .fixture-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding-top: 6px; margin-top: 2px; border-top: 1px solid rgba(255, 255, 255, 0.18); }
+  .venue { font-size: 0.78rem; font-weight: 800; }
+  .form { display: inline-flex; gap: 3px; align-items: center; }
+  .form i { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; font-style: normal; font-size: 0.66rem; font-weight: 800; color: #fff; }
+  .form i.form-W { background: var(--grass-hi); }
+  .form i.form-D { background: #8a9bab; }
+  .form i.form-L { background: var(--danger); }
+  .form em { font-size: 0.72rem; color: #cfe6fa; font-style: normal; }
+}

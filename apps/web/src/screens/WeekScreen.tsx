@@ -4,13 +4,15 @@ import {
   getTrainingOption,
   personaOvr,
   personaView,
+  sortTable,
+  tierName,
   seasonWeeks,
   trainingOffer,
   type GameState,
   type StatKey,
   type TrainingId,
 } from '@futbolchi/engine';
-import { tx } from '../i18n';
+import { lang, tx } from '../i18n';
 import { FatigueMeter, LeagueTable, PersonaHeader, StatBars } from '../components/common';
 import { Avatar } from '../art/Avatar';
 
@@ -54,6 +56,18 @@ export function WeekScreen({ state, onPlay }: Props) {
   const weekLine = tx.seasonWeek(season.index, season.week, seasonWeeks(season));
   const fatigue = Math.round(persona.fatigue);
   const fatigueLevel = fatigue >= 70 ? 'high' : fatigue >= 40 ? 'mid' : 'low';
+  // Table places and the club's recent form, for the phone home view.
+  const rows = sortTable(season.table, state.clubs);
+  const placeOf = (id: string) => rows.findIndex((r) => r.clubId === id) + 1;
+  const form = season.matchIds
+    .map((id) => state.matches[id])
+    .filter((m): m is NonNullable<typeof m> => !!m)
+    .slice(-5)
+    .map((m) => {
+      const [mine, theirs] = m.homeId === club.id ? m.score : [m.score[1], m.score[0]];
+      return mine > theirs ? 'W' : mine < theirs ? 'L' : 'D';
+    }) as ('W' | 'D' | 'L')[];
+  const atHome = fx ? fx.homeId === club.id : false;
 
   return (
     <div className={`screen grid week view-${view}`}>
@@ -62,6 +76,9 @@ export function WeekScreen({ state, onPlay }: Props) {
         <Avatar appearance={persona.appearance} kit={club.color} scale={1} crop="bust" className="m-status-avatar" />
         <div className="m-status-main">
           <strong>{persona.name}</strong>
+          <span>
+            <b className="m-pos">{persona.position}</b> {club.name}
+          </span>
           <span>{weekLine}</span>
         </div>
         <div className="m-status-side">
@@ -69,6 +86,7 @@ export function WeekScreen({ state, onPlay }: Props) {
             <b>{Math.round(personaOvr(persona))}</b>
             <small>{tx.ovrShort}</small>
           </span>
+          <span className="m-place">🏆 {tx.tablePlace(placeOf(club.id), rows.length)}</span>
           <span className={`m-fatigue ${fatigueLevel}`} title={tx.fatigue} aria-label={`${tx.fatigue}: ${fatigue}`}>
             <i style={{ width: `${fatigue}%` }} />
           </span>
@@ -86,14 +104,32 @@ export function WeekScreen({ state, onPlay }: Props) {
       <section className={`card train-card ${view === 'train' ? 'm-on' : ''}`}>
         {fx && (
           <div className="fixture" aria-label={tx.nextMatch(state.clubs[fx.homeId].name, state.clubs[fx.awayId].name)}>
-            <span className="eyebrow">{tx.weekNextMatch}</span>
+            <div className="fixture-top">
+              <span className="eyebrow">{tx.weekNextMatch}</span>
+              <span className="fixture-league">{tierName(season.tier, lang)}</span>
+            </div>
             <div className="fixture-teams">
               {[fx.homeId, fx.awayId].map((id, i) => (
                 <span key={id} className={`fixture-team ${id === club.id ? 'me' : ''} ${i ? 'away' : 'home'}`}>
                   <i style={{ background: state.clubs[id].color }} />
-                  {state.clubs[id].name}
+                  <span className="fixture-name">{state.clubs[id].name}</span>
+                  <small>#{placeOf(id)}</small>
                 </span>
               ))}
+            </div>
+            <div className="fixture-foot">
+              <span className="venue">{atHome ? `🏠 ${tx.homeLabel}` : `✈️ ${tx.awayLabel}`}</span>
+              <span className="form" aria-label={tx.formLabel}>
+                {form.length ? (
+                  form.map((r, i) => (
+                    <i key={i} className={`form-${r}`} title={tx.formNames[r]}>
+                      {tx.formLetters[r]}
+                    </i>
+                  ))
+                ) : (
+                  <em>{tx.formNone}</em>
+                )}
+              </span>
             </div>
           </div>
         )}
