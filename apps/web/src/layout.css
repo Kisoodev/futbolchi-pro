@@ -503,7 +503,6 @@ button.danger { background: var(--danger); border-color: #8f2018; color: #fff; }
   .m-tabs button span { font-size: 1.3rem; line-height: 1.15; }
   .m-tabs button.on { background: var(--sky-pale); color: var(--sky-deep); }
   .m-tabs button:active { transform: none; }
-  .week .train-card .primary.big { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 2; }
 
   /* Payment */
   .pay-head { align-items: stretch; }
@@ -558,4 +557,148 @@ button.danger { background: var(--danger); border-color: #8f2018; color: #fff; }
   .admin .card-head .row { flex: 1 1 100%; }
   .proof-thumb { width: 72px; height: 72px; }
   .pay-list li { padding: 10px; }
+}
+
+/* =====================================================================
+ * Phone polish: lighter cards and buttons. A button never fills the
+ * screen: main actions are compact pills, choices are light rows.
+ * ===================================================================== */
+.m-status,
+.week .fixture,
+.option .radio { display: none; }
+
+@media (max-width: 899px) {
+  /* ----- buttons: lighter everywhere ----- */
+  button.big { border-radius: 14px; padding: 0.72rem 1rem; font-size: 1.02rem; }
+  button.primary { box-shadow: 0 3px 0 var(--grass-shadow), inset 0 2px 0 rgba(255, 255, 255, 0.25); }
+  .panel-foot button.big,
+  .match-foot button.big {
+    display: block;
+    width: auto;
+    min-width: 220px;
+    max-width: 100%;
+    margin-inline: auto;
+    padding: 0.72rem 1.6rem;
+    border-radius: 999px;
+  }
+  .pay .panel-foot { justify-content: center; }
+  .pay .panel-foot button.big { flex: 0 1 auto; width: auto; }
+  .pay .panel-foot { flex-direction: column; align-items: center; }
+  .pay .panel-foot .admin-skip { flex: none; padding: 0.35rem 0.9rem; font-size: 0.82rem; border-radius: 999px; }
+  .bank-card button { padding: 0.35rem 1rem; font-size: 0.86rem; border-radius: 999px; box-shadow: none; }
+  .amount .small-btn { border-radius: 999px; box-shadow: none; }
+  .menu-btn.primary { padding-top: 0.85rem; padding-bottom: 0.85rem; font-size: 1.12rem; }
+  .menu-card button.big:not(.primary) { padding: 0.6rem 1rem; border-width: 1.5px; box-shadow: 0 2px 0 var(--card-shadow); }
+  .menu-card { gap: 10px; }
+
+  /* ----- week: status bar (training and table tabs) ----- */
+  .week { gap: 10px; }
+  .m-status {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-left: 5px solid;
+    border-radius: 14px;
+    padding: 8px 12px;
+    box-shadow: 0 2px 8px rgba(18, 50, 79, 0.08);
+  }
+  .week.view-me .m-status { display: none; }
+  .m-status-avatar { width: 40px; height: 40px; flex: none; border-radius: 10px; background: var(--sky-pale); }
+  .m-status-main { display: grid; flex: 1; min-width: 0; line-height: 1.25; }
+  .m-status-main strong { font-family: var(--pixel); font-size: 1.05rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .m-status-main span { font-size: 0.74rem; font-weight: 700; color: var(--ink-muted); }
+  .m-status-side { display: grid; justify-items: end; gap: 5px; }
+  .m-ovr { display: flex; align-items: baseline; gap: 4px; }
+  .m-ovr b { font-family: var(--pixel); font-size: 1.3rem; line-height: 1; color: var(--sky-deep); }
+  .m-ovr small { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; color: var(--ink-muted); }
+  .m-fatigue { display: block; width: 56px; height: 6px; border-radius: 3px; background: #e3eef7; overflow: hidden; }
+  .m-fatigue i { display: block; height: 100%; background: var(--grass-light); }
+  .m-fatigue.mid i { background: var(--warn); }
+  .m-fatigue.high i { background: var(--danger); }
+
+  /* ----- week: lighter cards ----- */
+  .week > .card { border-width: 1px; border-radius: 16px; padding: 14px; box-shadow: 0 2px 10px rgba(18, 50, 79, 0.08); }
+  .week .card h2 { font-size: 1.1rem; }
+  .week .train-card > .muted { margin-top: 0; font-size: 0.86rem; }
+
+  /* ----- week: next match ----- */
+  .week .fixture { display: grid; gap: 6px; margin-bottom: 12px; padding: 10px 12px; border-radius: 12px; color: #fff; background: linear-gradient(135deg, var(--sky-deep), #1f5a8f); }
+  .week .fixture .eyebrow { color: #cfe6fa; font-size: 0.7rem; }
+  .fixture-teams { display: grid; gap: 4px; }
+  .fixture-team { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 0.95rem; min-width: 0; }
+  .fixture-team i { flex: none; width: 12px; height: 12px; border-radius: 3px; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.6); }
+  .fixture-team.me { font-weight: 800; color: var(--sun); }
+  .week .next-match { display: none; }
+
+  /* ----- week: training choices as light radio rows ----- */
+  .week .options { gap: 8px; margin-top: 0.6rem; }
+  .week .option {
+    grid-template-columns: 22px minmax(0, 1fr);
+    column-gap: 10px;
+    row-gap: 4px;
+    padding: 10px 12px;
+    border-width: 1.5px;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: none;
+  }
+  .week .option .radio { display: block; grid-row: span 2; align-self: center; width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); background: #fff; }
+  .week .option strong { font-size: 0.98rem; }
+  .week .option .effects { grid-column: 2; }
+  .week .option.on { background: var(--grass-pale); border-color: var(--grass-hi); box-shadow: none; }
+  .week .option.on .radio { border-color: var(--grass); background: radial-gradient(circle, var(--grass) 0 4px, #fff 5px); }
+  .week .eff { font-size: 0.7rem; padding: 1px 7px; }
+
+  /* ----- week: play button as a compact pill above the tab bar ----- */
+  .week .play-btn {
+    position: sticky;
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    z-index: 2;
+    display: block;
+    width: auto;
+    min-width: 220px;
+    max-width: 100%;
+    margin: 14px auto 0;
+    padding: 0.72rem 1.6rem;
+    border-radius: 999px;
+    font-size: 1.02rem;
+  }
+  .week .play-btn:disabled { opacity: 0.5; filter: grayscale(0.4); }
+
+  /* ----- week: stats in two columns ----- */
+  .week .persona-card .stat-bars { grid-template-columns: 1fr 1fr; gap: 10px 16px; margin-top: 0.75rem; }
+  .week .persona-card .stat-bars li { grid-template-columns: minmax(0, 1fr) auto; row-gap: 3px; font-size: 0.84rem; }
+  .week .persona-card .stat-bars .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .week .persona-card .stat-bars .bar { grid-column: 1 / -1; grid-row: 2; height: 6px; }
+  .week .persona-card .fatigue { grid-template-columns: auto 1fr 28px; gap: 10px; }
+
+  /* ----- week: floating tab bar ----- */
+  .m-tabs {
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    padding: 5px;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    box-shadow: 0 6px 20px rgba(18, 50, 79, 0.18);
+  }
+  .m-tabs button { border-radius: 13px; }
+  .m-tabs button.on { background: var(--sky-deep); color: #fff; }
+  main:has(.week) { padding-bottom: calc(90px + env(safe-area-inset-bottom)); }
+}
+
+/* ---------- Persona creator: drawn option chips (eyes, boots) ---------- */
+.icon-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.icon-chip { display: grid; place-items: center; padding: 4px 5px; border-radius: 10px; background: var(--sky-pale); border: 2px solid var(--line); box-shadow: none; line-height: 0; }
+.icon-chip.on { border-color: var(--sky-deep); background: #fff; box-shadow: 0 0 0 2px var(--sky); }
+.icon-chip svg { display: block; }
+@media (min-width: 900px) and (max-height: 760px) {
+  .create .icon-chip { padding: 2px 4px; }
+  .create .icon-chip svg { width: 32px; height: auto; }
+}
+@media (min-width: 900px) and (max-height: 760px) {
+  .create .look-controls .field,
+  .create .create-look .field { margin: 0.25rem 0; }
 }

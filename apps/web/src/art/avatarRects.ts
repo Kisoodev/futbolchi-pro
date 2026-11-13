@@ -30,23 +30,17 @@ export type Pose = 'stand' | ExtraPose | Celebration;
 export const POSE_CYCLE: readonly Exclude<Pose, 'stand'>[] = [...EXTRA_POSES, ...CELEBRATIONS];
 
 export const SKIN_HEX: Record<SkinTone, string> = {
-  pale: '#fbe2cd',
-  light: '#f3cca6',
-  medium: '#dea472',
-  olive: '#c48f59',
-  tan: '#a8703f',
-  brown: '#83532f',
-  dark: '#5a3720',
+  light: '#f1c8a2',
+  medium: '#d49a68',
+  tan: '#a46a3c',
+  dark: '#5e3a22',
 };
 export const HAIR_HEX: Record<HairColor, string> = {
   black: '#1d1a19',
   chestnut: '#3d2516',
   brown: '#6e4426',
-  blonde: '#e1b44c',
-  platinum: '#efe5c4',
-  red: '#b4462a',
-  gray: '#8b939b',
-  white: '#eef1f4',
+  blonde: '#d9ad55',
+  red: '#a8492b',
 };
 export const EYE_HEX: Record<EyeColor, string> = {
   dark: '#231914',
@@ -54,7 +48,6 @@ export const EYE_HEX: Record<EyeColor, string> = {
   hazel: '#8c6b2b',
   green: '#3e7d3c',
   blue: '#3a70c2',
-  gray: '#6f808d',
 };
 export const BOOT_HEX: Record<BootColor, string> = {
   black: '#202228',
@@ -163,10 +156,11 @@ const put = (out: Pixels, x: number, y: number, c: string) => {
 // ---------- body layout ----------
 /** Head width per row, top to bottom (even numbers, centred). */
 const HEAD_ROWS: Record<HeadShape, number[]> = {
-  round: [8, 12, 14, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 14, 14, 12, 10, 8, 6],
   oval: [8, 10, 12, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 14, 12, 12, 10, 10, 8, 6],
-  square: [12, 14, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 14, 14, 12, 10],
-  angular: [10, 12, 14, 16, 16, 16, 16, 16, 16, 16, 16, 14, 14, 12, 12, 10, 8, 6, 4],
+  // Slimmer cheeks than before so it reads as round, not chubby.
+  round: [8, 12, 14, 14, 16, 16, 16, 16, 16, 16, 16, 14, 14, 14, 12, 12, 10, 8, 6],
+  // Strong but soft jaw: rounded crown, wide cheeks, short tapered chin.
+  square: [10, 14, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 14, 14, 12, 10],
 };
 
 export interface AvatarLayout {
@@ -191,7 +185,8 @@ export function avatarLayout(a: Appearance): AvatarLayout {
   const ground = 92;
   const legLen = Math.round(25 + 9 * th);
   const torsoLen = Math.round(19 + 5 * th);
-  const torsoW = 2 * Math.round((17 + 8 * tw) / 2);
+  // Always an athlete: weight widens the frame a little, never into a belly.
+  const torsoW = 2 * Math.round((17 + 5 * tw) / 2);
   const legTop = ground - legLen + 1;
   const torsoTop = legTop - torsoLen;
   const headRows = HEAD_ROWS[a.headShape];
@@ -208,7 +203,7 @@ export function avatarLayout(a: Appearance): AvatarLayout {
     shortsLen: 9 + Math.round(2 * th),
     sockLen: 10 + Math.round(3 * th),
     legW: Math.max(6, torsoW / 2 - 3),
-    limb: tw < 0.34 ? 5 : tw < 0.67 ? 6 : 7,
+    limb: tw < 0.5 ? 5 : 6,
   };
 }
 
@@ -508,22 +503,12 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
       }
       sideburns(12);
       break;
-    case 'bun':
-      dome(8, 4, 0);
-      sideburns(7);
-      front.ellipse(cx - 0.5, headTop - 4, 4, 3.5);
-      break;
-    case 'mohawk':
-      front.rect(cx - 2, headTop - 6, 4, 10);
-      front.unset(cx - 2, headTop - 6);
-      front.unset(cx + 1, headTop - 6);
-      break;
     case 'bald':
       break;
   }
-  // Buzzed sides for mohawk, very short hair for buzz
-  if (a.hairStyle === 'buzz' || a.hairStyle === 'mohawk') {
-    const fuzz = mix(skin, hair, a.hairStyle === 'buzz' ? 0.62 : 0.3);
+  // Very short hair for buzz
+  if (a.hairStyle === 'buzz') {
+    const fuzz = mix(skin, hair, 0.62);
     for (let y = headTop - 1; y <= headTop + 3; y++) {
       for (let x = rowX0(0) - 3; x <= rowX1(0) + 3; x++) {
         const dx = (x - cx + 0.5) / (maxW / 2 + 0.5);
@@ -541,7 +526,7 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
     const y = (p - x) / AVATAR_W;
     if ((a.hairStyle === 'curly' || a.hairStyle === 'afro') && (x * 3 + y * 2) % 7 === 0) put(out, x, y, strand);
     else if (a.hairStyle === 'dreads' && y % 3 === 0) put(out, x, y, strand);
-    else if (x < cx - 1 && y === headTop - 1 + ((x + 1) % 2) && a.hairStyle !== 'mohawk') put(out, x, y, shine);
+    else if (x < cx - 1 && y === headTop - 1 + ((x + 1) % 2)) put(out, x, y, shine);
   }
   if (a.hairStyle === 'afro' || a.hairStyle === 'curly') {
     for (const p of back.px) {
@@ -556,9 +541,6 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   if (a.hairStyle === 'bald') {
     put(out, cx - 4, headTop + 2, shade(skin, 0.3));
     put(out, cx - 3, headTop + 1, shade(skin, 0.3));
-  }
-  if (a.hairStyle === 'bun') {
-    for (let x = cx - 3; x <= cx + 2; x++) put(out, x, headTop - 1, shade(hair, -0.4));
   }
 
   // ---- headband ----

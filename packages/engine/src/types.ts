@@ -20,9 +20,11 @@ export type StatKey = (typeof STAT_KEYS)[number];
 export type Stats = Record<StatKey, number>;
 
 /** Cosmetic options chosen at creation. They never affect the simulation. */
-export const HEAD_SHAPES = ['round', 'oval', 'square', 'angular'] as const;
+/** Face shapes. Kept to natural, flattering ones. */
+export const HEAD_SHAPES = ['oval', 'round', 'square'] as const;
 export type HeadShape = (typeof HEAD_SHAPES)[number];
-export const SKIN_TONES = ['pale', 'light', 'medium', 'olive', 'tan', 'brown', 'dark'] as const;
+/** The four main human skin tones. */
+export const SKIN_TONES = ['light', 'medium', 'tan', 'dark'] as const;
 export type SkinTone = (typeof SKIN_TONES)[number];
 export const HAIR_STYLES = [
   'short',
@@ -33,14 +35,14 @@ export const HAIR_STYLES = [
   'afro',
   'long',
   'dreads',
-  'bun',
-  'mohawk',
   'bald',
 ] as const;
 export type HairStyle = (typeof HAIR_STYLES)[number];
-export const HAIR_COLORS = ['black', 'chestnut', 'brown', 'blonde', 'platinum', 'red', 'gray', 'white'] as const;
+/** Natural hair colours of young players. */
+export const HAIR_COLORS = ['black', 'chestnut', 'brown', 'blonde', 'red'] as const;
 export type HairColor = (typeof HAIR_COLORS)[number];
-export const EYE_COLORS = ['dark', 'brown', 'hazel', 'green', 'blue', 'gray'] as const;
+/** Natural eye colours. */
+export const EYE_COLORS = ['dark', 'brown', 'hazel', 'green', 'blue'] as const;
 export type EyeColor = (typeof EYE_COLORS)[number];
 export const BROWS = ['thin', 'normal', 'thick'] as const;
 export type Brows = (typeof BROWS)[number];

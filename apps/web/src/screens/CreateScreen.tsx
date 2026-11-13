@@ -28,7 +28,8 @@ import { tx } from '../i18n';
 import { api } from '../state/api';
 import { getUserId } from '../state/store';
 import { Avatar } from '../art/Avatar';
-import { BOOT_HEX, EYE_HEX, HAIR_HEX, POSE_CYCLE, SKIN_HEX, type Pose } from '../art/avatarRects';
+import { BOOT_HEX, EYE_HEX, POSE_CYCLE, type Pose } from '../art/avatarRects';
+import { BootIcon, EyeIcon } from '../art/LookIcons';
 
 interface Props {
   /** Registered on the main menu. */
@@ -97,14 +98,17 @@ function Choice<T extends string>({ label, options, value, names, onChange, cols
 }
 
 /** Chips that show a small portrait of the player with that option applied. */
-function Portraits<K extends 'hairStyle' | 'facialHair' | 'headShape'>({ label, field, options, look, names, onChange }: {
+function Portraits<K extends 'hairStyle' | 'facialHair' | 'headShape' | 'skinTone' | 'hairColor'>({ label, field, options, look, names, onChange, preview }: {
   label: string;
   field: K;
   options: readonly Appearance[K][];
   look: Appearance;
   names: Record<Appearance[K], string>;
   onChange: (v: Appearance[K]) => void;
+  /** Adjusts the look shown in the chips (e.g. give a bald player hair to show hair colours). */
+  preview?: (look: Appearance) => Appearance;
 }) {
+  const base = preview ? preview(look) : look;
   return (
     <div className="field">
       <span>{label}: <b>{names[look[field]]}</b></span>
@@ -119,7 +123,7 @@ function Portraits<K extends 'hairStyle' | 'facialHair' | 'headShape'>({ label, 
             title={names[o]}
             onClick={() => onChange(o)}
           >
-            <Avatar appearance={{ ...look, [field]: o }} kit={PREVIEW_KIT} scale={1.25} crop="bust" />
+            <Avatar appearance={{ ...base, [field]: o }} kit={PREVIEW_KIT} scale={1.25} crop="bust" />
           </button>
         ))}
       </div>
@@ -127,29 +131,31 @@ function Portraits<K extends 'hairStyle' | 'facialHair' | 'headShape'>({ label, 
   );
 }
 
-function Swatches<T extends string>({ label, options, value, names, colors, onChange }: {
+/** Chips with a small drawing of each option (an eye, a boot) and its name on hover. */
+function IconChoices<T extends string>({ label, options, value, names, icon, onChange }: {
   label: string;
   options: readonly T[];
   value: T;
   names: Record<T, string>;
-  colors: Record<T, string>;
+  icon: (o: T) => JSX.Element;
   onChange: (v: T) => void;
 }) {
   return (
     <div className="field">
       <span>{label}: <b>{names[value]}</b></span>
-      <div className="swatches">
+      <div className="icon-chips">
         {options.map((o) => (
           <button
             key={o}
             type="button"
-            className={o === value ? 'swatch on' : 'swatch'}
-            style={{ background: colors[o] }}
+            className={o === value ? 'icon-chip on' : 'icon-chip'}
             aria-label={names[o]}
             title={names[o]}
             aria-pressed={o === value}
             onClick={() => onChange(o)}
-          />
+          >
+            {icon(o)}
+          </button>
         ))}
       </div>
     </div>
@@ -281,9 +287,9 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
 
           {tab === 'face' && (
             <>
-              <Choice label={tx.headShapeLabel} options={HEAD_SHAPES} value={look.headShape} names={tx.headShapes} onChange={(v) => set('headShape', v)} cols={4} />
-              <Swatches label={tx.skinToneLabel} options={SKIN_TONES} value={look.skinTone} names={tx.skinTones} colors={SKIN_HEX} onChange={(v) => set('skinTone', v)} />
-              <Swatches label={tx.eyeColorLabel} options={EYE_COLORS} value={look.eyeColor} names={tx.eyeColors} colors={EYE_HEX} onChange={(v) => set('eyeColor', v)} />
+              <Portraits label={tx.headShapeLabel} field="headShape" options={HEAD_SHAPES} look={look} names={tx.headShapes} onChange={(v) => set('headShape', v)} />
+              <Portraits label={tx.skinToneLabel} field="skinTone" options={SKIN_TONES} look={look} names={tx.skinTones} onChange={(v) => set('skinTone', v)} />
+              <IconChoices label={tx.eyeColorLabel} options={EYE_COLORS} value={look.eyeColor} names={tx.eyeColors} icon={(o) => <EyeIcon color={EYE_HEX[o]} />} onChange={(v) => set('eyeColor', v)} />
               <Choice label={tx.browsLabel} options={BROWS} value={look.brows} names={tx.browsNames} onChange={(v) => set('brows', v)} cols={3} inline />
               <Choice label={tx.noseLabel} options={NOSES} value={look.nose} names={tx.noses} onChange={(v) => set('nose', v)} cols={3} inline />
             </>
@@ -292,7 +298,15 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
           {tab === 'hair' && (
             <>
               <Portraits label={tx.hairStyleLabel} field="hairStyle" options={HAIR_STYLES} look={look} names={tx.hairStyles} onChange={(v) => set('hairStyle', v)} />
-              <Swatches label={tx.hairColorLabel} options={HAIR_COLORS} value={look.hairColor} names={tx.hairColors} colors={HAIR_HEX} onChange={(v) => set('hairColor', v)} />
+              <Portraits
+                label={tx.hairColorLabel}
+                field="hairColor"
+                options={HAIR_COLORS}
+                look={look}
+                names={tx.hairColors}
+                preview={(l) => (l.hairStyle === 'bald' || l.hairStyle === 'buzz' ? { ...l, hairStyle: 'short' } : l)}
+                onChange={(v) => set('hairColor', v)}
+              />
               <Portraits label={tx.facialHairLabel} field="facialHair" options={FACIAL_HAIR} look={look} names={tx.facialHairNames} onChange={(v) => set('facialHair', v)} />
             </>
           )}
@@ -307,7 +321,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
 
           {tab === 'kit' && (
             <>
-              <Swatches label={tx.bootsLabel} options={BOOT_COLORS} value={look.boots} names={tx.bootColors} colors={BOOT_HEX} onChange={(v) => set('boots', v)} />
+              <IconChoices label={tx.bootsLabel} options={BOOT_COLORS} value={look.boots} names={tx.bootColors} icon={(o) => <BootIcon color={BOOT_HEX[o]} size={32} />} onChange={(v) => set('boots', v)} />
               <Choice label={tx.sleevesLabel} options={SLEEVES} value={look.sleeves} names={tx.sleevesNames} onChange={(v) => set('sleeves', v)} cols={2} />
               <Choice label={tx.accessoryLabel} options={ACCESSORIES} value={look.accessory} names={tx.accessories} onChange={(v) => set('accessory', v)} cols={3} />
               <Choice

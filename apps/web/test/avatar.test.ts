@@ -61,7 +61,7 @@ describe('pixel avatar', () => {
     expect(poses.has(sig(base))).toBe(false);
     const extremes: Appearance[] = [
       { ...base, heightCm: C.HEIGHT_MAX_CM, weightKg: C.WEIGHT_MAX_KG, hairStyle: 'afro' },
-      { ...base, heightCm: C.HEIGHT_MAX_CM, hairStyle: 'mohawk' },
+      { ...base, heightCm: C.HEIGHT_MAX_CM, hairStyle: 'spiky' },
       { ...base, heightCm: C.HEIGHT_MIN_CM, weightKg: C.WEIGHT_MIN_KG, hairStyle: 'dreads' },
     ];
     for (const a of extremes) {

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   currentSeason,
   getTrainingOption,
+  personaOvr,
   personaView,
   seasonWeeks,
   trainingOffer,
@@ -11,6 +12,7 @@ import {
 } from '@futbolchi/engine';
 import { tx } from '../i18n';
 import { FatigueMeter, LeagueTable, PersonaHeader, StatBars } from '../components/common';
+import { Avatar } from '../art/Avatar';
 
 interface Props {
   state: GameState;
@@ -49,11 +51,32 @@ export function WeekScreen({ state, onPlay }: Props) {
   const persona = personaView(state.persona);
   const club = state.clubs[persona.clubId];
   const fx = season.fixtures.find((f) => f.week === season.week && (f.homeId === club.id || f.awayId === club.id));
+  const weekLine = tx.seasonWeek(season.index, season.week, seasonWeeks(season));
+  const fatigue = Math.round(persona.fatigue);
+  const fatigueLevel = fatigue >= 70 ? 'high' : fatigue >= 40 ? 'mid' : 'low';
 
   return (
-    <div className="screen grid week">
+    <div className={`screen grid week view-${view}`}>
+      {/* Phone: who you are and where you stand, on the training and table tabs */}
+      <header className="m-status" style={{ borderColor: club.color }}>
+        <Avatar appearance={persona.appearance} kit={club.color} scale={1} crop="bust" className="m-status-avatar" />
+        <div className="m-status-main">
+          <strong>{persona.name}</strong>
+          <span>{weekLine}</span>
+        </div>
+        <div className="m-status-side">
+          <span className="m-ovr" title={tx.ovr}>
+            <b>{Math.round(personaOvr(persona))}</b>
+            <small>{tx.ovrShort}</small>
+          </span>
+          <span className={`m-fatigue ${fatigueLevel}`} title={tx.fatigue} aria-label={`${tx.fatigue}: ${fatigue}`}>
+            <i style={{ width: `${fatigue}%` }} />
+          </span>
+        </div>
+      </header>
+
       <section className={`card persona-card ${view === 'me' ? 'm-on' : ''}`}>
-        <p className="eyebrow">{tx.seasonWeek(season.index, season.week, seasonWeeks(season))}</p>
+        <p className="eyebrow">{weekLine}</p>
         <PersonaHeader persona={persona} club={club} />
         <FatigueMeter value={persona.fatigue} />
         {persona.injuryWeeksLeft > 0 && <p className="warn">{tx.injured(persona.injuryWeeksLeft)}</p>}
@@ -61,18 +84,38 @@ export function WeekScreen({ state, onPlay }: Props) {
       </section>
 
       <section className={`card train-card ${view === 'train' ? 'm-on' : ''}`}>
+        {fx && (
+          <div className="fixture" aria-label={tx.nextMatch(state.clubs[fx.homeId].name, state.clubs[fx.awayId].name)}>
+            <span className="eyebrow">{tx.weekNextMatch}</span>
+            <div className="fixture-teams">
+              {[fx.homeId, fx.awayId].map((id, i) => (
+                <span key={id} className={`fixture-team ${id === club.id ? 'me' : ''} ${i ? 'away' : 'home'}`}>
+                  <i style={{ background: state.clubs[id].color }} />
+                  {state.clubs[id].name}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
         <h2>{tx.trainingTitle}</h2>
         <p className="muted">{tx.trainingHint}</p>
-        <div className="options">
+        <div className="options" role="radiogroup" aria-label={tx.trainingTitle}>
           {offer.map((id) => (
-            <button key={id} className={`option ${choice === id ? 'on' : ''}`} onClick={() => setChoice(id)}>
+            <button
+              key={id}
+              role="radio"
+              aria-checked={choice === id}
+              className={`option ${choice === id ? 'on' : ''}`}
+              onClick={() => setChoice(id)}
+            >
+              <span className="radio" aria-hidden />
               <strong>{tx.trainingNames[id]}</strong>
               <Effects id={id} />
             </button>
           ))}
         </div>
         {fx && <p className="next-match">{tx.nextMatch(state.clubs[fx.homeId].name, state.clubs[fx.awayId].name)}</p>}
-        <button className="primary big" disabled={!choice} onClick={() => choice && onPlay(choice)}>
+        <button className="primary big play-btn" disabled={!choice} onClick={() => choice && onPlay(choice)}>
           {tx.playWeek} →
         </button>
       </section>
