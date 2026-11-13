@@ -16,7 +16,7 @@ import {
   type Position,
   type Stats,
 } from '@futbolchi/engine';
-import { uz } from '../i18n/uz';
+import { tx } from '../i18n';
 import { api } from '../state/api';
 import { getUserId } from '../state/store';
 import { Avatar } from '../art/Avatar';
@@ -129,7 +129,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
       await api.consume(entitlementId, getUserId(), personaId);
       onCreated(state);
     } catch {
-      setError(uz.serverDown);
+      setError(tx.serverDown);
       setBusy(false);
     }
   };
@@ -137,8 +137,8 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
   return (
     <div className="screen panel create">
       <header className="panel-head create-head">
-        <p className="success">{uz.createPaid}</p>
-        <h1>{uz.createTitle}</h1>
+        <p className="success">{tx.createPaid}</p>
+        <h1>{tx.createTitle}</h1>
       </header>
 
       <div className="panel-body create-grid">
@@ -147,61 +147,61 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
             <Avatar appearance={look} kit={PREVIEW_KIT} scale={4} />
             <strong>{name}</strong>
             <span className="muted small">
-              {uz.heightValue(look.heightCm)} · {uz.weightValue(look.weightKg)}
+              {tx.heightValue(look.heightCm)} · {tx.weightValue(look.weightKg)}
             </span>
           </div>
           <div className="preview-ovr">
             <span className="ovr">
               <strong>{Math.round(computeOvr(preview, position))}</strong>
-              <small>{uz.ovr}</small>
+              <small>{tx.ovr}</small>
             </span>
             <span>
-              <b>{position}</b> {uz.positions[position]}
+              <b>{position}</b> {tx.positions[position]}
             </span>
           </div>
         </section>
 
         <section className="create-look">
-          <h2>{uz.appearanceTitle}</h2>
+          <h2>{tx.appearanceTitle}</h2>
           {/* Paired rows keep the whole column on screen at 1366×768 */}
           <div className="look-row head-foot">
-            <Choice label={uz.headShapeLabel} options={HEAD_SHAPES} value={look.headShape} names={uz.headShapes} onChange={(v) => set('headShape', v)} />
-            <Choice label={uz.footLabel} options={FEET} value={look.foot} names={uz.feet} onChange={(v) => set('foot', v)} />
+            <Choice label={tx.headShapeLabel} options={HEAD_SHAPES} value={look.headShape} names={tx.headShapes} onChange={(v) => set('headShape', v)} />
+            <Choice label={tx.footLabel} options={FEET} value={look.foot} names={tx.feet} onChange={(v) => set('foot', v)} />
           </div>
-          <Choice label={uz.hairStyleLabel} options={HAIR_STYLES} value={look.hairStyle} names={uz.hairStyles} onChange={(v) => set('hairStyle', v)} />
+          <Choice label={tx.hairStyleLabel} options={HAIR_STYLES} value={look.hairStyle} names={tx.hairStyles} onChange={(v) => set('hairStyle', v)} />
           <div className="look-row colors">
-            <Swatches label={uz.skinToneLabel} options={SKIN_TONES} value={look.skinTone} names={uz.skinTones} colors={SKIN_HEX} onChange={(v) => set('skinTone', v)} />
-            <Swatches label={uz.hairColorLabel} options={HAIR_COLORS} value={look.hairColor} names={uz.hairColors} colors={HAIR_HEX} onChange={(v) => set('hairColor', v)} />
+            <Swatches label={tx.skinToneLabel} options={SKIN_TONES} value={look.skinTone} names={tx.skinTones} colors={SKIN_HEX} onChange={(v) => set('skinTone', v)} />
+            <Swatches label={tx.hairColorLabel} options={HAIR_COLORS} value={look.hairColor} names={tx.hairColors} colors={HAIR_HEX} onChange={(v) => set('hairColor', v)} />
           </div>
           <div className="slider-pair">
-            <Slider label={uz.heightLabel} value={look.heightCm} min={C.HEIGHT_MIN_CM} max={C.HEIGHT_MAX_CM} text={uz.heightValue(look.heightCm)} onChange={(v) => set('heightCm', v)} />
-            <Slider label={uz.weightLabel} value={look.weightKg} min={C.WEIGHT_MIN_KG} max={C.WEIGHT_MAX_KG} text={uz.weightValue(look.weightKg)} onChange={(v) => set('weightKg', v)} />
+            <Slider label={tx.heightLabel} value={look.heightCm} min={C.HEIGHT_MIN_CM} max={C.HEIGHT_MAX_CM} text={tx.heightValue(look.heightCm)} onChange={(v) => set('heightCm', v)} />
+            <Slider label={tx.weightLabel} value={look.weightKg} min={C.WEIGHT_MIN_KG} max={C.WEIGHT_MAX_KG} text={tx.weightValue(look.weightKg)} onChange={(v) => set('weightKg', v)} />
           </div>
         </section>
 
         <section className="create-skills">
-          <h2>{uz.skillsTitle}</h2>
+          <h2>{tx.skillsTitle}</h2>
           <div className="field">
-            <div className="chips pos-chips" role="group" aria-label={uz.positionLabel}>
+            <div className="chips pos-chips" role="group" aria-label={tx.positionLabel}>
               {POSITIONS.map((p) => (
                 <button key={p} type="button" className={p === position ? 'chip on' : 'chip'} aria-pressed={p === position} onClick={() => { setPosition(p); setBonus({}); }}>
-                  <b>{p}</b> {uz.positions[p]}
+                  <b>{p}</b> {tx.positions[p]}
                 </button>
               ))}
             </div>
           </div>
           <div className="field">
-            <span>{uz.bonusLabel(left)}</span>
+            <span>{tx.bonusLabel(left)}</span>
             <ul className="stat-edit">
               {STAT_KEYS.map((k) => (
                 <li key={k} className={C.POSITION_WEIGHTS[position][k] >= 0.15 ? 'key' : ''}>
-                  <span className="label">{uz.stats[k]}</span>
-                  <button type="button" onClick={() => adjust(k, -1)} disabled={!bonus[k]} aria-label={`${uz.stats[k]} −`}>−</button>
+                  <span className="label">{tx.stats[k]}</span>
+                  <button type="button" onClick={() => adjust(k, -1)} disabled={!bonus[k]} aria-label={`${tx.stats[k]} −`}>−</button>
                   <span className="val">
                     {preview[k]}
                     {bonus[k] ? <small> +{bonus[k]}</small> : null}
                   </span>
-                  <button type="button" onClick={() => adjust(k, 1)} disabled={left <= 0 || (bonus[k] ?? 0) >= C.BONUS_POINTS_PER_STAT_MAX} aria-label={`${uz.stats[k]} +`}>+</button>
+                  <button type="button" onClick={() => adjust(k, 1)} disabled={left <= 0 || (bonus[k] ?? 0) >= C.BONUS_POINTS_PER_STAT_MAX} aria-label={`${tx.stats[k]} +`}>+</button>
                 </li>
               ))}
             </ul>
@@ -211,9 +211,9 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
 
       <footer className="panel-foot">
         {error && <p className="error">{error}</p>}
-        {validation && <p className="error">{uz.errors[validation] ?? validation}</p>}
+        {validation && <p className="error">{tx.errors[validation] ?? validation}</p>}
         <button className="primary big" disabled={!!validation || busy} onClick={create}>
-          {uz.createButton}
+          {tx.createButton}
         </button>
       </footer>
     </div>

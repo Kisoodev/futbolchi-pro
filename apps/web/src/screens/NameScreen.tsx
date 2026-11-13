@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { uz } from '../i18n/uz';
+import { tx } from '../i18n';
 import { api } from '../state/api';
 import { getUserId, getUserName, setUserName } from '../state/store';
 import { PixelArt } from '../art/PixelArt';
@@ -25,7 +25,7 @@ export function NameScreen({ onDone }: { onDone: (name: string) => void }) {
       setUserName(clean);
       onDone(clean);
     } catch {
-      setError(uz.serverDown);
+      setError(tx.serverDown);
       setBusy(false);
     }
   };
@@ -33,7 +33,7 @@ export function NameScreen({ onDone }: { onDone: (name: string) => void }) {
   return (
     <div className="screen center hero">
       <PixelArt sprite={BALL} scale={6} className="ball-logo" />
-      <h1>{uz.appName}</h1>
+      <h1>{tx.appName}</h1>
 
       <form
         className="name-card"
@@ -43,28 +43,28 @@ export function NameScreen({ onDone }: { onDone: (name: string) => void }) {
         }}
       >
         <div className="attention" role="note">
-          <span className="attention-tag">{uz.nameAttention}</span>
-          <strong>{uz.nameTitle}</strong>
-          <p>{uz.nameText}</p>
+          <span className="attention-tag">{tx.nameAttention}</span>
+          <strong>{tx.nameTitle}</strong>
+          <p>{tx.nameText}</p>
         </div>
-        <label className="field-label" htmlFor="nick">{uz.menuNameTitle}</label>
+        <label className="field-label" htmlFor="nick">{tx.menuNameTitle}</label>
         <label className="name-input">
           <span aria-hidden>@</span>
           <input
             id="nick"
             value={name}
             maxLength={NAME_MAX}
-            placeholder={uz.menuNamePlaceholder}
+            placeholder={tx.menuNamePlaceholder}
             autoComplete="nickname"
             spellCheck={false}
             autoFocus
             onChange={(e) => setName(e.target.value)}
           />
         </label>
-        <p className="muted small">{uz.menuNameHint}</p>
+        <p className="muted small">{tx.menuNameHint}</p>
         {error && <p className="error">{error}</p>}
         <button className="primary big" type="submit" disabled={!valid || busy}>
-          {uz.continue} →
+          {tx.continue} →
         </button>
       </form>
     </div>

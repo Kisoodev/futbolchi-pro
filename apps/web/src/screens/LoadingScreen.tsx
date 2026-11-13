@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { uz } from '../i18n/uz';
+import { tx } from '../i18n';
 import { api } from '../state/api';
 import { PixelArt } from '../art/PixelArt';
 import { BALL } from '../art/sprites';
@@ -62,18 +62,18 @@ export function LoadingScreen({ onDone }: { onDone: () => void }) {
   return (
     <div className="screen center loading">
       <div className="loading-brand">
-        <PixelArt sprite={BALL} scale={3} /> {uz.appName}
+        <PixelArt sprite={BALL} scale={3} /> {tx.appName}
       </div>
       {count !== null && (
         <>
-          <p className="counter-label">{uz.loadingCounterLabel}</p>
+          <p className="counter-label">{tx.loadingCounterLabel}</p>
           <RollingCounter value={count} />
         </>
       )}
       <div className="progress" aria-hidden>
         <span style={{ animationDuration: `${MIN_MS}ms` }} />
       </div>
-      <p className="loading-text">{uz.loadingText}</p>
+      <p className="loading-text">{tx.loadingText}</p>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import type { GameState } from '@futbolchi/engine';
-import { uz } from '../i18n/uz';
+import { tx } from '../i18n';
 import { PitchReplay } from '../replay/PitchReplay';
 
 interface Props {
@@ -26,8 +26,8 @@ export function MatchScreen({ state, matchId, onContinue }: Props) {
         onFinished={onFinished}
         sideTop={
           <div className="match-head">
-            <p className="eyebrow">{uz.matchTitle(match.week)}</p>
-            {ps && <p className="role">{uz.roles[ps.role]}</p>}
+            <p className="eyebrow">{tx.matchTitle(match.week)}</p>
+            {ps && <p className="role">{tx.roles[ps.role]}</p>}
           </div>
         }
         sideBottom={
@@ -35,13 +35,13 @@ export function MatchScreen({ state, matchId, onContinue }: Props) {
             {finished && ps && ps.rating !== null && (
               <div className="result">
                 <span className="rating">
-                  {uz.rating}: <strong>{ps.rating.toFixed(1)}</strong>
+                  {tx.rating}: <strong>{ps.rating.toFixed(1)}</strong>
                 </span>
-                <span className="muted small">{uz.personaLine(ps.minutes, ps.goals, ps.assists)}</span>
+                <span className="muted small">{tx.personaLine(ps.minutes, ps.goals, ps.assists)}</span>
               </div>
             )}
             <button className={finished ? 'primary big' : 'big'} onClick={onContinue}>
-              {uz.afterMatch} →
+              {tx.afterMatch} →
             </button>
           </div>
         }

@@ -1,6 +1,7 @@
 /**
- * All UI text (Uzbek, Latin script). Code identifiers stay in English.
- * Keep every user-facing string here so a second language can be added later.
+ * Uzbek UI text (Latin script) — the default language and the source of the
+ * Messages type. en.ts and ru.ts must provide exactly the same keys; the
+ * compiler enforces it. Add every new user-facing string to all three files.
  */
 import type {
   Foot,
@@ -18,6 +19,12 @@ import type {
 
 export const uz = {
   appName: 'Futbolchi Pro',
+  langLabel: 'Til',
+  /** Amount already formatted with thousands separators. */
+  money: (n: string) => `${n} so'm`,
+  dateLocale: 'uz-UZ',
+  navMenu: 'Menyu',
+  pitchLabel: "2D o'yin ko'rinishi",
   tagline: "Bolalikdagi orzuingiz — endi sizning karyerangiz.",
   start: 'Karyerani boshlash',
   continue: 'Davom etish',
@@ -128,6 +135,12 @@ export const uz = {
   infoAboutText:
     "Futbolchi Pro — bolalikda futbolchi bo'lishni orzu qilgan har bir inson uchun karyera o'yini. Siz futbolchi yaratasiz, har hafta mashg'ulot tanlaysiz, o'yinlar esa avtomatik o'tadi. Kichik akademiyadan boshlab, ligadan-ligaga ko'tarilasiz.",
   infoCreditsTitle: 'Yaratuvchilar',
+  creditRoles: {
+    lead: "G'oya va loyiha rahbari",
+    dev: 'Dasturlash',
+    design: 'Dizayn va piksel grafika',
+    balance: "O'yin balansi va sinov",
+  },
   infoTba: "Tez orada e'lon qilinadi",
   infoLegal:
     "Barcha klublar, ligalar, futbolchilar va shaharlar o'ylab topilgan. Haqiqiy shaxslar yoki tashkilotlar bilan o'xshashlik tasodifiy.",
@@ -202,6 +215,20 @@ export const uz = {
   afterMatch: 'Davom etish',
   fullTime: "O'yin tugadi",
   personaLine: (min: number, g: number, a: number) => `${min} daqiqa · ${g} gol · ${a} golli pas`,
+  ev: {
+    goalMe: (name: string) => `GOL! ${name} to'pni darvozaga yo'lladi!`,
+    goalTeam: (club: string) => `Gol! ${club} hisobni o'zgartirdi.`,
+    assistBy: (name: string) => ` ${name}ning pasidan.`,
+    shotMe: (name: string, saved: boolean) => `${name} zarba berdi — ${saved ? 'darvozabon qaytardi' : "to'p yonidan o'tdi"}.`,
+    chanceTeam: (club: string, saved: boolean) => `${club} xavfli hujum qildi${saved ? ', darvozabon qaytardi' : ''}.`,
+    save: (name: string) => `${name} ajoyib seyv qildi!`,
+    cardMe: (name: string, red: boolean) => `${name} ${red ? 'qizil' : 'sariq'} kartochka oldi.`,
+    cardTeam: (club: string, red: boolean) => `${club} o'yinchisi ${red ? 'qizil' : 'sariq'} kartochka oldi.`,
+    injury: (name: string, weeks: number) => `${name} jarohat oldi (${weeks} hafta).`,
+    subIn: (name: string) => `${name} maydonga tushdi!`,
+    subOut: (name: string) => `${name} almashtirildi.`,
+    subTeam: (club: string) => `${club}: almashtirish.`,
+  },
   eventIcons: {
     goal: '⚽',
     keyChance: '🎯',
@@ -235,6 +262,8 @@ export const uz = {
 
   // Admin
   adminTitle: 'Admin panel',
+  adminError: (detail: string) => `Xato: ${detail}`,
+  adminMatchRow: (week: number, home: string, away: string, a: number, b: number) => `${week}-hafta: ${home} ${a}:${b} ${away}`,
   adminToken: 'Admin token',
   adminLogin: 'Kirish',
   adminBadToken: "Token noto'g'ri.",
@@ -261,4 +290,4 @@ export const uz = {
   adminNoMatches: "Hali o'yinlar yo'q. Avval o'yinda bir necha hafta o'ynang.",
 };
 
-export type Uz = typeof uz;
+export type Messages = typeof uz;

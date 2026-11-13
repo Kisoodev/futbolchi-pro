@@ -7,8 +7,8 @@
  */
 import { useCallback, useMemo, useState } from 'react';
 import type { MatchEvent } from '@futbolchi/engine';
-import { uz } from '../i18n/uz';
-import { adminApi, formatUzs, type AdminPayment } from '../state/api';
+import { formatMoney, tx } from '../i18n';
+import { adminApi, type AdminPayment } from '../state/api';
 import { getUserId } from '../state/store';
 
 interface MatchSummary {
@@ -46,7 +46,7 @@ export function AdminScreen() {
       setAuthed(true);
       await loadPayments();
     } catch {
-      setMsg(uz.adminBadToken);
+      setMsg(tx.adminBadToken);
     }
   };
 
@@ -55,7 +55,7 @@ export function AdminScreen() {
     try {
       await fn();
     } catch (e) {
-      setMsg(`Xato: ${e instanceof Error ? e.message : String(e)}`);
+      setMsg(tx.adminError(e instanceof Error ? e.message : String(e)));
     }
   };
 
@@ -70,7 +70,7 @@ export function AdminScreen() {
     guard(async () => {
       let note: string | undefined;
       if (decision === 'reject') {
-        const answer = prompt(uz.adminRejectPrompt);
+        const answer = prompt(tx.adminRejectPrompt);
         if (answer === null) return;
         note = answer.trim() || undefined;
       }
@@ -110,14 +110,14 @@ export function AdminScreen() {
         body: JSON.stringify({ userId: selected.userId, eventIds: [...marked] }),
       });
       if (!res.ok) throw new Error(String(res.status));
-      setMsg(uz.adminSaved);
+      setMsg(tx.adminSaved);
     });
 
   if (!authed) {
     return (
       <div className="screen narrow admin login">
-        <a className="link" href="#/">{uz.adminBackToGame}</a>
-        <h1>{uz.adminTitle}</h1>
+        <a className="link" href="#/">{tx.adminBackToGame}</a>
+        <h1>{tx.adminTitle}</h1>
         <form
           className="row"
           onSubmit={(e) => {
@@ -125,8 +125,8 @@ export function AdminScreen() {
             void login();
           }}
         >
-          <input type="password" placeholder={uz.adminToken} value={token} autoComplete="off" onChange={(e) => setToken(e.target.value)} />
-          <button className="primary" type="submit" disabled={!token}>{uz.adminLogin}</button>
+          <input type="password" placeholder={tx.adminToken} value={token} autoComplete="off" onChange={(e) => setToken(e.target.value)} />
+          <button className="primary" type="submit" disabled={!token}>{tx.adminLogin}</button>
         </form>
         {msg && <p className="error">{msg}</p>}
       </div>
@@ -136,24 +136,24 @@ export function AdminScreen() {
   return (
     <div className="screen panel admin">
       <header className="panel-head">
-        <a className="link" href="#/">{uz.adminBackToGame}</a>
-        <h1>{uz.adminTitle}</h1>
+        <a className="link" href="#/">{tx.adminBackToGame}</a>
+        <h1>{tx.adminTitle}</h1>
         {msg && <p className="muted">{msg}</p>}
       </header>
       <div className="panel-body">
 
       <section className="card">
-        <h2>{uz.adminFreeTitle}</h2>
-        <p className="muted">{uz.adminFreeText}</p>
-        {granted ? <p className="success">{uz.adminFreeDone}</p> : <button className="primary" onClick={grant}>{uz.adminFreeButton}</button>}
+        <h2>{tx.adminFreeTitle}</h2>
+        <p className="muted">{tx.adminFreeText}</p>
+        {granted ? <p className="success">{tx.adminFreeDone}</p> : <button className="primary" onClick={grant}>{tx.adminFreeButton}</button>}
       </section>
 
       <section className="card">
         <div className="card-head">
-          <h2>{uz.adminPaymentsTitle}</h2>
-          <button onClick={() => guard(loadPayments)}>{uz.adminRefresh}</button>
+          <h2>{tx.adminPaymentsTitle}</h2>
+          <button onClick={() => guard(loadPayments)}>{tx.adminRefresh}</button>
         </div>
-        {payments.length === 0 && <p className="muted">{uz.adminPaymentsEmpty}</p>}
+        {payments.length === 0 && <p className="muted">{tx.adminPaymentsEmpty}</p>}
         <ul className="pay-list">
           {payments.map((p) => {
             const waiting = p.status === 'pending' && p.proof?.status === 'submitted';
@@ -162,10 +162,10 @@ export function AdminScreen() {
                 <div className="pay-row">
                   <div>
                     <strong>{p.userName ?? '—'}</strong>
-                    <span className="muted small"> · {formatUzs(p.amountMinor)} · {p.provider}</span>
-                    <div className="muted small">{new Date(p.createdAt).toLocaleString('uz-UZ')}</div>
+                    <span className="muted small"> · {formatMoney(p.amountMinor)} · {p.provider}</span>
+                    <div className="muted small">{new Date(p.createdAt).toLocaleString(tx.dateLocale)}</div>
                   </div>
-                  <span className={`badge ${waiting ? 'waiting' : p.status}`}>{waiting ? uz.adminWaiting : uz.adminStatus[p.status]}</span>
+                  <span className={`badge ${waiting ? 'waiting' : p.status}`}>{waiting ? tx.adminWaiting : tx.adminStatus[p.status]}</span>
                 </div>
                 {p.proof ? (
                   proofs[p.paymentId] ? (
@@ -173,15 +173,15 @@ export function AdminScreen() {
                       <img className="proof" src={proofs[p.paymentId]} alt="" />
                     </a>
                   ) : (
-                    <button onClick={() => showProof(p)}>{uz.adminShowProof}</button>
+                    <button onClick={() => showProof(p)}>{tx.adminShowProof}</button>
                   )
                 ) : (
-                  p.provider === 'manual' && <span className="muted small">{uz.adminNoProof}</span>
+                  p.provider === 'manual' && <span className="muted small">{tx.adminNoProof}</span>
                 )}
                 {p.status === 'pending' && p.provider === 'manual' && (
                   <div className="row">
-                    <button className="primary" onClick={() => decide(p, 'approve')}>{uz.adminApprove}</button>
-                    <button onClick={() => decide(p, 'reject')}>{uz.adminReject}</button>
+                    <button className="primary" onClick={() => decide(p, 'approve')}>{tx.adminApprove}</button>
+                    <button onClick={() => decide(p, 'reject')}>{tx.adminReject}</button>
                   </div>
                 )}
               </li>
@@ -192,16 +192,16 @@ export function AdminScreen() {
 
       <section className="card">
         <div className="card-head">
-          <h2>{uz.adminHighlightsTitle}</h2>
-          <button onClick={loadMatches}>{uz.adminLoad}</button>
+          <h2>{tx.adminHighlightsTitle}</h2>
+          <button onClick={loadMatches}>{tx.adminLoad}</button>
         </div>
-        {matches && matches.length === 0 && <p className="muted">{uz.adminNoMatches}</p>}
+        {matches && matches.length === 0 && <p className="muted">{tx.adminNoMatches}</p>}
         {matches && (
           <ul className="admin-list">
             {matches.map((m) => (
               <li key={`${m.userId}/${m.matchId}`}>
                 <button className={selected?.matchId === m.matchId && selected.userId === m.userId ? 'on' : ''} onClick={() => open(m)}>
-                  {m.week}-hafta: {m.home} {m.score[0]}:{m.score[1]} {m.away}
+                  {tx.adminMatchRow(m.week, m.home, m.away, m.score[0], m.score[1])}
                   <small className="muted"> · {m.matchId}</small>
                 </button>
               </li>
@@ -228,14 +228,14 @@ export function AdminScreen() {
                       />
                     </td>
                     <td>{e.minute}'</td>
-                    <td>{uz.eventIcons[e.type]} {e.type}</td>
+                    <td>{tx.eventIcons[e.type]} {e.type}</td>
                     <td>{e.team}</td>
                     <td>{e.actor}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <button className="primary" onClick={saveHighlights}>{uz.adminSave}</button>
+            <button className="primary" onClick={saveHighlights}>{tx.adminSave}</button>
           </>
         )}
       </section>

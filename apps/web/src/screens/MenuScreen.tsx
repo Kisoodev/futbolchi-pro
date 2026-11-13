@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { currentSeason, type GameState } from '@futbolchi/engine';
-import { uz } from '../i18n/uz';
-import { api, formatUzs } from '../state/api';
+import { formatMoney, tx } from '../i18n';
+import { api } from '../state/api';
 import { PixelArt } from '../art/PixelArt';
 import { BALL } from '../art/sprites';
 
@@ -27,39 +27,39 @@ export function MenuScreen({ name, game, onNewCareer, onLoadGame, onInfo, onChan
   const saveLabel =
     game && season
       ? game.phase === 'seasonSummary'
-        ? uz.menuLoadGameSummary(game.persona.name, season.index)
-        : uz.menuLoadGameOf(game.persona.name, season.index, season.week)
-      : uz.menuNoSave;
+        ? tx.menuLoadGameSummary(game.persona.name, season.index)
+        : tx.menuLoadGameOf(game.persona.name, season.index, season.week)
+      : tx.menuNoSave;
 
   return (
     <div className="screen center hero menu">
       <PixelArt sprite={BALL} scale={5} className="ball-logo" />
-      <h1>{uz.menuHello(name)}</h1>
-      <p className="tagline">{uz.menuSub}</p>
+      <h1>{tx.menuHello(name)}</h1>
+      <p className="tagline">{tx.menuSub}</p>
 
       {confirming && game ? (
         <div className="menu-card confirm" role="alertdialog" aria-labelledby="replace-title">
-          <h2 id="replace-title">{uz.menuReplaceTitle}</h2>
-          <p>{uz.menuReplaceText(game.persona.name)}</p>
-          <button className="primary big" onClick={onNewCareer}>{uz.menuReplaceYes}</button>
-          <button className="big" onClick={() => setConfirming(false)}>{uz.menuReplaceNo}</button>
+          <h2 id="replace-title">{tx.menuReplaceTitle}</h2>
+          <p>{tx.menuReplaceText(game.persona.name)}</p>
+          <button className="primary big" onClick={onNewCareer}>{tx.menuReplaceYes}</button>
+          <button className="big" onClick={() => setConfirming(false)}>{tx.menuReplaceNo}</button>
         </div>
       ) : (
-        <nav className="menu-card" aria-label="Menyu">
+        <nav className="menu-card" aria-label={tx.navMenu}>
           <button className="primary big menu-btn" onClick={() => (game ? setConfirming(true) : onNewCareer())}>
-            <span>▶ {uz.menuNewCareer}</span>
-            {price !== null && <small>{uz.menuPrice(formatUzs(price))}</small>}
+            <span>▶ {tx.menuNewCareer}</span>
+            {price !== null && <small>{tx.menuPrice(formatMoney(price))}</small>}
           </button>
           <button className="big menu-btn" onClick={onLoadGame} disabled={!game}>
-            <span>{uz.menuLoadGame}</span>
+            <span>{tx.menuLoadGame}</span>
             <small>{saveLabel}</small>
           </button>
           <button className="big menu-btn" onClick={onInfo}>
-            <span>{uz.menuInfo}</span>
-            <small>{uz.menuInfoNote}</small>
+            <span>{tx.menuInfo}</span>
+            <small>{tx.menuInfoNote}</small>
           </button>
           <button className="link change-name" onClick={onChangeName}>
-            {uz.menuChangeName}
+            {tx.menuChangeName}
           </button>
         </nav>
       )}

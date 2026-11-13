@@ -5,8 +5,8 @@
  * slot granted from the admin panel).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { uz } from '../i18n/uz';
-import { api, formatUzs, type AppConfig } from '../state/api';
+import { formatMoney, tx } from '../i18n';
+import { api, type AppConfig } from '../state/api';
 import { getUserId } from '../state/store';
 
 type Step = 'loading' | 'instructions' | 'review' | 'rejected' | 'error';
@@ -90,11 +90,11 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
   const pick = (file: File | undefined) => {
     setFileError(null);
     if (!file) return;
-    if (!TYPES.includes(file.type)) return setFileError(uz.payFileBad);
-    if (file.size > MAX_BYTES) return setFileError(uz.payFileTooBig);
+    if (!TYPES.includes(file.type)) return setFileError(tx.payFileBad);
+    if (file.size > MAX_BYTES) return setFileError(tx.payFileTooBig);
     const reader = new FileReader();
     reader.onload = () => setImage(typeof reader.result === 'string' ? reader.result : null);
-    reader.onerror = () => setFileError(uz.payFileBad);
+    reader.onerror = () => setFileError(tx.payFileBad);
     reader.readAsDataURL(file);
   };
 
@@ -106,7 +106,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
       await api.uploadProof(paymentId, userId, image);
       setStep('review');
     } catch {
-      setFileError(uz.serverDown);
+      setFileError(tx.serverDown);
     } finally {
       setSending(false);
     }
@@ -126,18 +126,18 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
   return (
     <div className="screen panel pay">
       <header className="panel-head">
-        <button className="link" onClick={onBack}>← {uz.back}</button>
-        <p className="eyebrow">{uz.payTitle}</p>
-        <h1>{uz.payHello(name)}</h1>
+        <button className="link" onClick={onBack}>← {tx.back}</button>
+        <p className="eyebrow">{tx.payTitle}</p>
+        <h1>{tx.payHello(name)}</h1>
       </header>
 
       <div className="panel-body">
-        {step === 'loading' && <p className="muted">{uz.loading}</p>}
+        {step === 'loading' && <p className="muted">{tx.loading}</p>}
 
         {step === 'error' && (
           <>
-            <p className="error">{uz.serverDown}</p>
-            <button className="big" onClick={() => void init()}>{uz.payRetry}</button>
+            <p className="error">{tx.serverDown}</p>
+            <button className="big" onClick={() => void init()}>{tx.payRetry}</button>
           </>
         )}
 
@@ -145,30 +145,30 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
           <div className="pay-grid">
             <section className="pay-step">
               <div className="amount">
-                <span>{uz.payAmount}</span>
-                <strong>{amount !== null ? formatUzs(amount) : '—'}</strong>
+                <span>{tx.payAmount}</span>
+                <strong>{amount !== null ? formatMoney(amount) : '—'}</strong>
               </div>
-              <h2><b>1</b> {uz.payStep1}</h2>
+              <h2><b>1</b> {tx.payStep1}</h2>
               {config?.card ? (
                 <div className="bank-card">
                   <span className="number">{config.card.number}</span>
                   <span className="holder">
-                    {uz.payCardHolder}: <b>{config.card.holder}</b>
+                    {tx.payCardHolder}: <b>{config.card.holder}</b>
                   </span>
-                  <button type="button" onClick={copy}>{copied ? uz.payCopied : uz.payCopy}</button>
+                  <button type="button" onClick={copy}>{copied ? tx.payCopied : tx.payCopy}</button>
                 </div>
               ) : (
-                <p className="error">{uz.payNoCard}</p>
+                <p className="error">{tx.payNoCard}</p>
               )}
             </section>
 
             <section className="pay-step">
-              <h2><b>2</b> {uz.payStep2}</h2>
+              <h2><b>2</b> {tx.payStep2}</h2>
               <label className={`upload ${image ? 'has-file' : ''}`}>
                 <input type="file" accept={TYPES.join(',')} onChange={(e) => pick(e.target.files?.[0])} />
                 {image ? <img src={image} alt="" /> : <span className="plus" aria-hidden>+</span>}
-                <span>{image ? uz.payChange : uz.payChoose}</span>
-                <small>{uz.payFileHint}</small>
+                <span>{image ? tx.payChange : tx.payChoose}</span>
+                <small>{tx.payFileHint}</small>
               </label>
               {fileError && <p className="error">{fileError}</p>}
             </section>
@@ -178,15 +178,15 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
         {step === 'review' && (
           <div className="review">
             <div className="spinner" aria-hidden />
-            <h2>{uz.payReviewTitle}</h2>
-            <p>{uz.payReviewText}</p>
+            <h2>{tx.payReviewTitle}</h2>
+            <p>{tx.payReviewText}</p>
           </div>
         )}
 
         {step === 'rejected' && (
           <>
-            <h2 className="outcome relegated">{uz.payRejectedTitle}</h2>
-            {note && <p>{uz.payRejectedNote(note)}</p>}
+            <h2 className="outcome relegated">{tx.payRejectedTitle}</h2>
+            {note && <p>{tx.payRejectedNote(note)}</p>}
           </>
         )}
       </div>
@@ -194,13 +194,13 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
       {step === 'instructions' && (
         <footer className="panel-foot">
           <button className="primary big" disabled={!image || sending} onClick={submit}>
-            {sending ? uz.paySending : uz.paySubmit}
+            {sending ? tx.paySending : tx.paySubmit}
           </button>
         </footer>
       )}
       {step === 'rejected' && (
         <footer className="panel-foot">
-          <button className="primary big" onClick={() => void init()}>{uz.payRetry}</button>
+          <button className="primary big" onClick={() => void init()}>{tx.payRetry}</button>
         </footer>
       )}
     </div>

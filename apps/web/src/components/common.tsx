@@ -7,7 +7,7 @@ import {
   type PersonaView,
   type Season,
 } from '@futbolchi/engine';
-import { uz } from '../i18n/uz';
+import { tx } from '../i18n';
 import { Avatar } from '../art/Avatar';
 
 export function StatBars({ persona }: { persona: PersonaView }) {
@@ -16,7 +16,7 @@ export function StatBars({ persona }: { persona: PersonaView }) {
     <ul className="stat-bars">
       {STAT_KEYS.map((k) => (
         <li key={k} className={w[k] >= 0.15 ? 'key' : ''}>
-          <span className="label">{uz.stats[k]}</span>
+          <span className="label">{tx.stats[k]}</span>
           <span className="bar">
             <span style={{ width: `${persona.stats[k]}%` }} />
           </span>
@@ -33,14 +33,14 @@ export function PersonaHeader({ persona, club }: { persona: PersonaView; club: C
       <Avatar appearance={persona.appearance} kit={club.color} scale={1.6} className="mini-avatar" />
       <div className="ovr">
         <strong>{Math.round(personaOvr(persona))}</strong>
-        <small>{uz.ovr}</small>
+        <small>{tx.ovr}</small>
       </div>
       <div>
         <h2>{persona.name}</h2>
         <p className="muted">
-          {uz.positions[persona.position]} · {club.name} · {uz.age(persona.age)}
+          {tx.positions[persona.position]} · {club.name} · {tx.age(persona.age)}
         </p>
-        <p className="muted small">{uz.careerLine(persona.career.apps, persona.career.goals, persona.career.assists)}</p>
+        <p className="muted small">{tx.careerLine(persona.career.apps, persona.career.goals, persona.career.assists)}</p>
       </div>
     </div>
   );
@@ -50,7 +50,7 @@ export function FatigueMeter({ value }: { value: number }) {
   const level = value >= 70 ? 'high' : value >= 40 ? 'mid' : 'low';
   return (
     <div className="fatigue">
-      <span>{uz.fatigue}</span>
+      <span>{tx.fatigue}</span>
       <span className={`meter ${level}`}>
         <span style={{ width: `${value}%` }} />
       </span>
@@ -66,11 +66,11 @@ export function LeagueTable({ season, clubs, highlightId }: { season: Season; cl
     <table className="league">
       <thead>
         <tr>
-          <th>{uz.tableCols.pos}</th>
-          <th className="club">{uz.tableCols.club}</th>
-          <th>{uz.tableCols.p}</th>
-          <th>{uz.tableCols.gd}</th>
-          <th>{uz.tableCols.pts}</th>
+          <th>{tx.tableCols.pos}</th>
+          <th className="club">{tx.tableCols.club}</th>
+          <th>{tx.tableCols.p}</th>
+          <th>{tx.tableCols.gd}</th>
+          <th>{tx.tableCols.pts}</th>
         </tr>
       </thead>
       <tbody>

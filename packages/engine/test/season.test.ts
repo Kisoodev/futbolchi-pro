@@ -155,7 +155,7 @@ describe('season loop', () => {
 describe('story', () => {
   const base = {
     personaName: 'Aziz', position: 'ST' as const, seasonIndex: 1, clubName: 'Qumtepa FK', tier: 4 as const,
-    tierName: TIER_NAMES[4], nextTierName: TIER_NAMES[3], matches: 14, apps: 8, starts: 6, goals: 4, assists: 2,
+    tierName: TIER_NAMES[4], nextTier: 3 as const, nextTierName: TIER_NAMES[3], matches: 14, apps: 8, starts: 6, goals: 4, assists: 2,
     saves: 0, avgRating: 7.1, best: { rating: 8.4, opponentName: 'Oqsoy Sport', goals: 2 }, injuries: 0,
     injuryWeeks: 0, outcome: 'promoted' as const, finalPosition: 2, transferOffered: false,
   };
@@ -167,7 +167,7 @@ describe('story', () => {
   it('covers no appearances, injury, relegation and GK', () => {
     expect(seasonStoryUz({ ...base, apps: 0, avgRating: null, best: null })).toContain('maydonga tushish nasib etmadi');
     expect(seasonStoryUz({ ...base, injuries: 1, injuryWeeks: 3 })).toContain('3 hafta');
-    expect(seasonStoryUz({ ...base, tier: 3, outcome: 'relegated', finalPosition: 8, nextTierName: TIER_NAMES[4] })).toContain('tushib ketdi');
+    expect(seasonStoryUz({ ...base, tier: 3, outcome: 'relegated', finalPosition: 8, nextTier: 4, nextTierName: TIER_NAMES[4] })).toContain('tushib ketdi');
     expect(seasonStoryUz({ ...base, position: 'GK', saves: 20 })).toContain('20 marta darvozani qutqardingiz');
   });
   it('facts match stored matches', () => {

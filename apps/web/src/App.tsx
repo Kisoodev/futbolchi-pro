@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { playWeek, startNextSeason, type GameState, type TrainingId } from '@futbolchi/engine';
-import { uz } from './i18n/uz';
+import { tx, useLang } from './i18n';
 import { api } from './state/api';
 import { getUserId, getUserName, loadGame, saveGame } from './state/store';
 import { LoadingScreen } from './screens/LoadingScreen';
@@ -15,6 +15,7 @@ import { SummaryScreen } from './screens/SummaryScreen';
 import { AdminScreen } from './screens/AdminScreen';
 import { PixelArt, SkyBackdrop } from './art/PixelArt';
 import { BALL } from './art/sprites';
+import { LangSwitch } from './components/LangSwitch';
 
 /**
  * Flow: loading (counter) → name (first visit only) → menu
@@ -43,6 +44,8 @@ const useHash = () => {
 };
 
 export function App() {
+  // Re-render the whole tree when the language changes.
+  useLang();
   const hash = useHash();
   const [game, setGame] = useState<GameState | null>(() => loadGame());
   const [userName, setUserNameState] = useState(() => getUserName());
@@ -59,6 +62,7 @@ export function App() {
     return (
       <div className="app bare">
         <SkyBackdrop />
+        <LangSwitch floating />
         <main>
           <AdminScreen />
         </main>
@@ -70,6 +74,7 @@ export function App() {
     return (
       <div className="app bare">
         <SkyBackdrop />
+        <LangSwitch floating />
         <main>
           <LoadingScreen onDone={() => setRoute(home)} />
         </main>
@@ -156,8 +161,9 @@ export function App() {
       <SkyBackdrop />
       <header className="topbar">
         <button className="brand" onClick={() => setRoute(home)}>
-          <PixelArt sprite={BALL} scale={2} /> {uz.appName}
+          <PixelArt sprite={BALL} scale={2} /> {tx.appName}
         </button>
+        <LangSwitch />
       </header>
       <main>{body}</main>
     </div>

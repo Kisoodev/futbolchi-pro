@@ -92,6 +92,3 @@ export const adminApi = (token: string) => {
     headers: h,
   };
 };
-
-export const formatUzs = (minor: number): string =>
-  `${new Intl.NumberFormat('ru-RU').format(Math.round(minor / 100)).replace(/ /g, ' ')} so'm`;

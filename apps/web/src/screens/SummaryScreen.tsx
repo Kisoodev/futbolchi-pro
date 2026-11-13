@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { currentSeason, seasonFacts, type GameState } from '@futbolchi/engine';
-import { uz } from '../i18n/uz';
+import { currentSeason, seasonFacts, seasonStory, type GameState } from '@futbolchi/engine';
+import { lang, tx } from '../i18n';
 import { LeagueTable } from '../components/common';
 import { renderShareCard, shareOrDownload } from '../share/ShareCard';
 
@@ -12,47 +12,48 @@ interface Props {
 export function SummaryScreen({ state, onNextSeason }: Props) {
   const season = currentSeason(state);
   const facts = useMemo(() => seasonFacts(state, season.id), [state, season.id]);
-  const story = season.storyUz ?? '';
+  // Rebuilt from facts so it always follows the current language.
+  const story = seasonStory(facts, lang);
   const club = state.clubs[state.persona.clubId];
   const [preview, setPreview] = useState<string | null>(null);
 
   const card = () => renderShareCard(facts, story, club.color, state.persona.appearance);
   const share = async () =>
-    shareOrDownload(await card(), `futbolchi-${season.index}-mavsum.png`, uz.shareText(facts.personaName));
+    shareOrDownload(await card(), `futbolchi-${season.index}-mavsum.png`, tx.shareText(facts.personaName));
   const showPreview = async () => setPreview((await card()).toDataURL('image/png'));
 
   return (
     <div className="screen split summary">
       <div className="panel">
         <header className="panel-head">
-          <p className="eyebrow">{uz.summaryTitle(season.index)}</p>
+          <p className="eyebrow">{tx.summaryTitle(season.index)}</p>
           <h1 className={`outcome ${facts.outcome}`}>
-            {uz.finalPosition(facts.finalPosition)} · {uz.outcomes[facts.outcome]}
+            {tx.finalPosition(facts.finalPosition)} · {tx.outcomes[facts.outcome]}
           </h1>
         </header>
         <div className="panel-body">
           <p className="story">{story}</p>
           <div className="tiles">
-            <div><strong>{facts.apps}</strong><span>{uz.sumApps}</span></div>
+            <div><strong>{facts.apps}</strong><span>{tx.sumApps}</span></div>
             {facts.position === 'GK' ? (
-              <div><strong>{facts.saves}</strong><span>{uz.sumSaves}</span></div>
+              <div><strong>{facts.saves}</strong><span>{tx.sumSaves}</span></div>
             ) : (
-              <div><strong>{facts.goals}</strong><span>{uz.sumGoals}</span></div>
+              <div><strong>{facts.goals}</strong><span>{tx.sumGoals}</span></div>
             )}
-            <div><strong>{facts.assists}</strong><span>{uz.sumAssists}</span></div>
-            <div><strong>{facts.avgRating?.toFixed(1) ?? '—'}</strong><span>{uz.sumRating}</span></div>
+            <div><strong>{facts.assists}</strong><span>{tx.sumAssists}</span></div>
+            <div><strong>{facts.avgRating?.toFixed(1) ?? '—'}</strong><span>{tx.sumRating}</span></div>
           </div>
           <div className="row">
-            <button onClick={share}>{uz.share}</button>
-            <button onClick={showPreview}>{uz.downloadCard}</button>
+            <button onClick={share}>{tx.share}</button>
+            <button onClick={showPreview}>{tx.downloadCard}</button>
           </div>
           {state.transferOffers.length > 0 && (
             <section className="card transfer">
-              <h2>{uz.transferTitle}</h2>
-              <p>{uz.transferText}</p>
+              <h2>{tx.transferTitle}</h2>
+              <p>{tx.transferText}</p>
               {state.transferOffers.map((o) => (
                 <button key={o.clubId} className="primary" onClick={() => onNextSeason(o.clubId)}>
-                  {uz.transferAccept(state.clubs[o.clubId].name)}
+                  {tx.transferAccept(state.clubs[o.clubId].name)}
                 </button>
               ))}
             </section>
@@ -60,25 +61,25 @@ export function SummaryScreen({ state, onNextSeason }: Props) {
         </div>
         <footer className="panel-foot">
           <button className="primary big" onClick={() => onNextSeason(null)}>
-            {state.transferOffers.length > 0 ? uz.stay(club.name) : uz.nextSeason} →
+            {state.transferOffers.length > 0 ? tx.stay(club.name) : tx.nextSeason} →
           </button>
         </footer>
       </div>
 
       <section className="card table-card">
-        <h2>{uz.table}</h2>
+        <h2>{tx.table}</h2>
         <LeagueTable season={season} clubs={state.clubs} highlightId={season.clubIds.includes(club.id) ? club.id : ''} />
       </section>
 
       {preview && (
-        <div className="modal" role="dialog" aria-modal="true" aria-label={uz.downloadCard} onClick={() => setPreview(null)}>
+        <div className="modal" role="dialog" aria-modal="true" aria-label={tx.downloadCard} onClick={() => setPreview(null)}>
           <div className="modal-box" onClick={(e) => e.stopPropagation()}>
-            <img className="card-preview" src={preview} alt={uz.summaryTitle(season.index)} />
+            <img className="card-preview" src={preview} alt={tx.summaryTitle(season.index)} />
             <div className="row">
               <a className="button primary" href={preview} download={`futbolchi-${season.index}-mavsum.png`}>
-                {uz.downloadCard}
+                {tx.downloadCard}
               </a>
-              <button onClick={() => setPreview(null)}>{uz.close}</button>
+              <button onClick={() => setPreview(null)}>{tx.close}</button>
             </div>
           </div>
         </div>

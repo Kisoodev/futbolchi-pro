@@ -3,9 +3,9 @@
  * Same look as the game: sky, pixel clouds, grass strip.
  * No recording feature here — video highlights are admin-only, later.
  */
-import { TIER_NAMES, type Appearance, type SeasonFacts } from '@futbolchi/engine';
+import { tierName, type Appearance, type SeasonFacts } from '@futbolchi/engine';
 import { drawAvatar } from '../art/avatarRects';
-import { uz } from '../i18n/uz';
+import { lang, tx } from '../i18n';
 import { BALL, CLOUD, GRASS, drawSprite, spriteSize } from '../art/sprites';
 
 const W = 1080;
@@ -55,9 +55,10 @@ export async function renderShareCard(
 ): Promise<HTMLCanvasElement> {
   // Canvas text only uses web fonts that are already loaded.
   await Promise.all([
-    document.fonts.load(`700 100px ${PIXEL}`),
-    document.fonts.load(`700 38px ${BODY}`),
-    document.fonts.load(`600 36px ${BODY}`),
+    // Pass the real text so the browser fetches the right subsets (Latin and Cyrillic).
+    document.fonts.load(`700 100px ${PIXEL}`, `${f.personaName} ${tx.appName} ${tx.outcomes[f.outcome]} 0123456789`),
+    document.fonts.load(`700 38px ${BODY}`, `${f.clubName} ${tx.summaryTitle(f.seasonIndex)} ${tx.sumRating}`),
+    document.fonts.load(`600 36px ${BODY}`, story),
   ]).catch(() => undefined);
 
   const c = document.createElement('canvas');
@@ -83,19 +84,19 @@ export async function renderShareCard(
   drawSprite(ctx, BALL, 80, 64, 5);
   ctx.textAlign = 'left';
   ctx.font = `700 40px ${PIXEL}`;
-  shadowText(ctx, uz.appName.toUpperCase(), 152, 108, '#fff', 3);
+  shadowText(ctx, tx.appName.toUpperCase(), 152, 108, '#fff', 3);
 
   // Name & context
   ctx.font = `700 104px ${PIXEL}`;
   shadowText(ctx, f.personaName, 80, 250, '#fff', 6);
   ctx.font = `800 38px ${BODY}`;
   ctx.fillStyle = C.ink;
-  ctx.fillText(`${uz.positions[f.position]} · ${f.clubName}`, 80, 312);
+  ctx.fillText(`${tx.positions[f.position]} · ${f.clubName}`, 80, 312);
   ctx.font = `700 34px ${BODY}`;
-  ctx.fillText(`${uz.summaryTitle(f.seasonIndex)} · ${TIER_NAMES[f.tier]}`, 80, 362);
+  ctx.fillText(`${tx.summaryTitle(f.seasonIndex)} · ${tierName(f.tier, lang)}`, 80, 362);
 
   // Outcome badge
-  const badge = `${uz.finalPosition(f.finalPosition)} · ${uz.outcomes[f.outcome]}`;
+  const badge = `${tx.finalPosition(f.finalPosition)} · ${tx.outcomes[f.outcome]}`;
   ctx.font = `700 44px ${PIXEL}`;
   const bw = ctx.measureText(badge).width + 64;
   const badgeColor = f.outcome === 'promoted' ? C.grass : f.outcome === 'relegated' ? C.danger : C.skyDeep;
@@ -125,10 +126,10 @@ export async function renderShareCard(
 
   // Stat tiles
   const tiles: [string, string][] = [
-    [uz.sumApps, String(f.apps)],
-    f.position === 'GK' ? [uz.sumSaves, String(f.saves)] : [uz.sumGoals, String(f.goals)],
-    [uz.sumAssists, String(f.assists)],
-    [uz.sumRating, f.avgRating !== null ? f.avgRating.toFixed(1) : '—'],
+    [tx.sumApps, String(f.apps)],
+    f.position === 'GK' ? [tx.sumSaves, String(f.saves)] : [tx.sumGoals, String(f.goals)],
+    [tx.sumAssists, String(f.assists)],
+    [tx.sumRating, f.avgRating !== null ? f.avgRating.toFixed(1) : '—'],
   ];
   const gap = 20;
   const tw = (pw - 64 - 3 * gap) / 4;
@@ -161,7 +162,7 @@ export async function renderShareCard(
   ctx.textAlign = 'center';
   ctx.font = `800 28px ${BODY}`;
   ctx.fillStyle = C.ink;
-  ctx.fillText(uz.tagline, W / 2, H - 112);
+  ctx.fillText(tx.tagline, W / 2, H - 112);
   const scale = 6;
   const tile = spriteSize(GRASS);
   for (let x = 0; x < W; x += tile.w * scale) drawSprite(ctx, GRASS, x, H - tile.h * scale, scale);

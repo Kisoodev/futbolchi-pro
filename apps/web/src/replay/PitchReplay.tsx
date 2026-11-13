@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Club, Match, MatchEvent, PitchPoint, Position } from '@futbolchi/engine';
-import { uz } from '../i18n/uz';
+import { tx } from '../i18n';
 import { eventText } from '../i18n/events';
 import { buildTimeline, frameAt, personaWindow, type Frame } from './timeline';
 import { kitColors, kitStroke } from './kits';
@@ -113,13 +113,13 @@ export function PitchReplay({ match, clubs, personaName, personaPosition, onFini
                 {shownScore[0]} : {shownScore[1]}
               </span>
               <span className="team" style={{ borderColor: away.color }}>{away.name}</span>
-              <span className="minute">{done ? uz.fullTime : `${minute}'`}</span>
+              <span className="minute">{done ? tx.fullTime : `${minute}'`}</span>
             </div>
             <div ref={wrapRef} className="pitch-wrap">
-              <canvas ref={canvasRef} className="pitch" aria-label="2D o'yin ko'rinishi" />
+              <canvas ref={canvasRef} className="pitch" aria-label={tx.pitchLabel} />
               {current && frame.arrived && !done && (
                 <div className={`caption ${current.actor === 'persona' ? 'me' : ''}`}>
-                  {uz.eventIcons[current.type]} {eventText(current, match, clubs, personaName)}
+                  {tx.eventIcons[current.type]} {eventText(current, match, clubs, personaName)}
                 </div>
               )}
             </div>
@@ -127,20 +127,20 @@ export function PitchReplay({ match, clubs, personaName, personaPosition, onFini
         </div>
         <div className="controls">
           <button onClick={() => (done ? (setT(0), (finishedRef.current = false), setPlaying(true)) : setPlaying(!playing))}>
-            {playing ? uz.pause : uz.play}
+            {playing ? tx.pause : tx.play}
           </button>
           <button onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>
-            {uz.speed}: {speed}×
+            {tx.speed}: {speed}×
           </button>
           <button onClick={() => setT(total)} disabled={done}>
-            {uz.skip}
+            {tx.skip}
           </button>
         </div>
       </div>
       <aside className="replay-side">
         {sideTop}
       <ol className="event-feed">
-        {visible.length === 0 && done && <li className="muted">{uz.noEvents}</li>}
+        {visible.length === 0 && done && <li className="muted">{tx.noEvents}</li>}
         {visible
           .map((e, i) => ({ e, i }))
           .reverse()
@@ -154,7 +154,7 @@ export function PitchReplay({ match, clubs, personaName, personaPosition, onFini
               }}
             >
               <span className="min">{e.minute}'</span>
-              <span>{uz.eventIcons[e.type]}</span>
+              <span>{tx.eventIcons[e.type]}</span>
               <span>{eventText(e, match, clubs, personaName)}</span>
             </li>
           ))}
