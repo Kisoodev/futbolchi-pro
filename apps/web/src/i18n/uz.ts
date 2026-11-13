@@ -24,6 +24,7 @@ export const uz = {
   newCareer: 'Yangi karyera',
   confirmNewCareer: "Joriy karyera o'chiriladi. Davom etasizmi?",
   back: 'Orqaga',
+  close: 'Yopish',
   loading: 'Yuklanmoqda…',
 
   positions: {
@@ -93,12 +94,44 @@ export const uz = {
   loadingCounterLabel: 'Futbolchilar safida',
   loadingText: 'Stadion tayyorlanmoqda…',
 
-  // Main menu: name entry
-  menuNameTitle: "Ismingizni kiriting",
-  menuNameHint: "Shu ism bilan maydonga chiqasiz.",
-  menuNamePlaceholder: 'ismingiz',
-  menuPrice: (amount: string) => `Persona yaratish — ${amount}`,
-  menuPriceNote: "Bir martalik to'lov, har bir futbolchi uchun.",
+  // First page: name entry
+  nameAttention: 'Diqqat!',
+  nameTitle: 'Kelajak yulduzi, xush kelibsiz!',
+  nameText:
+    "Futbol maydoni sizni kutmoqda. Avval o'zingizga nik tanlang — u formangizda, turnir jadvalida va ulashish kartangizda yoziladi.",
+  menuNameTitle: 'Nikingiz yoki ismingiz',
+  menuNameHint: '2–24 ta belgi.',
+  menuNamePlaceholder: 'nikingiz',
+
+  // Main menu
+  menuHello: (name: string) => `Salom, ${name}!`,
+  menuSub: "Bugun qaysi yo'ldan boramiz?",
+  menuNewCareer: 'Yangi karyera boshlash',
+  menuPrice: (amount: string) => `Yangi futbolchi yaratish — ${amount}`,
+  menuLoadGame: "O'yinni yuklash",
+  menuLoadGameOf: (name: string, season: number, week: number) => `${name} · ${season}-mavsum, ${week}-hafta`,
+  menuLoadGameSummary: (name: string, season: number) => `${name} · ${season}-mavsum yakunlandi`,
+  menuNoSave: "Saqlangan o'yin yo'q",
+  menuInfo: "Ma'lumot",
+  menuInfoNote: 'Yaratuvchilar va dizaynerlar',
+  menuChangeName: "Nikni o'zgartirish",
+  menuReplaceTitle: 'Yangi karyera boshlansinmi?',
+  menuReplaceText: (name: string) =>
+    `${name} bilan boshlangan karyera yangi futbolchi yaratilganda o'chadi. To'lov yoki yaratishni bekor qilsangiz, u saqlanib qoladi.`,
+  menuReplaceYes: 'Ha, yangisini boshlayman',
+  menuReplaceNo: 'Bekor qilish',
+
+  // Info page
+  infoTitle: "Ma'lumot",
+  infoBack: '← Menyuga qaytish',
+  infoAboutTitle: "O'yin haqida",
+  infoAboutText:
+    "Futbolchi Pro — bolalikda futbolchi bo'lishni orzu qilgan har bir inson uchun karyera o'yini. Siz futbolchi yaratasiz, har hafta mashg'ulot tanlaysiz, o'yinlar esa avtomatik o'tadi. Kichik akademiyadan boshlab, ligadan-ligaga ko'tarilasiz.",
+  infoCreditsTitle: 'Yaratuvchilar',
+  infoTba: "Tez orada e'lon qilinadi",
+  infoLegal:
+    "Barcha klublar, ligalar, futbolchilar va shaharlar o'ylab topilgan. Haqiqiy shaxslar yoki tashkilotlar bilan o'xshashlik tasodifiy.",
+  infoVersion: (v: string) => `Versiya ${v}`,
 
   // Payment: card transfer + receipt
   payTitle: "To'lov",

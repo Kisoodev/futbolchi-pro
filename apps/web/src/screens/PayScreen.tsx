@@ -124,73 +124,84 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
   };
 
   return (
-    <div className="screen narrow pay">
-      <button className="link" onClick={onBack}>← {uz.back}</button>
-      <p className="eyebrow">{uz.payTitle}</p>
-      <h1>{uz.payHello(name)}</h1>
+    <div className="screen panel pay">
+      <header className="panel-head">
+        <button className="link" onClick={onBack}>← {uz.back}</button>
+        <p className="eyebrow">{uz.payTitle}</p>
+        <h1>{uz.payHello(name)}</h1>
+      </header>
 
-      {step === 'loading' && <p className="muted">{uz.loading}</p>}
+      <div className="panel-body">
+        {step === 'loading' && <p className="muted">{uz.loading}</p>}
 
-      {step === 'error' && (
-        <>
-          <p className="error">{uz.serverDown}</p>
-          <button className="big" onClick={() => void init()}>{uz.payRetry}</button>
-        </>
-      )}
+        {step === 'error' && (
+          <>
+            <p className="error">{uz.serverDown}</p>
+            <button className="big" onClick={() => void init()}>{uz.payRetry}</button>
+          </>
+        )}
+
+        {step === 'instructions' && (
+          <div className="pay-grid">
+            <section className="pay-step">
+              <div className="amount">
+                <span>{uz.payAmount}</span>
+                <strong>{amount !== null ? formatUzs(amount) : '—'}</strong>
+              </div>
+              <h2><b>1</b> {uz.payStep1}</h2>
+              {config?.card ? (
+                <div className="bank-card">
+                  <span className="number">{config.card.number}</span>
+                  <span className="holder">
+                    {uz.payCardHolder}: <b>{config.card.holder}</b>
+                  </span>
+                  <button type="button" onClick={copy}>{copied ? uz.payCopied : uz.payCopy}</button>
+                </div>
+              ) : (
+                <p className="error">{uz.payNoCard}</p>
+              )}
+            </section>
+
+            <section className="pay-step">
+              <h2><b>2</b> {uz.payStep2}</h2>
+              <label className={`upload ${image ? 'has-file' : ''}`}>
+                <input type="file" accept={TYPES.join(',')} onChange={(e) => pick(e.target.files?.[0])} />
+                {image ? <img src={image} alt="" /> : <span className="plus" aria-hidden>+</span>}
+                <span>{image ? uz.payChange : uz.payChoose}</span>
+                <small>{uz.payFileHint}</small>
+              </label>
+              {fileError && <p className="error">{fileError}</p>}
+            </section>
+          </div>
+        )}
+
+        {step === 'review' && (
+          <div className="review">
+            <div className="spinner" aria-hidden />
+            <h2>{uz.payReviewTitle}</h2>
+            <p>{uz.payReviewText}</p>
+          </div>
+        )}
+
+        {step === 'rejected' && (
+          <>
+            <h2 className="outcome relegated">{uz.payRejectedTitle}</h2>
+            {note && <p>{uz.payRejectedNote(note)}</p>}
+          </>
+        )}
+      </div>
 
       {step === 'instructions' && (
-        <>
-          <div className="amount">
-            <span>{uz.payAmount}</span>
-            <strong>{amount !== null ? formatUzs(amount) : '—'}</strong>
-          </div>
-
-          <section className="pay-step">
-            <h2><b>1</b> {uz.payStep1}</h2>
-            {config?.card ? (
-              <div className="bank-card">
-                <span className="number">{config.card.number}</span>
-                <span className="holder">
-                  {uz.payCardHolder}: <b>{config.card.holder}</b>
-                </span>
-                <button type="button" onClick={copy}>{copied ? uz.payCopied : uz.payCopy}</button>
-              </div>
-            ) : (
-              <p className="error">{uz.payNoCard}</p>
-            )}
-          </section>
-
-          <section className="pay-step">
-            <h2><b>2</b> {uz.payStep2}</h2>
-            <label className={`upload ${image ? 'has-file' : ''}`}>
-              <input type="file" accept={TYPES.join(',')} onChange={(e) => pick(e.target.files?.[0])} />
-              {image ? <img src={image} alt="" /> : <span className="plus" aria-hidden>+</span>}
-              <span>{image ? uz.payChange : uz.payChoose}</span>
-              <small>{uz.payFileHint}</small>
-            </label>
-            {fileError && <p className="error">{fileError}</p>}
-          </section>
-
+        <footer className="panel-foot">
           <button className="primary big" disabled={!image || sending} onClick={submit}>
             {sending ? uz.paySending : uz.paySubmit}
           </button>
-        </>
+        </footer>
       )}
-
-      {step === 'review' && (
-        <div className="review">
-          <div className="spinner" aria-hidden />
-          <h2>{uz.payReviewTitle}</h2>
-          <p>{uz.payReviewText}</p>
-        </div>
-      )}
-
       {step === 'rejected' && (
-        <>
-          <h2 className="outcome relegated">{uz.payRejectedTitle}</h2>
-          {note && <p>{uz.payRejectedNote(note)}</p>}
+        <footer className="panel-foot">
           <button className="primary big" onClick={() => void init()}>{uz.payRetry}</button>
-        </>
+        </footer>
       )}
     </div>
   );

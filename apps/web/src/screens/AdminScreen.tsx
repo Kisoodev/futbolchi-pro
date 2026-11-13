@@ -115,7 +115,7 @@ export function AdminScreen() {
 
   if (!authed) {
     return (
-      <div className="screen narrow admin">
+      <div className="screen narrow admin login">
         <a className="link" href="#/">{uz.adminBackToGame}</a>
         <h1>{uz.adminTitle}</h1>
         <form
@@ -134,10 +134,13 @@ export function AdminScreen() {
   }
 
   return (
-    <div className="screen narrow wide-ish admin">
-      <a className="link" href="#/">{uz.adminBackToGame}</a>
-      <h1>{uz.adminTitle}</h1>
-      {msg && <p className="muted">{msg}</p>}
+    <div className="screen panel admin">
+      <header className="panel-head">
+        <a className="link" href="#/">{uz.adminBackToGame}</a>
+        <h1>{uz.adminTitle}</h1>
+        {msg && <p className="muted">{msg}</p>}
+      </header>
+      <div className="panel-body">
 
       <section className="card">
         <h2>{uz.adminFreeTitle}</h2>
@@ -236,6 +239,7 @@ export function AdminScreen() {
           </>
         )}
       </section>
+      </div>
     </div>
   );
 }

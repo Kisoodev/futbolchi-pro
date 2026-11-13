@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Club, Match, MatchEvent, PitchPoint, Position } from '@futbolchi/engine';
 import { uz } from '../i18n/uz';
 import { eventText } from '../i18n/events';
@@ -26,16 +26,22 @@ interface Props {
   personaName: string;
   personaPosition: Position;
   onFinished?: () => void;
+  /** Shown above / below the event feed in the side column. */
+  sideTop?: ReactNode;
+  sideBottom?: ReactNode;
 }
 
 const SPEEDS = [1, 2, 4];
+/** Same breakpoint as the fit-to-screen layout in styles.css. */
+export const FIT_QUERY = '(min-width: 900px) and (min-height: 520px)';
 
 /** Canvas can't read CSS variables cheaply; keep in sync with styles.css. */
 const COLORS = { grassA: '#62b533', grassB: '#6cc23a', sun: '#ffcf33', ink: '#12324f' };
 const PIXEL_FONT = "'Pixelify Sans', system-ui, sans-serif";
 
-export function PitchReplay({ match, clubs, personaName, personaPosition, onFinished }: Props) {
+export function PitchReplay({ match, clubs, personaName, personaPosition, onFinished, sideTop, sideBottom }: Props) {
   const events = match.events;
+  const { areaRef, boardRef, frameW } = useFitPitch();
   const { segments, total } = useMemo(() => buildTimeline(events), [events]);
   const [t, setT] = useState(0);
   const [playing, setPlaying] = useState(true);
@@ -98,33 +104,41 @@ export function PitchReplay({ match, clubs, personaName, personaPosition, onFini
 
   return (
     <div className="replay">
-      <div className="scoreboard">
-        <span className="team" style={{ borderColor: home.color }}>{home.name}</span>
-        <span className="score">
-          {shownScore[0]} : {shownScore[1]}
-        </span>
-        <span className="team" style={{ borderColor: away.color }}>{away.name}</span>
-        <span className="minute">{done ? uz.fullTime : `${minute}'`}</span>
-      </div>
-      <div ref={wrapRef} className="pitch-wrap">
-        <canvas ref={canvasRef} className="pitch" aria-label="2D o'yin ko'rinishi" />
-        {current && frame.arrived && !done && (
-          <div className={`caption ${current.actor === 'persona' ? 'me' : ''}`}>
-            {uz.eventIcons[current.type]} {eventText(current, match, clubs, personaName)}
+      <div className="replay-main">
+        <div ref={areaRef} className="pitch-area">
+          <div className="pitch-frame" style={frameW ? { width: frameW } : undefined}>
+            <div ref={boardRef} className="scoreboard">
+              <span className="team" style={{ borderColor: home.color }}>{home.name}</span>
+              <span className="score">
+                {shownScore[0]} : {shownScore[1]}
+              </span>
+              <span className="team" style={{ borderColor: away.color }}>{away.name}</span>
+              <span className="minute">{done ? uz.fullTime : `${minute}'`}</span>
+            </div>
+            <div ref={wrapRef} className="pitch-wrap">
+              <canvas ref={canvasRef} className="pitch" aria-label="2D o'yin ko'rinishi" />
+              {current && frame.arrived && !done && (
+                <div className={`caption ${current.actor === 'persona' ? 'me' : ''}`}>
+                  {uz.eventIcons[current.type]} {eventText(current, match, clubs, personaName)}
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
+        <div className="controls">
+          <button onClick={() => (done ? (setT(0), (finishedRef.current = false), setPlaying(true)) : setPlaying(!playing))}>
+            {playing ? uz.pause : uz.play}
+          </button>
+          <button onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>
+            {uz.speed}: {speed}×
+          </button>
+          <button onClick={() => setT(total)} disabled={done}>
+            {uz.skip}
+          </button>
+        </div>
       </div>
-      <div className="controls">
-        <button onClick={() => (done ? (setT(0), (finishedRef.current = false), setPlaying(true)) : setPlaying(!playing))}>
-          {playing ? uz.pause : uz.play}
-        </button>
-        <button onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>
-          {uz.speed}: {speed}×
-        </button>
-        <button onClick={() => setT(total)} disabled={done}>
-          {uz.skip}
-        </button>
-      </div>
+      <aside className="replay-side">
+        {sideTop}
       <ol className="event-feed">
         {visible.length === 0 && done && <li className="muted">{uz.noEvents}</li>}
         {visible
@@ -145,8 +159,42 @@ export function PitchReplay({ match, clubs, personaName, personaPosition, onFini
             </li>
           ))}
       </ol>
+        {sideBottom}
+      </aside>
     </div>
   );
+}
+
+/**
+ * On PC the replay must fit the window: the pitch (with its scoreboard) gets
+ * the largest 105:68 size that fits the free area. On narrow screens the page
+ * scrolls normally and the pitch simply takes the full width.
+ */
+function useFitPitch() {
+  const areaRef = useRef<HTMLDivElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const [frameW, setFrameW] = useState<number | null>(null);
+  useEffect(() => {
+    const area = areaRef.current;
+    const board = boardRef.current;
+    if (!area || !board) return;
+    const mq = window.matchMedia(FIT_QUERY);
+    const measure = () => {
+      if (!mq.matches) return setFrameW(null);
+      const free = area.clientHeight - board.offsetHeight;
+      const w = Math.floor(Math.min(area.clientWidth, (free * 105) / 68));
+      setFrameW(w > 120 ? w : null);
+    };
+    const ro = new ResizeObserver(measure);
+    ro.observe(area);
+    mq.addEventListener('change', measure);
+    measure();
+    return () => {
+      ro.disconnect();
+      mq.removeEventListener('change', measure);
+    };
+  }, []);
+  return { areaRef, boardRef, frameW };
 }
 
 function drawFrame(

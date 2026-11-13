@@ -1,0 +1,72 @@
+import { useState } from 'react';
+import { uz } from '../i18n/uz';
+import { api } from '../state/api';
+import { getUserId, getUserName, setUserName } from '../state/store';
+import { PixelArt } from '../art/PixelArt';
+import { BALL } from '../art/sprites';
+
+const NAME_MIN = 2;
+const NAME_MAX = 24;
+
+/** First page after loading: an attention message and the nickname. */
+export function NameScreen({ onDone }: { onDone: (name: string) => void }) {
+  const [name, setName] = useState(() => getUserName());
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const clean = name.trim();
+  const valid = clean.length >= NAME_MIN && clean.length <= NAME_MAX;
+
+  const submit = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await api.register(getUserId(), clean);
+      setUserName(clean);
+      onDone(clean);
+    } catch {
+      setError(uz.serverDown);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="screen center hero">
+      <PixelArt sprite={BALL} scale={6} className="ball-logo" />
+      <h1>{uz.appName}</h1>
+
+      <form
+        className="name-card"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submit();
+        }}
+      >
+        <div className="attention" role="note">
+          <span className="attention-tag">{uz.nameAttention}</span>
+          <strong>{uz.nameTitle}</strong>
+          <p>{uz.nameText}</p>
+        </div>
+        <label className="field-label" htmlFor="nick">{uz.menuNameTitle}</label>
+        <label className="name-input">
+          <span aria-hidden>@</span>
+          <input
+            id="nick"
+            value={name}
+            maxLength={NAME_MAX}
+            placeholder={uz.menuNamePlaceholder}
+            autoComplete="nickname"
+            spellCheck={false}
+            autoFocus
+            onChange={(e) => setName(e.target.value)}
+          />
+        </label>
+        <p className="muted small">{uz.menuNameHint}</p>
+        {error && <p className="error">{error}</p>}
+        <button className="primary big" type="submit" disabled={!valid || busy}>
+          {uz.continue} →
+        </button>
+      </form>
+    </div>
+  );
+}

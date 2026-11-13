@@ -17,27 +17,35 @@ export function MatchScreen({ state, matchId, onContinue }: Props) {
   const ps = match.personaStats;
 
   return (
-    <div className="screen narrow wide-ish">
-      <p className="eyebrow">{uz.matchTitle(match.week)}</p>
-      {ps && <p className="role">{uz.roles[ps.role]}</p>}
+    <div className="screen panel match">
       <PitchReplay
         match={match}
         clubs={state.clubs}
         personaName={state.persona.name}
         personaPosition={state.persona.position}
         onFinished={onFinished}
+        sideTop={
+          <div className="match-head">
+            <p className="eyebrow">{uz.matchTitle(match.week)}</p>
+            {ps && <p className="role">{uz.roles[ps.role]}</p>}
+          </div>
+        }
+        sideBottom={
+          <div className="match-foot">
+            {finished && ps && ps.rating !== null && (
+              <div className="result">
+                <span className="rating">
+                  {uz.rating}: <strong>{ps.rating.toFixed(1)}</strong>
+                </span>
+                <span className="muted small">{uz.personaLine(ps.minutes, ps.goals, ps.assists)}</span>
+              </div>
+            )}
+            <button className={finished ? 'primary big' : 'big'} onClick={onContinue}>
+              {uz.afterMatch} →
+            </button>
+          </div>
+        }
       />
-      {finished && ps && ps.rating !== null && (
-        <div className="card result">
-          <span className="rating">
-            {uz.rating}: <strong>{ps.rating.toFixed(1)}</strong>
-          </span>
-          <span className="muted">{uz.personaLine(ps.minutes, ps.goals, ps.assists)}</span>
-        </div>
-      )}
-      <button className={finished ? 'primary big' : 'big'} onClick={onContinue}>
-        {uz.afterMatch} →
-      </button>
     </div>
   );
 }

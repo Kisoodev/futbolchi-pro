@@ -135,66 +135,87 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
   };
 
   return (
-    <div className="screen narrow create">
-      <p className="success">{uz.createPaid}</p>
-      <h1>{uz.createTitle}</h1>
+    <div className="screen panel create">
+      <header className="panel-head create-head">
+        <p className="success">{uz.createPaid}</p>
+        <h1>{uz.createTitle}</h1>
+      </header>
 
-      <section className="look">
-        <div className="avatar-stage">
-          <Avatar appearance={look} kit={PREVIEW_KIT} scale={5} />
-          <strong>{name}</strong>
-          <span className="muted small">
-            {uz.heightValue(look.heightCm)} · {uz.weightValue(look.weightKg)}
-          </span>
-        </div>
-        <div className="look-controls">
+      <div className="panel-body create-grid">
+        <section className="create-preview">
+          <div className="avatar-stage">
+            <Avatar appearance={look} kit={PREVIEW_KIT} scale={4} />
+            <strong>{name}</strong>
+            <span className="muted small">
+              {uz.heightValue(look.heightCm)} · {uz.weightValue(look.weightKg)}
+            </span>
+          </div>
+          <div className="preview-ovr">
+            <span className="ovr">
+              <strong>{Math.round(computeOvr(preview, position))}</strong>
+              <small>{uz.ovr}</small>
+            </span>
+            <span>
+              <b>{position}</b> {uz.positions[position]}
+            </span>
+          </div>
+        </section>
+
+        <section className="create-look">
           <h2>{uz.appearanceTitle}</h2>
-          <Choice label={uz.headShapeLabel} options={HEAD_SHAPES} value={look.headShape} names={uz.headShapes} onChange={(v) => set('headShape', v)} />
-          <Swatches label={uz.skinToneLabel} options={SKIN_TONES} value={look.skinTone} names={uz.skinTones} colors={SKIN_HEX} onChange={(v) => set('skinTone', v)} />
+          {/* Paired rows keep the whole column on screen at 1366×768 */}
+          <div className="look-row head-foot">
+            <Choice label={uz.headShapeLabel} options={HEAD_SHAPES} value={look.headShape} names={uz.headShapes} onChange={(v) => set('headShape', v)} />
+            <Choice label={uz.footLabel} options={FEET} value={look.foot} names={uz.feet} onChange={(v) => set('foot', v)} />
+          </div>
           <Choice label={uz.hairStyleLabel} options={HAIR_STYLES} value={look.hairStyle} names={uz.hairStyles} onChange={(v) => set('hairStyle', v)} />
-          <Swatches label={uz.hairColorLabel} options={HAIR_COLORS} value={look.hairColor} names={uz.hairColors} colors={HAIR_HEX} onChange={(v) => set('hairColor', v)} />
-          <Slider label={uz.heightLabel} value={look.heightCm} min={C.HEIGHT_MIN_CM} max={C.HEIGHT_MAX_CM} text={uz.heightValue(look.heightCm)} onChange={(v) => set('heightCm', v)} />
-          <Slider label={uz.weightLabel} value={look.weightKg} min={C.WEIGHT_MIN_KG} max={C.WEIGHT_MAX_KG} text={uz.weightValue(look.weightKg)} onChange={(v) => set('weightKg', v)} />
-          <Choice label={uz.footLabel} options={FEET} value={look.foot} names={uz.feet} onChange={(v) => set('foot', v)} />
-        </div>
-      </section>
+          <div className="look-row colors">
+            <Swatches label={uz.skinToneLabel} options={SKIN_TONES} value={look.skinTone} names={uz.skinTones} colors={SKIN_HEX} onChange={(v) => set('skinTone', v)} />
+            <Swatches label={uz.hairColorLabel} options={HAIR_COLORS} value={look.hairColor} names={uz.hairColors} colors={HAIR_HEX} onChange={(v) => set('hairColor', v)} />
+          </div>
+          <div className="slider-pair">
+            <Slider label={uz.heightLabel} value={look.heightCm} min={C.HEIGHT_MIN_CM} max={C.HEIGHT_MAX_CM} text={uz.heightValue(look.heightCm)} onChange={(v) => set('heightCm', v)} />
+            <Slider label={uz.weightLabel} value={look.weightKg} min={C.WEIGHT_MIN_KG} max={C.WEIGHT_MAX_KG} text={uz.weightValue(look.weightKg)} onChange={(v) => set('weightKg', v)} />
+          </div>
+        </section>
 
-      <h2>{uz.skillsTitle}</h2>
-      <div className="field">
-        <span>{uz.positionLabel}</span>
-        <div className="chips">
-          {POSITIONS.map((p) => (
-            <button key={p} type="button" className={p === position ? 'chip on' : 'chip'} aria-pressed={p === position} onClick={() => { setPosition(p); setBonus({}); }}>
-              <b>{p}</b> {uz.positions[p]}
-            </button>
-          ))}
-        </div>
-      </div>
-      <div className="field">
-        <span>{uz.bonusLabel(left)}</span>
-        <ul className="stat-edit">
-          {STAT_KEYS.map((k) => (
-            <li key={k} className={C.POSITION_WEIGHTS[position][k] >= 0.15 ? 'key' : ''}>
-              <span className="label">{uz.stats[k]}</span>
-              <button type="button" onClick={() => adjust(k, -1)} disabled={!bonus[k]} aria-label={`${uz.stats[k]} −`}>−</button>
-              <span className="val">
-                {preview[k]}
-                {bonus[k] ? <small> +{bonus[k]}</small> : null}
-              </span>
-              <button type="button" onClick={() => adjust(k, 1)} disabled={left <= 0 || (bonus[k] ?? 0) >= C.BONUS_POINTS_PER_STAT_MAX} aria-label={`${uz.stats[k]} +`}>+</button>
-            </li>
-          ))}
-        </ul>
-        <p className="muted small">
-          {uz.ovr}: {Math.round(computeOvr(preview, position))}
-        </p>
+        <section className="create-skills">
+          <h2>{uz.skillsTitle}</h2>
+          <div className="field">
+            <div className="chips pos-chips" role="group" aria-label={uz.positionLabel}>
+              {POSITIONS.map((p) => (
+                <button key={p} type="button" className={p === position ? 'chip on' : 'chip'} aria-pressed={p === position} onClick={() => { setPosition(p); setBonus({}); }}>
+                  <b>{p}</b> {uz.positions[p]}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="field">
+            <span>{uz.bonusLabel(left)}</span>
+            <ul className="stat-edit">
+              {STAT_KEYS.map((k) => (
+                <li key={k} className={C.POSITION_WEIGHTS[position][k] >= 0.15 ? 'key' : ''}>
+                  <span className="label">{uz.stats[k]}</span>
+                  <button type="button" onClick={() => adjust(k, -1)} disabled={!bonus[k]} aria-label={`${uz.stats[k]} −`}>−</button>
+                  <span className="val">
+                    {preview[k]}
+                    {bonus[k] ? <small> +{bonus[k]}</small> : null}
+                  </span>
+                  <button type="button" onClick={() => adjust(k, 1)} disabled={left <= 0 || (bonus[k] ?? 0) >= C.BONUS_POINTS_PER_STAT_MAX} aria-label={`${uz.stats[k]} +`}>+</button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
       </div>
 
-      {error && <p className="error">{error}</p>}
-      {validation && <p className="error">{uz.errors[validation] ?? validation}</p>}
-      <button className="primary big" disabled={!!validation || busy} onClick={create}>
-        {uz.createButton}
-      </button>
+      <footer className="panel-foot">
+        {error && <p className="error">{error}</p>}
+        {validation && <p className="error">{uz.errors[validation] ?? validation}</p>}
+        <button className="primary big" disabled={!!validation || busy} onClick={create}>
+          {uz.createButton}
+        </button>
+      </footer>
     </div>
   );
 }

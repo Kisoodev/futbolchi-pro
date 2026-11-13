@@ -47,7 +47,7 @@ export function WeekScreen({ state, onPlay }: Props) {
 
   return (
     <div className="screen grid">
-      <section className="card">
+      <section className="card persona-card">
         <p className="eyebrow">{uz.seasonWeek(season.index, season.week, seasonWeeks(season))}</p>
         <PersonaHeader persona={persona} club={club} />
         <FatigueMeter value={persona.fatigue} />
@@ -55,7 +55,7 @@ export function WeekScreen({ state, onPlay }: Props) {
         <StatBars persona={persona} />
       </section>
 
-      <section className="card">
+      <section className="card train-card">
         <h2>{uz.trainingTitle}</h2>
         <p className="muted">{uz.trainingHint}</p>
         <div className="options">
@@ -72,7 +72,7 @@ export function WeekScreen({ state, onPlay }: Props) {
         </button>
       </section>
 
-      <section className="card">
+      <section className="card table-card">
         <h2>{uz.table}</h2>
         <LeagueTable season={season} clubs={state.clubs} highlightId={club.id} />
       </section>

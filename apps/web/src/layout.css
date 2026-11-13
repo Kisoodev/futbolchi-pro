@@ -1,0 +1,296 @@
+/* =====================================================================
+ * Panels, menu screens and the PC fit-to-screen layout.
+ * Loaded after styles.css.
+ * ===================================================================== */
+
+/* ---------- Panel: white card with head / body / foot ---------- */
+.panel {
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 6px 0 var(--card-shadow);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+}
+.screen.panel { max-width: 1120px; }
+.screen.panel.pay { max-width: 940px; }
+.screen.panel.info { max-width: 920px; }
+.screen.panel.admin { max-width: 880px; }
+/* The pitch should grow to the window height on big screens */
+.screen.panel.match { max-width: 1520px; }
+.panel .card { background: var(--sky-pale); box-shadow: none; }
+.panel-head h1 { margin-bottom: 0.25rem; }
+.panel-head .link,
+.panel-head a.link { margin-bottom: 0.35rem; }
+.panel-foot { padding-top: 12px; margin-top: 12px; border-top: 2px solid var(--line); }
+.panel-foot button.big { margin-top: 0; }
+.panel-foot .error { margin: 0 0 8px; }
+/* Links that look like buttons (e.g. a download link) */
+a.button {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  font: 600 1rem var(--body);
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  box-shadow: 0 3px 0 var(--card-shadow);
+  flex: 1 1 auto;
+}
+a.button.primary {
+  font-family: var(--pixel);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: linear-gradient(180deg, var(--grass-hi) 0%, var(--grass) 100%);
+  border-color: var(--grass-shadow);
+  box-shadow: 0 4px 0 var(--grass-shadow), inset 0 2px 0 rgba(255, 255, 255, 0.28);
+  text-shadow: 0 2px 0 var(--grass-shadow);
+}
+a.button:hover { filter: brightness(1.05); }
+
+/* ---------- Name page ---------- */
+.attention {
+  position: relative;
+  background: var(--grass-pale);
+  border: 2px solid var(--grass);
+  border-radius: 12px;
+  padding: 22px 14px 12px;
+  margin: 10px 0 14px;
+}
+.attention-tag {
+  position: absolute;
+  top: -13px;
+  left: 12px;
+  font-family: var(--pixel);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fff;
+  background: var(--grass);
+  border: 2px solid var(--grass-shadow);
+  border-radius: 6px;
+  padding: 1px 10px;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+.attention strong { display: block; font-family: var(--pixel); font-size: 1.2rem; color: var(--grass-ink); }
+.attention p { margin: 0.3rem 0 0; }
+.field-label { display: block; font-weight: 800; font-size: 0.9rem; color: var(--ink-muted); }
+@keyframes pulse { 50% { transform: scale(1.06); } }
+
+/* ---------- Main menu ---------- */
+.menu-card {
+  display: grid;
+  gap: 12px;
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  box-shadow: 0 6px 0 var(--card-shadow);
+  padding: 18px;
+}
+.menu-card button.big { margin-top: 0; }
+.menu-btn { display: grid; gap: 2px; justify-items: center; }
+.menu-btn small {
+  font-family: var(--body);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0;
+  text-shadow: none;
+  color: var(--ink-muted);
+}
+.menu-btn.primary { padding-top: 1.05rem; padding-bottom: 1.05rem; font-size: 1.3rem; }
+.menu-btn.primary small { color: #e6f8d8; }
+.change-name { justify-self: center; margin: 0; }
+.menu-card.confirm { text-align: left; }
+.menu-card.confirm h2 { color: var(--danger); }
+
+/* ---------- Info page ---------- */
+.info-grid { display: grid; gap: 24px; }
+.credits { margin: 0; display: grid; gap: 12px; }
+.credits div { background: var(--sky-pale); border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.credits dt { font-weight: 800; color: var(--sky-deep); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.credits dd { margin: 2px 0 0; font-family: var(--pixel); font-size: 1.15rem; }
+.credits dd.tba { font-family: var(--body); font-style: italic; font-size: 0.95rem; color: var(--ink-muted); }
+.legal { background: var(--sky-pale); border-left: 4px solid var(--sky); padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; }
+
+/* ---------- Payment page ---------- */
+.pay-grid { display: grid; gap: 18px; }
+.pay-grid .pay-step { margin: 0; }
+.pay-grid .amount { margin-top: 0; }
+
+/* ---------- Persona creation ---------- */
+.create-head .success { margin: 0; }
+.create-grid { display: grid; gap: 18px; }
+.create-grid h2 { margin-bottom: 0.25rem; }
+.create .field { margin: 0.55rem 0; }
+.create .chip { padding: 0.4rem 0.6rem; font-size: 0.88rem; }
+.create .swatch { width: 32px; height: 32px; }
+.create .stat-edit { gap: 4px; }
+.create .stat-edit li { grid-template-columns: 1fr 34px 60px 34px; }
+.create .stat-edit button { padding: 0.1rem 0; }
+.pos-chips { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.slider-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.look-row { display: grid; gap: 12px; }
+.look-row.head-foot { grid-template-columns: 3fr 2fr; }
+.look-row.colors { grid-template-columns: 1fr 1.4fr; }
+.look-row .chips.tight { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 6px; }
+.look-row .chip { padding: 0.4rem 0.3rem; text-align: center; font-size: 0.82rem; }
+.create .chips.tight { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.create .look-row .chips.tight { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); }
+.create .swatches { gap: 6px; }
+.create-preview { display: grid; gap: 10px; align-content: start; }
+.preview-ovr { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.preview-ovr .ovr { min-width: 56px; height: 56px; }
+.preview-ovr b { font-family: var(--pixel); color: var(--sky-deep); }
+
+/* ---------- Week screen ---------- */
+.train-card { display: flex; flex-direction: column; }
+.train-card .primary.big { margin-top: auto; }
+.train-card .next-match { margin-bottom: 0.75rem; }
+
+/* ---------- Match screen ---------- */
+.replay { display: grid; gap: 14px; margin: 0; }
+.replay-main { display: flex; flex-direction: column; min-width: 0; }
+.pitch-frame { margin: 0 auto; width: 100%; }
+.replay-side { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.match-head p { margin: 0; }
+.match-foot { display: grid; gap: 8px; }
+.match-foot button.big { margin-top: 0; }
+.match .controls { margin: 10px 0 0; }
+
+/* ---------- Season summary ---------- */
+.screen.split { display: grid; gap: 18px; }
+.split > .panel,
+.split > .card { margin: 0; }
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(18, 50, 79, 0.55);
+}
+.modal-box {
+  background: var(--card);
+  border-radius: 14px;
+  padding: 14px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 8px 0 var(--card-shadow);
+}
+.modal-box .card-preview { max-height: calc(100vh - 140px); width: auto; max-width: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .attention-tag { animation: none; }
+}
+
+/* ---------- Two-column pieces from tablet width up ---------- */
+@media (min-width: 900px) {
+  .info-grid { grid-template-columns: 1.2fr 1fr; }
+  .pay-grid { grid-template-columns: 1fr 1fr; align-items: start; }
+  .create-grid { grid-template-columns: 200px minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .replay { grid-template-columns: minmax(0, 1fr) 300px; }
+  .screen.split { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; }
+}
+
+/* ---------- PC: everything fits the window, no page scroll ----------
+ * Only lists (event feed, league table, admin) may scroll inside their own
+ * box; primary buttons always stay on screen.
+ * Keep in sync with FIT_QUERY in replay/PitchReplay.tsx. */
+@media (min-width: 900px) and (min-height: 520px) {
+  html,
+  body,
+  #root { height: 100%; }
+  body { overflow: hidden; }
+  .app {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  /* Loading and admin have no top bar */
+  .app.bare { grid-template-rows: minmax(0, 1fr); }
+  .topbar { padding: 8px 24px 0; }
+  main { min-height: 0; padding: 8px 24px 46px; display: flex; flex-direction: column; }
+  main > .screen { width: 100%; min-height: 0; }
+
+  /* Centered pages (loading, name, menu, admin login) */
+  main > .screen.center,
+  main > .screen.narrow { margin: auto; padding-top: 0; max-height: 100%; overflow: auto; }
+
+  /* Panels shrink to the window and scroll only their body */
+  main > .screen.panel { flex: 0 1 auto; max-height: 100%; margin-block: auto; }
+  .panel-head,
+  .panel-foot { flex: none; }
+  .panel-body { flex: 1 1 auto; min-height: 0; overflow: auto; }
+
+  /* Persona creation: columns scroll on their own if the window is short */
+  .create-grid { overflow: hidden; grid-template-rows: minmax(0, 1fr); }
+  .create-grid > section { min-height: 0; max-height: 100%; overflow: auto; padding-right: 4px; }
+
+  /* Week: three cards side by side, each fits the height */
+  main > .screen.grid { flex: 1; grid-template-rows: minmax(0, 1fr); align-items: start; }
+  .screen.grid > .card { max-height: 100%; overflow: auto; }
+  .train-card { overflow: hidden; }
+  .train-card .options { min-height: 0; overflow: auto; }
+
+  /* Match: pitch sized by JS to the free area, feed scrolls beside it */
+  main > .screen.panel.match { flex: 1; margin-block: 0; padding: 14px; }
+  .match .replay { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  .replay-main { min-height: 0; }
+  .pitch-area { flex: 1; min-height: 0; overflow: hidden; }
+  .replay-side { min-height: 0; }
+  .replay-side .event-feed { flex: 1; min-height: 0; max-height: none; }
+
+  /* Season summary: story + actions left, table right */
+  main > .screen.split { flex: 1; grid-template-rows: minmax(0, 1fr); }
+  .split > .panel,
+  .split > .card { max-height: 100%; min-height: 0; }
+  .split > .card { overflow: auto; }
+
+  /* Admin is a tool, not the game: its list may scroll inside the panel */
+  main > .screen.panel.admin { flex: 1; }
+}
+
+/* Short PC windows (e.g. 1366x768 with browser bars): tighten spacing */
+@media (min-width: 900px) and (max-height: 760px) {
+  h1 { font-size: 1.7rem; }
+  .hero h1 { font-size: 2.4rem; margin: 0.2rem 0; }
+  .hero .ball-logo { width: 48px; height: 48px; }
+  .hero .tagline { margin-bottom: 0.75rem; }
+  button.big { padding: 0.7rem 1rem; font-size: 1.05rem; }
+  .menu-btn.primary { padding-top: 0.8rem; padding-bottom: 0.8rem; font-size: 1.15rem; }
+  .card,
+  .panel { padding: 12px 14px; }
+  .menu-card,
+  .name-card { padding: 14px; }
+  .stat-bars { gap: 3px; }
+  .stat-bars li { font-size: 0.86rem; }
+  .persona-header { margin: 0.25rem 0 0.4rem; }
+  .option { padding: 0.55rem 0.8rem; }
+  .options { gap: 7px; }
+  th,
+  td { padding: 4px 6px; }
+  .story { font-size: 1rem; line-height: 1.5; }
+  .tiles { margin: 0.6rem 0; }
+  .tiles strong { font-size: 1.4rem; }
+  .avatar-stage svg { width: 112px; height: 168px; }
+  .create .field { margin: 0.35rem 0; }
+  .create .chip { padding: 0.3rem 0.5rem; }
+  .create .stat-edit button { height: 28px; font-size: 1rem; }
+  .create .swatch { width: 28px; height: 28px; }
+  .create-grid h2 { font-size: 1.1rem; }
+  .attention { padding-top: 18px; margin-bottom: 10px; }
+  .upload { padding: 12px; }
+  .upload img { max-height: 150px; }
+  .bank-card { padding: 14px; }
+  .amount { padding: 8px 14px; margin-bottom: 0.6rem; }
+}
