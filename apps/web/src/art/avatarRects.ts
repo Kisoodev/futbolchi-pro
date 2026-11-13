@@ -11,6 +11,7 @@ import {
   constants as C,
   type Appearance,
   type BootColor,
+  CELEBRATIONS,
   type Celebration,
   type EyeColor,
   type HairColor,
@@ -20,8 +21,13 @@ import {
 
 export const AVATAR_W = 64;
 export const AVATAR_H = 96;
-/** Standing, or one of the goal celebrations. */
-export type Pose = 'stand' | Celebration;
+/** Preview-only football poses (not saved; the saved one is the celebration). */
+export const EXTRA_POSES = ['hands_hips', 'arms_crossed', 'ball_arm', 'thumbs_up', 'ball_foot'] as const;
+export type ExtraPose = (typeof EXTRA_POSES)[number];
+/** Standing, a calm football pose, or one of the goal celebrations. */
+export type Pose = 'stand' | ExtraPose | Celebration;
+/** Order the pose button walks through. */
+export const POSE_CYCLE: readonly Exclude<Pose, 'stand'>[] = [...EXTRA_POSES, ...CELEBRATIONS];
 
 export const SKIN_HEX: Record<SkinTone, string> = {
   pale: '#fbe2cd',
@@ -221,7 +227,7 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   const hair = HAIR_HEX[a.hairColor];
   const boot = BOOT_HEX[a.boots];
   const trim = luminance(kit) < 0.62 ? WHITE : '#1d3a5c';
-  const celebrating = pose !== 'stand';
+  const celebrating = (CELEBRATIONS as readonly string[]).includes(pose);
   const headH = headRows.length;
   const maxW = Math.max(...headRows);
   const rowX0 = (i: number) => cx - headRows[Math.max(0, Math.min(headH - 1, i))] / 2;
@@ -576,7 +582,30 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   let right: Pt[] = mirror(leftDown);
   const shoulderL: Pt = [torsoL - L.limb / 2 + 1, sy];
   let fingerUp = false;
+  let thumbUp = false;
+  let ball: { x: number; y: number; r: number; front: boolean } | null = null;
   switch (pose) {
+    case 'hands_hips':
+      left = [shoulderL, [shoulderL[0] - 6, sy + 8], [torsoL + 1, L.legTop - 3]];
+      right = mirror(left);
+      break;
+    case 'arms_crossed':
+      left = [shoulderL, [torsoL - 1, sy + 10], [cx + 5, sy + 8]];
+      right = mirror([shoulderL, [torsoL - 1, sy + 12], [cx + 5, sy + 11]]);
+      break;
+    case 'ball_arm':
+      ball = { x: torsoR + 7, y: L.legTop - 1, r: 6.5, front: false };
+      right = [[torsoR + L.limb / 2, sy], [torsoR + 5, sy + 8], [torsoR + 8, L.legTop - 8]];
+      break;
+    case 'thumbs_up':
+      right = mirror([shoulderL, [shoulderL[0] - 4, sy + 10], [shoulderL[0] + 2, sy + 3]]);
+      thumbUp = true;
+      break;
+    case 'ball_foot':
+      ball = { x: cx + 1 + L.legW + 7, y: L.ground - 4.5, r: 5.5, front: true };
+      left = [shoulderL, [shoulderL[0] - 6, sy + 8], [torsoL + 1, L.legTop - 3]];
+      right = mirror(left);
+      break;
     case 'arms_up':
       left = [shoulderL, [shoulderL[0] - 6, sy - 8], [shoulderL[0] - 10, sy - 17]];
       right = mirror(left);
@@ -596,10 +625,21 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
     default:
       break;
   }
-  const sleeve = new Layer(kit);
-  const armSkin = new Layer(skin, 0.8);
-  const cuffs = new Layer(a.accessory === 'wristbands' ? WHITE : trim, 0.5);
+  // Ball: a white pixel ball with dark patches
+  if (ball) {
+    const b = new Layer(WHITE, 0.9);
+    b.ellipse(ball.x, ball.y, ball.r, ball.r);
+    b.paint(out);
+    const patch = '#2a2f3a';
+    const bx = Math.round(ball.x);
+    const by = Math.round(ball.y);
+    for (const [dx, dy] of [[0, 0], [-1, 0], [0, -1], [-1, -1], [-3, 2], [2, 2], [2, -3], [-3, -3]]) put(out, bx + dx, by + dy, patch);
+  }
+  // Each arm gets its own layers so crossed arms stay readable.
   const drawArm = (pts: Pt[]) => {
+    const sleeve = new Layer(kit);
+    const armSkin = new Layer(skin, 0.8);
+    const cuffs = new Layer(a.accessory === 'wristbands' ? WHITE : trim, 0.5);
     const segs = pts.slice(1).map((p, i) => {
       const q = pts[i];
       return { a: q, b: p, len: Math.hypot(p[0] - q[0], p[1] - q[1]) };
@@ -637,17 +677,23 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
     // Fist
     const [hx, hy] = pts[pts.length - 1];
     armSkin.rect(Math.round(hx - r - 0.5), Math.round(hy - r), L.limb + 1, L.limb);
+    armSkin.paint(out);
+    sleeve.paint(out);
+    cuffs.paint(out);
     return [hx, hy] as Pt;
   };
   const handL = drawArm(left);
   const handR = drawArm(right);
-  armSkin.paint(out);
-  sleeve.paint(out);
-  cuffs.paint(out);
   // Knuckle lines on fists
   for (const [hx, hy] of [handL, handR]) {
     put(out, hx - 1, hy, shade(skin, -0.25));
     put(out, hx + 1, hy, shade(skin, -0.25));
+  }
+  if (thumbUp) {
+    const [hx, hy] = handR;
+    const t = new Layer(skin, 0.6);
+    t.rect(Math.round(hx - L.limb / 2), Math.round(hy - L.limb / 2) - 4, 2, 4);
+    t.paint(out);
   }
   if (fingerUp) {
     // Open palm raised to the sky: three spread fingers and a thumb (never a single finger).

@@ -15,7 +15,7 @@ import {
   constants as C,
   type Appearance,
 } from '@futbolchi/engine';
-import { AVATAR_H, AVATAR_W, avatarPixels, avatarRects, headBox } from '../src/art/avatarRects';
+import { AVATAR_H, AVATAR_W, POSE_CYCLE, avatarPixels, avatarRects, headBox } from '../src/art/avatarRects';
 
 const KIT = '#c0392b';
 const base = C.DEFAULT_APPEARANCE;
@@ -69,6 +69,25 @@ describe('pixel avatar', () => {
         const px = avatarPixels(a, KIT, p);
         // Nothing touches the top edge (room for the outline)
         expect(px.slice(0, AVATAR_W).every((c) => c === null), `${a.hairStyle} ${p}`).toBe(true);
+      }
+    }
+  });
+
+  it('the pose button cycles through distinct football poses that fit the grid', () => {
+    expect(new Set(POSE_CYCLE).size).toBe(POSE_CYCLE.length);
+    const all = new Set([sig(base), ...POSE_CYCLE.map((p) => sig(base, p))]);
+    expect(all.size).toBe(POSE_CYCLE.length + 1);
+    for (const a of [
+      { ...base, heightCm: C.HEIGHT_MAX_CM, weightKg: C.WEIGHT_MAX_KG },
+      { ...base, heightCm: C.HEIGHT_MIN_CM, weightKg: C.WEIGHT_MIN_KG },
+    ]) {
+      for (const p of POSE_CYCLE) {
+        const px = avatarPixels(a, KIT, p);
+        // Left and right columns stay empty (nothing is cut at the edges)
+        for (let y = 0; y < AVATAR_H; y++) {
+          expect(px[y * AVATAR_W], p).toBeNull();
+          expect(px[y * AVATAR_W + AVATAR_W - 1], p).toBeNull();
+        }
       }
     }
   });

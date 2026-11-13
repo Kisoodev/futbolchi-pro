@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   computeOvr,
   newGame,
@@ -28,7 +28,7 @@ import { tx } from '../i18n';
 import { api } from '../state/api';
 import { getUserId } from '../state/store';
 import { Avatar } from '../art/Avatar';
-import { BOOT_HEX, EYE_HEX, HAIR_HEX, SKIN_HEX } from '../art/avatarRects';
+import { BOOT_HEX, EYE_HEX, HAIR_HEX, POSE_CYCLE, SKIN_HEX, type Pose } from '../art/avatarRects';
 
 interface Props {
   /** Registered on the main menu. */
@@ -40,13 +40,12 @@ interface Props {
 
 /** Kit shown in the preview; the real club colour is only known after creation. */
 const PREVIEW_KIT = '#2f78b7';
-/** How long the preview plays the goal celebration. */
-const CELEBRATE_MS = 2200;
 const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0];
 const pick = <T,>(list: readonly T[]): T => list[Math.floor(Math.random() * list.length)];
 
 type LookTab = 'face' | 'hair' | 'body' | 'kit';
 const LOOK_TABS: LookTab[] = ['face', 'hair', 'body', 'kit'];
+const TAB_ICONS: Record<LookTab, string> = { face: '🙂', hair: '💇', body: '📏', kit: '👕' };
 
 /** A random, valid look (cosmetic only, so Math.random is fine here). */
 function randomLook(prev: Appearance): Appearance {
@@ -176,20 +175,26 @@ function Slider({ label, value, min, max, text, onChange }: {
 export function CreateScreen({ name, entitlementId, onCreated }: Props) {
   const [look, setLook] = useState<Appearance>({ ...C.DEFAULT_APPEARANCE });
   const [tab, setTab] = useState<LookTab>('face');
-  const [celebrating, setCelebrating] = useState(false);
+  /** Tabs the player has opened; unopened ones are flagged so none is missed. */
+  const [seen, setSeen] = useState<Set<LookTab>>(() => new Set(['face']));
+  const [pose, setPose] = useState<Pose>('stand');
   const [position, setPosition] = useState<Position>('ST');
   const [bonus, setBonus] = useState<Partial<Stats>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const timer = useRef<number | undefined>(undefined);
   const set = <K extends keyof Appearance>(k: K, v: Appearance[K]) => setLook((prev) => ({ ...prev, [k]: v }));
 
-  const celebrate = () => {
-    window.clearTimeout(timer.current);
-    setCelebrating(true);
-    timer.current = window.setTimeout(() => setCelebrating(false), CELEBRATE_MS);
+  const openTab = (t: LookTab) => {
+    setTab(t);
+    setSeen((prev) => new Set(prev).add(t));
   };
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const nextTab = LOOK_TABS[LOOK_TABS.indexOf(tab) + 1];
+  /** The ball button walks through football poses and celebrations, then back to standing. */
+  const nextPose = () => {
+    const i = pose === 'stand' ? -1 : POSE_CYCLE.indexOf(pose as (typeof POSE_CYCLE)[number]);
+    setPose(i + 1 < POSE_CYCLE.length ? POSE_CYCLE[i + 1] : 'stand');
+  };
+  const poseName = pose === 'stand' ? null : (tx.poseNames as Record<string, string>)[pose] ?? tx.celebrations[pose as keyof typeof tx.celebrations];
 
   const used = STAT_KEYS.reduce((a, k) => a + (bonus[k] ?? 0), 0);
   const left = C.BONUS_POINTS_TOTAL - used;
@@ -229,8 +234,9 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
         <section className="create-preview">
           <div className="avatar-stage">
             <button type="button" className="stage-btn left" title={tx.lookRandom} aria-label={tx.lookRandom} onClick={() => setLook((prev) => randomLook(prev))}>🎲</button>
-            <button type="button" className="stage-btn right" title={tx.lookCelebrate} aria-label={tx.lookCelebrate} onClick={celebrate}>⚽</button>
-            <Avatar appearance={look} kit={PREVIEW_KIT} scale={2} pose={celebrating ? look.celebration : 'stand'} className="avatar-big" />
+            <button type="button" className="stage-btn right" title={tx.lookPose} aria-label={tx.lookPose} onClick={nextPose}>⚽</button>
+            {poseName && <span className="pose-name">{poseName}</span>}
+            <Avatar appearance={look} kit={PREVIEW_KIT} scale={2} pose={pose} className="avatar-big" />
             <strong>{name}</strong>
             <span className="muted small">
               {tx.heightValue(look.heightCm)} · {tx.weightValue(look.weightKg)}
@@ -250,14 +256,28 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
         <section className="create-look">
           <div className="look-head">
             <h2>{tx.appearanceTitle}</h2>
-            <nav className="look-tabs" role="tablist">
-              {LOOK_TABS.map((t) => (
-                <button key={t} type="button" role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
-                  {tx.lookTabs[t]}
-                </button>
-              ))}
-            </nav>
+            <span className={seen.size === LOOK_TABS.length ? 'look-progress done' : 'look-progress'}>
+              {tx.lookProgress(seen.size, LOOK_TABS.length)}
+            </span>
           </div>
+          <nav className="look-tabs" role="tablist">
+            {LOOK_TABS.map((t, i) => (
+              <button
+                key={t}
+                type="button"
+                role="tab"
+                aria-selected={tab === t}
+                className={['look-tab', tab === t ? 'on' : '', seen.has(t) ? 'seen' : 'new'].join(' ')}
+                onClick={() => openTab(t)}
+              >
+                <span className="look-icon" aria-hidden>{TAB_ICONS[t]}</span>
+                <span className="look-label">
+                  <small>{i + 1}</small> {tx.lookTabs[t]}
+                </span>
+                {!seen.has(t) && <i className="new-dot" aria-hidden />}
+              </button>
+            ))}
+          </nav>
 
           {tab === 'face' && (
             <>
@@ -266,7 +286,6 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
               <Swatches label={tx.eyeColorLabel} options={EYE_COLORS} value={look.eyeColor} names={tx.eyeColors} colors={EYE_HEX} onChange={(v) => set('eyeColor', v)} />
               <Choice label={tx.browsLabel} options={BROWS} value={look.brows} names={tx.browsNames} onChange={(v) => set('brows', v)} cols={3} inline />
               <Choice label={tx.noseLabel} options={NOSES} value={look.nose} names={tx.noses} onChange={(v) => set('nose', v)} cols={3} inline />
-              <Portraits label={tx.facialHairLabel} field="facialHair" options={FACIAL_HAIR} look={look} names={tx.facialHairNames} onChange={(v) => set('facialHair', v)} />
             </>
           )}
 
@@ -274,6 +293,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
             <>
               <Portraits label={tx.hairStyleLabel} field="hairStyle" options={HAIR_STYLES} look={look} names={tx.hairStyles} onChange={(v) => set('hairStyle', v)} />
               <Swatches label={tx.hairColorLabel} options={HAIR_COLORS} value={look.hairColor} names={tx.hairColors} colors={HAIR_HEX} onChange={(v) => set('hairColor', v)} />
+              <Portraits label={tx.facialHairLabel} field="facialHair" options={FACIAL_HAIR} look={look} names={tx.facialHairNames} onChange={(v) => set('facialHair', v)} />
             </>
           )}
 
@@ -298,11 +318,16 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
                 cols={2}
                 onChange={(v) => {
                   set('celebration', v);
-                  celebrate();
+                  setPose(v);
                 }}
               />
               <p className="muted small">{tx.lookKitNote}</p>
             </>
+          )}
+          {nextTab && (
+            <button type="button" className="look-next" onClick={() => openTab(nextTab)}>
+              {tx.lookNext(tx.lookTabs[nextTab])} →
+            </button>
           )}
         </section>
 

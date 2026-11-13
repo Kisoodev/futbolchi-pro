@@ -395,9 +395,19 @@ button.danger { background: var(--danger); border-color: #8f2018; color: #fff; }
 .avatar-stage .avatar-big { image-rendering: pixelated; }
 .look-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
 .look-head h2 { margin: 0; }
-.look-tabs { display: flex; gap: 4px; }
-.look-tabs button { padding: 0.25rem 0.6rem; font-size: 0.82rem; box-shadow: none; }
-.look-tabs button.on { background: var(--sky-pale); border-color: var(--sky-deep); color: var(--sky-deep); }
+.look-progress { font-size: 0.8rem; font-weight: 800; color: var(--grass-ink); background: var(--grass-pale); border-radius: 999px; padding: 2px 10px; }
+.look-progress.done { color: var(--sky-deep); background: var(--sky-pale); }
+.look-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 4px 0 6px; }
+.look-tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 0.3rem 0.2rem; font-size: 0.84rem; font-weight: 800; background: #fff; border: 2px solid var(--line); border-radius: 10px; box-shadow: 0 3px 0 var(--card-shadow); white-space: nowrap; }
+.look-tab .look-icon { font-size: 1.1rem; line-height: 1; }
+.look-tab .look-label small { font-size: 0.7rem; color: var(--ink-muted); margin-right: 1px; }
+.look-tab.new { border-color: var(--grass-hi); background: var(--grass-pale); }
+.look-tab.on { background: var(--sky-deep); border-color: var(--sky-deep); color: #fff; box-shadow: 0 3px 0 #17456f; }
+.look-tab.on .look-label small { color: #d6ecff; }
+.new-dot { position: absolute; top: -5px; right: -5px; width: 12px; height: 12px; border-radius: 50%; background: var(--grass-hi); border: 2px solid #fff; animation: pulse 1.2s ease-in-out infinite; }
+.look-next { display: block; width: 100%; margin-top: 6px; padding: 0.45rem; font-weight: 800; color: var(--grass-ink); background: var(--grass-pale); border: 2px dashed var(--grass-hi); box-shadow: none; }
+.look-next:hover:not(:disabled) { border-color: var(--grass); border-style: solid; }
+.pose-name { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 88px); font-size: 0.72rem; line-height: 1.15; font-weight: 800; text-align: center; background: rgba(255, 255, 255, 0.88); border-radius: 8px; padding: 2px 6px; z-index: 1; }
 .look-row.pair { grid-template-columns: 1fr 1fr; }
 .look-row.pair .field { margin: 0.35rem 0; }
 .portraits { display: flex; flex-wrap: wrap; gap: 6px; }
