@@ -23,7 +23,6 @@ const keysOf = (o: object) => leaves(o).map((l) => l.path).sort();
 const SAME_EVERYWHERE = new Set([
   'appName',
   'tableCols.pos',
-  'payFileHint',
   'adminToken',
   'adminTitle', // "Admin panel" is also English
   'weightValue()', // "72 kg" in both

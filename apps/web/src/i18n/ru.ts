@@ -134,7 +134,16 @@ export const ru: Messages = {
 
   // Main menu
   menuHello: (name) => `Привет, ${name}!`,
-  menuSub: 'Какой путь выберем сегодня?',
+  /** Rotates under the greeting on the main menu. */
+  menuTaglines: [
+    "Навстречу несбывшимся мечтам!",
+    "Большая мечта начинается с маленького шага.",
+    "От двора до большого стадиона — одна дорога.",
+    "Сегодняшняя тренировка — завтрашняя победа.",
+    "Гол вашей мечты ещё впереди.",
+    "Звёзды рождаются там, где в них никто не верил.",
+    "Трибуны ждут вашего имени.",
+  ],
   menuNewCareer: 'Начать новую карьеру',
   menuPrice: (amount) => `Создать нового футболиста — ${amount}`,
   menuLoadGame: 'Загрузить игру',
@@ -181,9 +190,9 @@ export const ru: Messages = {
   payChange: 'Выбрать другое фото',
   paySubmit: 'Отправить чек',
   paySending: 'Отправляем…',
-  payFileHint: 'PNG, JPG или WEBP, до 4 МБ.',
-  payFileTooBig: 'Размер изображения не должен превышать 4 МБ.',
-  payFileBad: 'Можно загрузить только изображение (PNG, JPG, WEBP).',
+  payFileHint: "Скриншот или фото чека — можно снять камерой телефона.",
+  payFileTooBig: "Изображение слишком большое (не больше 25 МБ).",
+  payFileBad: "Не удалось открыть файл как изображение. Загрузите скриншот или JPG/PNG.",
   payReviewTitle: 'Проверяем чек',
   payReviewText:
     'Чек получен. Как только его подтвердят, страница продолжит сама — можно не закрывать её или вернуться позже.',
@@ -197,6 +206,10 @@ export const ru: Messages = {
   payBackToMenu: 'В меню',
   payAdminSkip: 'Админ: пропустить оплату',
   payAdminSkipHint: 'Видно только вам. Открывает бесплатный слот с чеком на 0 сум.',
+  payPreparing: "Готовим изображение…",
+  payContactTitle: "Админ не отвечает?",
+  payContactText: "Если чек долго не подтверждают или у вас есть вопрос, напишите админу напрямую.",
+  payContactButton: "Написать в Telegram",
   serverDown: 'Нет связи с сервером. Попробуйте ещё раз чуть позже.',
 
   // Week / training
@@ -222,6 +235,7 @@ export const ru: Messages = {
   effInjury: (pct) => `Риск травмы +${pct}%`,
   effNoGrowth: 'Без роста',
   table: 'Турнирная таблица',
+  weekTabs: { me: "Игрок", train: "Тренировка", table: "Таблица" },
   tableCols: { pos: '#', club: 'Клуб', p: 'И', gd: 'РМ', pts: 'О' },
   nextMatch: (home, away) => `Следующий матч: ${home} — ${away}`,
   career: 'Карьера',
@@ -326,6 +340,9 @@ export const ru: Messages = {
   adminStatRevenue: 'Выручка',
   adminTabs: { payments: 'Платежи', free: 'Бесплатный доступ', highlights: 'Хайлайты' },
   adminFilter: { waiting: 'Нужна проверка', all: 'Все' },
+  adminAlertsOn: "🔔 Сигнал о новом чеке: вкл",
+  adminAlertsOff: "🔕 Сигнал о новом чеке: выкл",
+  adminNewReceipts: (n) => `Новых чеков: ${n}`,
   adminNothingWaiting: 'Чеков на проверку нет. Новые появятся сами.',
   adminProvider: { manual: 'карта', admin: 'бесплатно', mock: 'тест' },
   adminCancel: 'Отмена',

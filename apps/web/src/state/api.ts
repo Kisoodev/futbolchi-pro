@@ -27,6 +27,8 @@ export interface AppConfig {
   provider: string;
   product: { id: string; amountMinor: number; currency: 'UZS' };
   card: { number: string; holder: string } | null;
+  /** Link to message the admin (Telegram). */
+  contact: string | null;
 }
 export interface CreatedPayment {
   paymentId: string;

@@ -37,7 +37,12 @@ function Effects({ id }: { id: TrainingId }) {
   );
 }
 
+/** Phone: one section at a time, picked from the bottom bar. PC shows all three. */
+type View = 'me' | 'train' | 'table';
+const VIEW_ICONS: Record<View, string> = { me: '👤', train: '⚽', table: '🏆' };
+
 export function WeekScreen({ state, onPlay }: Props) {
+  const [view, setView] = useState<View>('train');
   const season = currentSeason(state);
   const offer = trainingOffer(state);
   const [choice, setChoice] = useState<TrainingId | null>(null);
@@ -46,8 +51,8 @@ export function WeekScreen({ state, onPlay }: Props) {
   const fx = season.fixtures.find((f) => f.week === season.week && (f.homeId === club.id || f.awayId === club.id));
 
   return (
-    <div className="screen grid">
-      <section className="card persona-card">
+    <div className="screen grid week">
+      <section className={`card persona-card ${view === 'me' ? 'm-on' : ''}`}>
         <p className="eyebrow">{tx.seasonWeek(season.index, season.week, seasonWeeks(season))}</p>
         <PersonaHeader persona={persona} club={club} />
         <FatigueMeter value={persona.fatigue} />
@@ -55,7 +60,7 @@ export function WeekScreen({ state, onPlay }: Props) {
         <StatBars persona={persona} />
       </section>
 
-      <section className="card train-card">
+      <section className={`card train-card ${view === 'train' ? 'm-on' : ''}`}>
         <h2>{tx.trainingTitle}</h2>
         <p className="muted">{tx.trainingHint}</p>
         <div className="options">
@@ -72,10 +77,19 @@ export function WeekScreen({ state, onPlay }: Props) {
         </button>
       </section>
 
-      <section className="card table-card">
+      <section className={`card table-card ${view === 'table' ? 'm-on' : ''}`}>
         <h2>{tx.table}</h2>
         <LeagueTable season={season} clubs={state.clubs} highlightId={club.id} />
       </section>
+
+      <nav className="m-tabs" aria-label={tx.navMenu}>
+        {(['me', 'train', 'table'] as const).map((v) => (
+          <button key={v} className={view === v ? 'on' : ''} aria-pressed={view === v} onClick={() => setView(v)}>
+            <span aria-hidden>{VIEW_ICONS[v]}</span>
+            {tx.weekTabs[v]}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

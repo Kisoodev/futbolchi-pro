@@ -138,7 +138,16 @@ export const en: Messages = {
 
   // Main menu
   menuHello: (name) => `Hi, ${name}!`,
-  menuSub: 'Which way do we go today?',
+  /** Rotates under the greeting on the main menu. */
+  menuTaglines: [
+    "Towards the dreams not yet reached!",
+    "Big dreams start with small steps.",
+    "From the backyard to the big stadium — one road.",
+    "Today's training is tomorrow's win.",
+    "The goal of your dreams is still ahead.",
+    "Stars are born where nobody believed.",
+    "The stands are waiting for your name.",
+  ],
   menuNewCareer: 'Start new career',
   menuPrice: (amount) => `Create a new footballer — ${amount}`,
   menuLoadGame: 'Load game',
@@ -185,9 +194,9 @@ export const en: Messages = {
   payChange: 'Choose another image',
   paySubmit: 'Send receipt',
   paySending: 'Sending…',
-  payFileHint: 'PNG, JPG or WEBP, up to 4 MB.',
-  payFileTooBig: 'The image must be 4 MB or smaller.',
-  payFileBad: 'Only image files (PNG, JPG, WEBP) can be uploaded.',
+  payFileHint: "A screenshot or a photo of the receipt — a phone camera photo works too.",
+  payFileTooBig: "The image is too large (25 MB at most).",
+  payFileBad: "This file couldn't be opened as an image. Upload a screenshot or a JPG/PNG.",
   payReviewTitle: 'Checking your receipt',
   payReviewText:
     'Your receipt has been received. As soon as it is confirmed, this page continues on its own — you can keep it open or come back later.',
@@ -201,6 +210,10 @@ export const en: Messages = {
   payBackToMenu: 'Back to menu',
   payAdminSkip: 'Admin: skip payment',
   payAdminSkipHint: "Only you can see this. Opens a free slot with a 0 so'm receipt.",
+  payPreparing: "Preparing the image…",
+  payContactTitle: "No answer from the admin?",
+  payContactText: "If your receipt stays unconfirmed for long or you have a question, message the admin directly.",
+  payContactButton: "Message on Telegram",
   serverDown: 'No connection to the server. Please try again in a moment.',
 
   // Week / training
@@ -226,6 +239,7 @@ export const en: Messages = {
   effInjury: (pct) => `Injury risk +${pct}%`,
   effNoGrowth: 'No growth',
   table: 'League table',
+  weekTabs: { me: "Player", train: "Training", table: "Table" },
   tableCols: { pos: '#', club: 'Club', p: 'P', gd: 'GD', pts: 'Pts' },
   nextMatch: (home, away) => `Next match: ${home} — ${away}`,
   career: 'Career',
@@ -329,6 +343,9 @@ export const en: Messages = {
   adminStatRevenue: 'Revenue',
   adminTabs: { payments: 'Payments', free: 'Free access', highlights: 'Highlights' },
   adminFilter: { waiting: 'Needs review', all: 'All' },
+  adminAlertsOn: "🔔 New receipt alert: on",
+  adminAlertsOff: "🔕 New receipt alert: off",
+  adminNewReceipts: (n) => `New receipts: ${n}`,
   adminNothingWaiting: 'No receipts to review. New ones appear by themselves.',
   adminProvider: { manual: 'card', admin: 'free', mock: 'test' },
   adminCancel: 'Cancel',

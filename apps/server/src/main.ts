@@ -4,6 +4,7 @@ import { buildApp } from './app';
 import { ManualPaymentProvider } from './payments/ManualPaymentProvider';
 import { JsonStore } from './store/jsonStore';
 import { DiskProofStorage } from './store/proofStorage';
+import { TelegramNotifier } from './notify/telegram';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const isProd = process.env.NODE_ENV === 'production';
@@ -28,6 +29,19 @@ const paymentCard = {
 };
 if (!process.env.PAYMENT_CARD_NUMBER) console.warn('[payments] PAYMENT_CARD_NUMBER is not set — showing a placeholder card');
 
+// In dev the game runs on Vite (port 5173). Set WEB_URL when it lives elsewhere.
+const webUrl = process.env.WEB_URL ?? (isProd ? null : 'http://localhost:5173');
+
+// Players who wait too long can message the admin here (shown next to the receipt upload).
+const contactUrl = process.env.ADMIN_CONTACT_URL ?? 'https://t.me/futproadmin';
+
+// Optional: forward every uploaded receipt to the admin's Telegram within seconds.
+const tgToken = process.env.TELEGRAM_BOT_TOKEN;
+const tgChat = process.env.TELEGRAM_CHAT_ID;
+const notifier = tgToken && tgChat ? new TelegramNotifier(tgToken, tgChat, webUrl ? `${webUrl}/#/admin` : null) : null;
+if (tgToken && !tgChat) console.warn('[telegram] TELEGRAM_CHAT_ID is not set — receipt alerts are off');
+if (notifier) console.log('[telegram] receipt alerts are on');
+
 const { app } = buildApp({
   store: new JsonStore(`${dataDir}/db.json`),
   proofs: new DiskProofStorage(`${dataDir}/proofs`),
@@ -35,8 +49,9 @@ const { app } = buildApp({
   adminToken,
   adminNick,
   paymentCard,
-  // In dev the game runs on Vite (port 5173). Set WEB_URL when it lives elsewhere.
-  webUrl: process.env.WEB_URL ?? (isProd ? null : 'http://localhost:5173'),
+  contactUrl,
+  notifier,
+  webUrl,
   logger: true,
 });
 app.listen({ port: PORT, host: '127.0.0.1' }).catch((err) => {

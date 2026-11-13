@@ -13,12 +13,11 @@ import { formatMoney, tx } from '../i18n';
 import { adminApi, api, type AppConfig } from '../state/api';
 import { verifiedAdminToken } from '../state/admin';
 import { getUserId } from '../state/store';
+import { prepareReceipt } from '../state/receiptImage';
 
 type Step = 'loading' | 'instructions' | 'review' | 'rejected' | 'error';
 
-const MAX_BYTES = 4 * 1024 * 1024;
-const TYPES = ['image/png', 'image/jpeg', 'image/webp'];
-const POLL_MS = 4000;
+const POLL_MS = 3000;
 
 interface Props {
   name: string;
@@ -38,6 +37,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
   const [image, setImage] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [note, setNote] = useState<string | null>(null);
   const [copied, setCopied] = useState<'card' | 'amount' | null>(null);
   const [dragging, setDragging] = useState(false);
@@ -112,15 +112,15 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
     };
   }, [step, paymentId, checkAccess, userId]);
 
-  const pick = (file: File | undefined) => {
+  /** Phone photos are shrunk before upload, so the receipt reaches the admin in seconds. */
+  const pick = async (file: File | undefined) => {
     setFileError(null);
     if (!file) return;
-    if (!TYPES.includes(file.type)) return setFileError(tx.payFileBad);
-    if (file.size > MAX_BYTES) return setFileError(tx.payFileTooBig);
-    const reader = new FileReader();
-    reader.onload = () => setImage(typeof reader.result === 'string' ? reader.result : null);
-    reader.onerror = () => setFileError(tx.payFileBad);
-    reader.readAsDataURL(file);
+    setPreparing(true);
+    const r = await prepareReceipt(file);
+    setPreparing(false);
+    if ('error' in r) return setFileError(r.error === 'too_big' ? tx.payFileTooBig : tx.payFileBad);
+    setImage(r.dataUrl);
   };
 
   const submit = async () => {
@@ -162,6 +162,21 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
   };
 
   const stage = STAGE[step];
+  // Direct line to the admin, for when a receipt waits too long.
+  const contact = config?.contact && (
+    <div className="pay-contact">
+      <div>
+        <strong>{tx.payContactTitle}</strong>
+        <span>{tx.payContactText}</span>
+      </div>
+      <a className="tg-btn" href={config.contact} target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
+          <path fill="currentColor" d="M21.4 4.2 2.9 11.3c-1.2.5-1.2 1.2 0 1.6l4.7 1.5 1.8 5.6c.2.6.4.8.9.8.4 0 .6-.2.9-.5l2.3-2.2 4.7 3.5c.9.5 1.5.2 1.7-.8l3.1-14.6c.3-1.3-.5-1.9-1.5-1.5Zm-3.2 3.4-8.6 7.8-.3 3.5-1.6-5 9.9-6.3c.5-.3.9 0 .6 0Z" />
+        </svg>
+        {tx.payContactButton}
+      </a>
+    </div>
+  );
   const adminSkip = adminToken && step !== 'loading' && (
     <button type="button" className="admin-skip" disabled={skipping} onClick={skip} title={tx.payAdminSkipHint}>
       ★ {tx.payAdminSkip}
@@ -230,6 +245,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
 
               <section className="pay-step">
                 <h2><b>2</b> {tx.payStep2}</h2>
+                {contact}
                 <label
                   className={`upload ${image ? 'has-file' : ''} ${dragging ? 'drag' : ''}`}
                   onDragOver={(e) => {
@@ -240,12 +256,12 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
                   onDrop={(e) => {
                     e.preventDefault();
                     setDragging(false);
-                    pick(e.dataTransfer.files?.[0]);
+                    void pick(e.dataTransfer.files?.[0]);
                   }}
                 >
-                  <input type="file" accept={TYPES.join(',')} onChange={(e) => pick(e.target.files?.[0])} />
-                  {image ? <img src={image} alt="" /> : <span className="plus" aria-hidden>+</span>}
-                  <span>{image ? tx.payChange : tx.payChoose}</span>
+                  <input type="file" accept="image/*" onChange={(e) => void pick(e.target.files?.[0])} />
+                  {image ? <img src={image} alt="" /> : <span className="plus" aria-hidden>{preparing ? '…' : '+'}</span>}
+                  <span>{preparing ? tx.payPreparing : image ? tx.payChange : tx.payChoose}</span>
                   <small>{tx.payFileHint}</small>
                 </label>
                 {fileError && <p className="error">{fileError}</p>}
@@ -261,6 +277,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
               <h2><span className="dot-pulse" aria-hidden /> {tx.payReviewTitle}</h2>
               <p>{tx.payReviewText}</p>
               {fileError && <p className="error">{fileError}</p>}
+              {contact}
             </div>
           </div>
         )}
@@ -269,7 +286,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
       {step === 'instructions' && (
         <footer className="panel-foot">
           {adminSkip}
-          <button className="primary big" disabled={!image || sending} onClick={submit}>
+          <button className="primary big" disabled={!image || sending || preparing} onClick={submit}>
             {sending ? tx.paySending : tx.paySubmit}
           </button>
         </footer>
@@ -277,7 +294,7 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
       {step === 'rejected' && (
         <footer className="panel-foot">
           {adminSkip}
-          <button className="primary big" disabled={!image || sending} onClick={submit}>
+          <button className="primary big" disabled={!image || sending || preparing} onClick={submit}>
             {sending ? tx.paySending : tx.paySubmit}
           </button>
         </footer>

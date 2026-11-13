@@ -14,7 +14,7 @@ if (existsSync(file)) {
 }
 
 /** An empty line like `ADMIN_TOKEN=` means "not set", so the defaults apply. */
-const KEYS = ['ADMIN_TOKEN', 'ADMIN_NICK', 'PAYMENT_CARD_NUMBER', 'PAYMENT_CARD_HOLDER', 'PERSONA_PRICE_MINOR', 'PAYMENT_EVENT_SECRET', 'DATA_DIR', 'WEB_URL', 'PORT'];
+const KEYS = ['ADMIN_TOKEN', 'ADMIN_NICK', 'PAYMENT_CARD_NUMBER', 'PAYMENT_CARD_HOLDER', 'PERSONA_PRICE_MINOR', 'PAYMENT_EVENT_SECRET', 'DATA_DIR', 'WEB_URL', 'PORT', 'ADMIN_CONTACT_URL', 'TELEGRAM_BOT_TOKEN', 'TELEGRAM_CHAT_ID'];
 for (const key of KEYS) {
   if (process.env[key]?.trim() === '') delete process.env[key];
 }

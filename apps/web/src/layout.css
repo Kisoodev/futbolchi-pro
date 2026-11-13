@@ -421,3 +421,141 @@ button.danger { background: var(--danger); border-color: #8f2018; color: #fff; }
   .create-preview .avatar-stage { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; position: relative; top: 0; }
   .avatar-stage .avatar-big { flex: 1 1 0; min-height: 120px; width: 100%; height: auto; max-height: 300px; }
 }
+
+/* ---------- Main menu: rotating tagline ---------- */
+/* Two lines are reserved so the buttons below never jump when the text changes. */
+.tagline.rotating { min-height: 2.7em; line-height: 1.35; display: grid; place-items: center; }
+.tagline.rotating span { animation: tag-in 0.5s ease-out; }
+@keyframes tag-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* ---------- Payment: message the admin on Telegram ---------- */
+.pay-contact { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; background: #e6f3fc; border: 2px solid #b6dbf3; border-radius: 10px; padding: 8px 12px; margin: 0 0 10px; text-align: left; }
+.pay-contact > div { display: grid; gap: 1px; flex: 1 1 200px; min-width: 0; }
+.pay-contact strong { font-size: 0.92rem; }
+.pay-contact span { font-size: 0.8rem; line-height: 1.35; color: var(--ink-muted); }
+.tg-btn { display: inline-flex; align-items: center; gap: 6px; flex: none; text-decoration: none; font-weight: 800; font-size: 0.9rem; color: #fff; background: #2a9fd8; border: 2px solid #1b7fb2; border-radius: 8px; padding: 0.4rem 0.8rem; box-shadow: 0 3px 0 #1b7fb2; }
+.tg-btn:hover { filter: brightness(1.07); }
+.tg-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #1b7fb2; }
+.review .pay-contact { margin: 12px 0 0; }
+
+/* ---------- Admin: new receipt alert switch ---------- */
+.alert-toggle.on { border-color: var(--grass-hi); background: var(--grass-pale); color: var(--grass-ink); }
+
+/* ---------- Week: phone section bar (hidden on PC) ---------- */
+.m-tabs { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tagline.rotating span { animation: none; }
+}
+
+/* =====================================================================
+ * Phones and small tablets (everything below the PC layout).
+ * The page may scroll here, but the main action of each screen always
+ * stays in reach: panel footers stick to the bottom of the screen and
+ * the week screen shows one section at a time with a bottom bar.
+ * ===================================================================== */
+@media (max-width: 899px) {
+  html { -webkit-text-size-adjust: 100%; }
+  button, a.button, .tg-btn, label.upload { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .topbar { padding: calc(8px + env(safe-area-inset-top)) 12px 2px; }
+  .brand { font-size: 1.1rem; }
+  main { padding: 6px 12px calc(64px + env(safe-area-inset-bottom)); }
+  .lang-switch.floating { top: calc(8px + env(safe-area-inset-top)); right: 12px; }
+  .lang-switch button { min-width: 40px; padding: 0.3rem 0.45rem; }
+
+  /* Panels: the footer (main button) sticks to the bottom edge */
+  .panel { padding: 14px; }
+  .panel-foot {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    background: var(--card);
+    margin: 12px -14px -14px;
+    padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+    border-radius: 0 0 12px 12px;
+    box-shadow: 0 -8px 12px -10px rgba(18, 50, 79, 0.45);
+  }
+  .screen.narrow { padding: 16px; }
+
+  /* Main menu */
+  .menu .ball-logo { width: 56px; height: 56px; }
+  .hero h1 { font-size: clamp(2rem, 10vw, 2.6rem); }
+  .hero .tagline { font-size: 1.02rem; margin-bottom: 1rem; }
+  .menu-card { padding: 14px; }
+
+  /* Week: one section at a time + bottom bar */
+  .week > section:not(.m-on) { display: none; }
+  .m-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    background: var(--card);
+    border-top: 2px solid var(--line);
+    padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 14px rgba(18, 50, 79, 0.15);
+  }
+  .m-tabs button { display: grid; justify-items: center; gap: 0; padding: 0.3rem 0; font-size: 0.78rem; font-weight: 800; color: var(--ink-muted); background: transparent; border: none; box-shadow: none; border-radius: 10px; }
+  .m-tabs button span { font-size: 1.3rem; line-height: 1.15; }
+  .m-tabs button.on { background: var(--sky-pale); color: var(--sky-deep); }
+  .m-tabs button:active { transform: none; }
+  .week .train-card .primary.big { position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 2; }
+
+  /* Payment */
+  .pay-head { align-items: stretch; }
+  .stepper { width: 100%; }
+  .stepper li { flex: 1 1 auto; justify-content: center; padding: 3px 6px; font-size: 0.78rem; }
+  .stepper li:not(.on) span { display: none; }
+  .amount strong { font-size: 1.5rem; }
+  .bank-card { padding: 14px; }
+  .bank-card .number { font-size: 1.32rem; letter-spacing: 0.04em; }
+  .upload { padding: 14px; }
+  .upload img { max-height: 180px; }
+  .review { flex-direction: column; text-align: center; gap: 12px; }
+  .review h2 { justify-content: center; }
+  .review-proof { max-width: 70%; max-height: 200px; }
+  .pay .panel-foot { flex-wrap: wrap; gap: 8px; }
+  .admin-skip { flex: 1 1 100%; }
+
+  /* Persona creator: a compact preview stays pinned at the top while the
+     player scrolls through the options, so every change is seen live. */
+  .create-grid { gap: 14px; }
+  .create-grid > .create-preview {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    margin: 0 -14px;
+    padding: 8px 14px;
+    background: var(--card);
+    box-shadow: 0 8px 10px -10px rgba(18, 50, 79, 0.45);
+  }
+  .create-preview .avatar-stage { padding: 8px 4px 6px; gap: 0; }
+  .create-preview .avatar-big { height: 128px; width: auto; }
+  .create-preview .avatar-stage strong { font-size: 1rem; }
+  .create-preview .stage-btn { width: 30px; height: 30px; font-size: 0.95rem; }
+  .create-preview .pose-name { max-width: calc(100% - 76px); font-size: 0.68rem; }
+  .create-preview .preview-ovr { flex-direction: column; align-items: flex-start; gap: 6px; }
+  /* Four long names (e.g. "Cho'zinchoq") do not fit one phone row */
+  .create .chips.tight.c4 { --cols: 2; }
+
+  /* Season summary */
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+
+  /* Admin */
+  .admin-top .row { width: 100%; }
+  .admin-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-tabs { overflow-x: auto; scrollbar-width: none; }
+  .admin-tabs button { flex: none; white-space: nowrap; }
+  .admin .card-head { flex-wrap: wrap; }
+  .admin .card-head .row { flex: 1 1 100%; }
+  .proof-thumb { width: 72px; height: 72px; }
+  .pay-list li { padding: 10px; }
+}

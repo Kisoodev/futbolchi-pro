@@ -3,6 +3,7 @@ import { buildApp } from '../src/app';
 import { ManualPaymentProvider } from '../src/payments/ManualPaymentProvider';
 import { JsonStore } from '../src/store/jsonStore';
 import { PROOF_MAX_BYTES, parseProofDataUrl } from '../src/store/proofStorage';
+import { proofCaption } from '../src/notify/telegram';
 
 const TOKEN = 'admin-test';
 const admin = { 'x-admin-token': TOKEN };
@@ -147,5 +148,45 @@ describe('admin free access', () => {
     const c = (await ctx.post('/api/admin/grant', { userId: 'owner' }, admin)).json().entitlement;
     expect(c.id).not.toBe(a.id);
     expect(ctx.counts()).toEqual({ entitlements: 2, receipts: 2 });
+  });
+});
+
+describe('fast receipt delivery', () => {
+  it('config exposes the admin contact link', async () => {
+    const { app } = buildApp({
+      store: new JsonStore(null),
+      provider: new ManualPaymentProvider('secret'),
+      adminToken: TOKEN,
+      contactUrl: 'https://t.me/futproadmin',
+    });
+    expect((await app.inject({ method: 'GET', url: '/api/config' })).json().contact).toBe('https://t.me/futproadmin');
+  });
+
+  it('tells the admin about every uploaded receipt, and a failing alert never breaks the upload', async () => {
+    const seen: { paymentId: string; userName: string | null; amountMinor: number; size: number }[] = [];
+    const store = new JsonStore(null);
+    const { app } = buildApp({
+      store,
+      provider: new ManualPaymentProvider('secret'),
+      adminToken: TOKEN,
+      notifier: {
+        proofSubmitted: async (n) => {
+          seen.push({ paymentId: n.paymentId, userName: n.userName, amountMinor: n.amountMinor, size: n.data.length });
+          throw new Error('telegram is down');
+        },
+      },
+    });
+    await app.inject({ method: 'POST', url: '/api/users', payload: { userId: 'u1', name: 'Aziz' } });
+    const { paymentId } = (await app.inject({ method: 'POST', url: '/api/payments', payload: { userId: 'u1', product: 'persona_slot' } })).json();
+    const up = await app.inject({ method: 'POST', url: `/api/payments/${paymentId}/proof`, payload: { userId: 'u1', dataUrl: PNG } });
+    expect(up.statusCode).toBe(200);
+    expect(seen).toEqual([{ paymentId, userName: 'Aziz', amountMinor: 500_000, size: expect.any(Number) }]);
+    expect(seen[0].size).toBeGreaterThan(0);
+  });
+
+  it('the Telegram caption has the receipt, player, amount and admin link', () => {
+    expect(proofCaption({ paymentId: 'pay_1', userName: 'Aziz', amountMinor: 500_000 }, 'http://x/#/admin')).toBe(
+      '🧾 pay_1\n👤 Aziz\n💰 5 000 UZS\n🔗 http://x/#/admin',
+    );
   });
 });

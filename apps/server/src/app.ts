@@ -7,6 +7,7 @@ import { MockPaymentProvider } from './payments/MockPaymentProvider';
 import { PaymentService } from './payments/paymentService';
 import type { JsonStore } from './store/jsonStore';
 import { MemoryProofStorage, parseProofDataUrl, type ProofStorage } from './store/proofStorage';
+import type { ProofNotifier } from './notify/telegram';
 
 export interface PaymentCard {
   /** Card the player transfers to (manual payments). */
@@ -33,6 +34,10 @@ export interface AppOptions {
    * reveals the login form; the admin token is still required. Null disables it.
    */
   adminNick?: string | null;
+  /** Where players can message the admin (e.g. a Telegram link). Shown on the payment page. */
+  contactUrl?: string | null;
+  /** Told about every uploaded receipt (e.g. Telegram), so the admin reacts fast. */
+  notifier?: ProofNotifier | null;
   logger?: boolean;
 }
 
@@ -79,6 +84,7 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
     provider: opts.provider.name,
     product: PRODUCTS.persona_slot,
     card: opts.provider.name === 'manual' ? (opts.paymentCard ?? null) : null,
+    contact: opts.contactUrl ?? null,
   }));
 
   app.get<{ Params: { id: string } }>('/api/products/:id', async (req, reply) => {
@@ -139,6 +145,13 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
         status: 'submitted',
       };
     });
+    // Tell the admin right away. Never blocks or fails the upload.
+    if (opts.notifier) {
+      const userName = opts.store.read((db) => db.users[payment.userId]?.name ?? null);
+      opts.notifier
+        .proofSubmitted({ paymentId: payment.id, userName, amountMinor: payment.amountMinor, mime: parsed.mime, data: parsed.data })
+        .catch((err: unknown) => req.log.warn({ err }, 'receipt notification failed'));
+    }
     return { ok: true, proof: 'submitted' };
   });
 

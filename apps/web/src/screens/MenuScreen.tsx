@@ -14,6 +14,23 @@ interface Props {
   onChangeName: () => void;
 }
 
+const TAGLINE_MS = 4500;
+
+/** A short line about chasing the dream; a new one every few seconds. */
+function Tagline() {
+  const [i, setI] = useState(() => Math.floor(Math.random() * tx.menuTaglines.length));
+  useEffect(() => {
+    const id = setInterval(() => setI((n) => n + 1), TAGLINE_MS);
+    return () => clearInterval(id);
+  }, []);
+  const lines = tx.menuTaglines;
+  return (
+    <p className="tagline rotating">
+      <span key={i}>{lines[i % lines.length]}</span>
+    </p>
+  );
+}
+
 /** Main menu: new career (primary), load game, info. */
 export function MenuScreen({ name, game, onNewCareer, onLoadGame, onInfo, onChangeName }: Props) {
   const [price, setPrice] = useState<number | null>(null);
@@ -35,7 +52,7 @@ export function MenuScreen({ name, game, onNewCareer, onLoadGame, onInfo, onChan
     <div className="screen center hero menu">
       <PixelArt sprite={BALL} scale={5} className="ball-logo" />
       <h1>{tx.menuHello(name)}</h1>
-      <p className="tagline">{tx.menuSub}</p>
+      <Tagline />
 
       {confirming && game ? (
         <div className="menu-card confirm" role="alertdialog" aria-labelledby="replace-title">

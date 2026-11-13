@@ -85,7 +85,7 @@ function Choice<T extends string>({ label, options, value, names, onChange, cols
   return (
     <div className={inline ? 'field inline' : 'field'}>
       <span>{label}</span>
-      <div className="chips tight" style={cols ? { gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` } : undefined}>
+      <div className={`chips tight ${cols === 4 ? 'c4' : ''}`} style={cols ? { gridTemplateColumns: `repeat(var(--cols, ${cols}), minmax(0, 1fr))` } : undefined}>
         {options.map((o) => (
           <button key={o} type="button" className={o === value ? 'chip on' : 'chip'} aria-pressed={o === value} onClick={() => onChange(o)}>
             {names[o]}

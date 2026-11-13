@@ -22,8 +22,8 @@ The game ships in **Uzbek (default), English and Russian**. The UZ / EN / RU swi
 ## New player flow
 
 1. **Loading** — a rolling counter shows how many players have registered (`GET /api/stats`, a real count).
-2. **Main menu** — the player enters a name; the price (5 000 so'm) appears next to *Davom etish*.
-3. **Payment** — the player transfers to the card shown, uploads a receipt image ("chek") and waits. The page polls and continues by itself once an admin approves.
+2. **Main menu** — the player enters a name; the price (5 000 so'm) appears next to *Davom etish*. Under the greeting a short line about chasing the dream changes every few seconds (`menuTaglines`).
+3. **Payment** — the player transfers to the card shown, uploads a receipt image ("chek") and waits. Phone photos are shrunk in the browser before upload (long side 2000 px, JPEG), so a 6 MB camera photo goes up as a few hundred KB. A **Telegramda yozish** button next to the upload (and on the waiting screen) opens a chat with the admin (`ADMIN_CONTACT_URL`). The page polls every 3 s and continues by itself once an admin approves.
 4. **Persona** — a 64×96 shaded pixel avatar that updates live. Appearance is split into tabs: face (head shape, skin, eyes, brows, nose), hair (11 styles with portrait previews, 8 colours, facial hair), body (height, weight, strong foot) and kit (boots, sleeves, accessory, goal celebration). A random button and a pose button sit on the avatar; the pose button cycles football poses (hands on hips, arms crossed, ball under the arm, thumbs up, ball at the feet) and the celebrations. Unopened tabs are highlighted with a dot and each tab ends with a "Next" button, so no section is missed. Then position and bonus points. Appearance is cosmetic only; older saves get defaults for new options (`normalizeAppearance`). Kits are plain colours: no real clubs, sponsors or logos.
 5. **Game.**
 
@@ -37,8 +37,12 @@ The game ships in **Uzbek (default), English and Russian**. The UZ / EN / RU swi
 | `ADMIN_TOKEN` | Admin panel token | `dev-admin-token` (admin is disabled in production if unset) |
 | `PAYMENT_EVENT_SECRET` | Signs admin payment decisions | dev value (required in production) |
 | `DATA_DIR` | Where `db.json` and receipt images are stored | `apps/server/data` |
+| `ADMIN_CONTACT_URL` | Where players can message the admin (shown next to the receipt upload) | `https://t.me/futproadmin` |
+| `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Optional: every uploaded receipt is sent to this Telegram chat within seconds | off |
 
 Put these in `apps/server/.env` (copy `apps/server/.env.example`; git-ignored). It is read on start in any shell — PowerShell, cmd or bash — and the dev server restarts when it changes. Variables set in the shell win; an empty value means "use the default".
+
+**Receipt alerts in Telegram (optional).** Create a bot with @BotFather and copy its token into `TELEGRAM_BOT_TOKEN`. Send the bot any message from your own Telegram account, then open `https://api.telegram.org/bot<TOKEN>/getUpdates` in a browser: the number at `message.chat.id` is your `TELEGRAM_CHAT_ID`. After that every receipt arrives in that chat as a photo with the player name, amount and a link to the admin panel. If Telegram is down, the upload still works and the receipt waits in the admin panel as usual.
 
 ```bash
 npm test             # all unit tests (engine, server, replay timeline)
@@ -58,9 +62,13 @@ The admin token is still required once. After that this browser remembers it (`C
 
 The panel has a stats row (players, receipts waiting, approved, revenue) and three tabs:
 
-- **To'lovlar** — receipts waiting for review first, with the image shown right away (click to enlarge). Approve, or reject with a reason typed inline; the player sees the reason and can send a new receipt on the same page. The list refreshes every 10 s.
+- **To'lovlar** — receipts waiting for review first, with the image shown right away (click to enlarge). Approve, or reject with a reason typed inline; the player sees the reason and can send a new receipt on the same page. The list refreshes every 4 s on every tab; a new receipt plays a short chime, shows a system notification (if the browser allows it) and puts the count in the tab title, e.g. `(2) Admin panel`. The chime switch is next to *Yangilash*.
 - **To'lovsiz kirish** — a free persona slot for this browser.
 - **Highlightlar** — mark match events as highlights.
+
+## Phones
+
+The same site adapts to phone screens (below 900 px wide) with no separate app. The page may scroll there, but the main action stays in reach: panel footers (pay, create, season summary) stick to the bottom edge, and the week screen shows one section at a time — player, training or table — picked from a bottom bar. The persona preview stays pinned at the top while the options scroll, so every change is seen live. Safe areas on notched phones are respected (`viewport-fit=cover`). PC keeps the fit-to-screen layout.
 
 ## Layout
 

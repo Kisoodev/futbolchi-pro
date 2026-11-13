@@ -10,7 +10,7 @@
  *  - free access: a free persona slot for this browser
  *  - highlights: mark match events (no video pipeline yet)
  */
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MatchEvent } from '@futbolchi/engine';
 import { formatMoney, tx } from '../i18n';
 import { adminApi, api, type AdminPayment } from '../state/api';
@@ -29,8 +29,37 @@ interface MatchSummary {
 type Tab = 'payments' | 'free' | 'highlights';
 type Filter = 'waiting' | 'all';
 
-const REFRESH_MS = 10_000;
+/** New receipts show up within a few seconds. */
+const REFRESH_MS = 4000;
 const isWaiting = (p: AdminPayment) => p.status === 'pending' && p.proof?.status === 'submitted';
+
+const ALERTS_KEY = 'futbolchi.adminAlerts';
+const readAlerts = () => {
+  try {
+    return localStorage.getItem(ALERTS_KEY) !== '0';
+  } catch {
+    return true;
+  }
+};
+
+/** Short two-tone chime for a new receipt. */
+function chime() {
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1320, ctx.currentTime + 0.12);
+    gain.gain.value = 0.05;
+    osc.connect(gain).connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.28);
+    osc.onended = () => void ctx.close();
+  } catch {
+    /* no audio: the badge and the title still show it */
+  }
+}
 
 export function AdminScreen() {
   const [token, setToken] = useState(() => getAdminToken() ?? '');
@@ -49,6 +78,9 @@ export function AdminScreen() {
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
   const [granted, setGranted] = useState(false);
+  const [alerts, setAlerts] = useState(readAlerts);
+  /** Receipts already seen; null until the first load (no alert for old ones). */
+  const known = useRef<Set<string> | null>(null);
 
   const [matches, setMatches] = useState<MatchSummary[] | null>(null);
   const [selected, setSelected] = useState<MatchSummary | null>(null);
@@ -86,12 +118,52 @@ export function AdminScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Keep the payment list fresh while it is open.
+  // Keep the payment list fresh on every tab, so a new receipt is noticed at once.
   useEffect(() => {
-    if (!authed || tab !== 'payments') return;
+    if (!authed) return;
     const id = setInterval(() => void loadPayments().catch(() => null), REFRESH_MS);
     return () => clearInterval(id);
-  }, [authed, tab, loadPayments]);
+  }, [authed, loadPayments]);
+
+  // New receipt: chime + system notification (if allowed) + count in the tab title.
+  const waitingIds = payments.filter(isWaiting).map((p) => p.paymentId);
+  const waitingKey = waitingIds.join(',');
+  useEffect(() => {
+    if (!authed) return;
+    const fresh = known.current ? waitingIds.filter((id) => !known.current!.has(id)) : [];
+    known.current = new Set([...(known.current ?? []), ...waitingIds]);
+    if (fresh.length && alerts) {
+      chime();
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification(tx.adminTitle, { body: tx.adminNewReceipts(waitingIds.length), tag: 'futbolchi-receipt' });
+        } catch {
+          /* some mobile browsers only allow notifications from a service worker */
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, waitingKey]);
+  useEffect(() => {
+    const base = document.title;
+    if (waitingIds.length) document.title = `(${waitingIds.length}) ${tx.adminTitle} · ${tx.appName}`;
+    return () => {
+      document.title = base;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [waitingIds.length]);
+
+  const toggleAlerts = () => {
+    const next = !alerts;
+    setAlerts(next);
+    try {
+      localStorage.setItem(ALERTS_KEY, next ? '1' : '0');
+    } catch {
+      /* private mode: the choice lasts for this visit */
+    }
+    if (next && 'Notification' in window && Notification.permission === 'default') void Notification.requestPermission();
+    if (next) chime();
+  };
 
   // Escape closes the receipt preview.
   useEffect(() => {
@@ -261,7 +333,12 @@ export function AdminScreen() {
                   </button>
                 ))}
               </div>
-              <button onClick={() => guard(loadPayments)}>{tx.adminRefresh}</button>
+              <div className="row">
+                <button className={`alert-toggle ${alerts ? 'on' : ''}`} aria-pressed={alerts} onClick={toggleAlerts}>
+                  {alerts ? tx.adminAlertsOn : tx.adminAlertsOff}
+                </button>
+                <button onClick={() => guard(loadPayments)}>{tx.adminRefresh}</button>
+              </div>
             </div>
             {shown.length === 0 && <p className="muted">{filter === 'waiting' ? tx.adminNothingWaiting : tx.adminPaymentsEmpty}</p>}
             <ul className="pay-list">
