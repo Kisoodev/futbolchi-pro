@@ -38,6 +38,8 @@ The game ships in **Uzbek (default), English and Russian**. The UZ / EN / RU swi
 | `PAYMENT_EVENT_SECRET` | Signs admin payment decisions | dev value (required in production) |
 | `DATA_DIR` | Where `db.json` and receipt images are stored | `apps/server/data` |
 
+Put these in `apps/server/.env` (copy `apps/server/.env.example`; git-ignored). It is read on start in any shell — PowerShell, cmd or bash — and the dev server restarts when it changes. Variables set in the shell win; an empty value means "use the default".
+
 ```bash
 npm test             # all unit tests (engine, server, replay timeline)
 npm run typecheck

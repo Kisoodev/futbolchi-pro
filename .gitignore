@@ -2,3 +2,4 @@ node_modules
 dist
 apps/server/data
 *.log
+apps/server/.env

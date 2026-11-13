@@ -1,3 +1,4 @@
+import './env';
 import { fileURLToPath } from 'node:url';
 import { buildApp } from './app';
 import { ManualPaymentProvider } from './payments/ManualPaymentProvider';
