@@ -11,6 +11,8 @@ npm run dev          # starts both: API on :8787 and the game on http://localhos
 
 Open the game at **http://localhost:5173**. Port 8787 is the API server only; opening it in a browser redirects to the game. To run the two separately: `npm run dev:server` and `npm run dev:web`.
 
+**On a phone:** run `npm run dev:phone` instead. It prints an address like `http://172.20.10.3:5173`; open it on a phone connected to the same Wi-Fi or hotspot. The first time, Windows may ask to let Node.js through the firewall — allow it on private networks. The API stays on localhost; only the game page is opened to the network.
+
 ## Languages
 
 The game ships in **Uzbek (default), English and Russian**. The UZ / EN / RU switch sits in the top-right corner of the entrance screens only — loading, name and main menu — and changes the language instantly (the choice is remembered). It is hidden once the game starts so it does not distract; to change language, go back to the main menu (click the logo).

@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc -p packages/engine && tsc -p apps/server && tsc -p apps/web",
     "dev": "node scripts/dev.mjs",
+    "dev:phone": "node scripts/dev.mjs --phone",
     "dev:web": "npm -w @futbolchi/web run dev",
     "dev:server": "npm -w @futbolchi/server run dev",
     "build": "npm -w @futbolchi/web run build"
