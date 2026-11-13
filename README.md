@@ -81,6 +81,30 @@ The panel has a stats row (players, receipts waiting, approved, revenue) and thr
 
 The same site adapts to phone screens (below 900 px wide) with no separate app. The page may scroll there, but the main action stays in reach: panel footers (pay, create, season summary) stick to the bottom edge, and the week screen shows one section at a time — player, training or table — picked from a bottom bar. The persona preview stays pinned at the top while the options scroll, so every change is seen live. Safe areas on notched phones are respected (`viewport-fit=cover`). PC keeps the fit-to-screen layout.
 
+## Deploy
+
+The game page and the API are deployed separately:
+
+- **Game → Vercel.** A static Vite build (`vercel.json` at the repo root).
+- **API + Telegram bot → a host that keeps a process running and has a disk** (Railway, Render, Fly.io or a VPS; `Dockerfile` at the repo root). Vercel cannot run it: its functions stop after each request, so the bot cannot poll Telegram, and files written to disk do not persist.
+
+**1. API (example: Railway).** New project → *Deploy from GitHub repo* → it builds the `Dockerfile`. Add a **Volume** mounted at `/data` (players, payments and receipt images live there). Set the variables, then *Generate domain*:
+
+| Variable | Value |
+|---|---|
+| `ADMIN_TOKEN` | a long random secret (not the dev one) |
+| `PAYMENT_EVENT_SECRET` | another long random secret |
+| `PAYMENT_CARD_NUMBER`, `PAYMENT_CARD_HOLDER` | the card players pay to |
+| `TELEGRAM_BOT_TOKEN` | the bot token (optional) |
+| `WEB_URL` | the game's address, e.g. `https://futbolchi-pro.vercel.app` (allowed by CORS) |
+| `CORS_ORIGINS` | optional: more allowed sites, comma-separated |
+
+`NODE_ENV`, `HOST`, `PORT` and `DATA_DIR` are set by the Dockerfile; Railway's own `PORT` wins.
+
+**2. Game (Vercel).** Import the repo with **Root Directory = the repository root** (not `apps/server`); `vercel.json` sets the build. Add the environment variable `VITE_API_URL` = the API's address (e.g. `https://futbolchi-api.up.railway.app`), then redeploy — the address is baked in at build time.
+
+**One bot, one server.** Telegram lets only one server read a bot's updates. While production runs the bot, leave `TELEGRAM_BOT_TOKEN` empty in the local `.env` (or use a second bot for development).
+
 ## Layout
 
 | Path | What |

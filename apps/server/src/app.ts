@@ -31,6 +31,11 @@ export interface AppOptions {
    */
   webUrl?: string | null;
   /**
+   * Sites allowed to call this API from the browser (CORS), e.g. the game on
+   * Vercel. Not needed in dev, where Vite proxies /api.
+   */
+  corsOrigins?: string[];
+  /**
    * Secret nickname that opens the admin login from the name screen. It only
    * reveals the login form; the admin token is still required. Null disables it.
    */
@@ -120,6 +125,22 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
       done(err as Error, undefined);
     }
   });
+
+  // ---------- CORS: the game may live on another domain (e.g. Vercel) ----------
+  const allowedOrigins = new Set((opts.corsOrigins ?? []).map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean));
+  if (allowedOrigins.size) {
+    app.addHook('onRequest', async (req, reply) => {
+      const origin = req.headers.origin;
+      if (!origin || !allowedOrigins.has(origin)) return;
+      reply.header('access-control-allow-origin', origin);
+      reply.header('vary', 'origin');
+      reply.header('access-control-allow-methods', 'GET, POST, PUT, OPTIONS');
+      reply.header('access-control-allow-headers', 'content-type, x-admin-token');
+      reply.header('access-control-max-age', '86400');
+    });
+    // Preflight for JSON bodies and the admin header.
+    app.options('/api/*', async (_req, reply) => reply.code(204).send());
+  }
 
   // ---------- Browser landing ----------
   // This is the API server; the game lives on the web app. Send people there.
@@ -243,7 +264,7 @@ export function buildApp(opts: AppOptions): { app: FastifyInstance; payments: Pa
     const { userId, personaId } = req.body ?? {};
     if (!isString(userId) || !isString(personaId)) return reply.code(400).send({ error: 'bad_request' });
     const r = payments.consume(req.params.id, userId, personaId);
-    if (!r.ok) return reply.code(r.code).send({ error: r.code === 404 ? 'not_found' : 'already_used' });
+    if ('code' in r) return reply.code(r.code).send({ error: r.code === 404 ? 'not_found' : 'already_used' });
     return { entitlement: r.entitlement };
   });
 

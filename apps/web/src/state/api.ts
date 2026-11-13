@@ -1,8 +1,17 @@
-/** Thin client for the server (registration, payments, saves). Vite proxies /api to the server. */
+/**
+ * Thin client for the server (registration, payments, saves).
+ * Dev: Vite proxies /api to the local server. Production: the game is served
+ * by Vercel and the API lives elsewhere, set at build time with VITE_API_URL
+ * (e.g. https://futbolchi-api.up.railway.app).
+ */
 import type { GameState } from '@futbolchi/engine';
 
+export const API_BASE = (import.meta.env.VITE_API_URL ?? '').trim().replace(/\/+$/, '');
+/** Full address of an API path such as "/api/stats". */
+export const apiUrl = (path: string) => API_BASE + path;
+
 async function call<T>(method: string, url: string, body?: unknown, headers: Record<string, string> = {}): Promise<T> {
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     method,
     headers: { ...(body !== undefined ? { 'content-type': 'application/json' } : {}), ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -90,7 +99,7 @@ export const adminApi = (token: string) => {
     grant: (userId: string) => call<{ entitlement: Entitlement }>('POST', '/api/admin/grant', { userId }, h),
     /** Receipt image as an object URL (the endpoint needs the token header, so <img src> can't load it directly). */
     proofUrl: async (paymentId: string): Promise<string> => {
-      const res = await fetch(`/api/admin/payments/${paymentId}/proof`, { headers: h });
+      const res = await fetch(apiUrl(`/api/admin/payments/${paymentId}/proof`), { headers: h });
       if (!res.ok) throw new ApiError(res.status, 'proof');
       return URL.createObjectURL(await res.blob());
     },

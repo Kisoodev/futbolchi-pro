@@ -119,3 +119,28 @@ describe('secret admin nickname', () => {
     await disabled.close();
   });
 });
+
+describe('CORS for the game on another domain', () => {
+  it('answers preflight and allows only the configured site', async () => {
+    const { app } = buildApp({
+      store: new JsonStore(null),
+      provider: new MockPaymentProvider('x'),
+      adminToken: TOKEN,
+      corsOrigins: ['https://futbolchi.vercel.app/'],
+    });
+    const pre = await app.inject({
+      method: 'OPTIONS',
+      url: '/api/admin/payments',
+      headers: { origin: 'https://futbolchi.vercel.app', 'access-control-request-method': 'GET', 'access-control-request-headers': 'x-admin-token' },
+    });
+    expect(pre.statusCode).toBe(204);
+    expect(pre.headers['access-control-allow-origin']).toBe('https://futbolchi.vercel.app');
+    expect(String(pre.headers['access-control-allow-headers'])).toContain('x-admin-token');
+
+    const ok = await app.inject({ method: 'GET', url: '/api/stats', headers: { origin: 'https://futbolchi.vercel.app' } });
+    expect(ok.headers['access-control-allow-origin']).toBe('https://futbolchi.vercel.app');
+    const other = await app.inject({ method: 'GET', url: '/api/stats', headers: { origin: 'https://evil.example' } });
+    expect(other.headers['access-control-allow-origin']).toBeUndefined();
+    await app.close();
+  });
+});

@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MatchEvent } from '@futbolchi/engine';
 import { formatMoney, tx } from '../i18n';
-import { adminApi, api, type AdminPayment } from '../state/api';
+import { adminApi, api, apiUrl, type AdminPayment } from '../state/api';
 import { clearAdminToken, getAdminToken, setAdminToken } from '../state/admin';
 import { getUserId } from '../state/store';
 
@@ -230,7 +230,7 @@ export function AdminScreen() {
 
   const loadMatches = () =>
     guard(async () => {
-      const res = await fetch('/api/admin/matches', { headers: admin.headers });
+      const res = await fetch(apiUrl('/api/admin/matches'), { headers: admin.headers });
       if (!res.ok) throw new Error(String(res.status));
       setMatches(((await res.json()) as { matches: MatchSummary[] }).matches);
     });
@@ -238,7 +238,7 @@ export function AdminScreen() {
   const open = (m: MatchSummary) =>
     guard(async () => {
       setSelected(m);
-      const res = await fetch(`/api/admin/matches/${encodeURIComponent(m.matchId)}/events?userId=${encodeURIComponent(m.userId)}`, { headers: admin.headers });
+      const res = await fetch(apiUrl(`/api/admin/matches/${encodeURIComponent(m.matchId)}/events?userId=${encodeURIComponent(m.userId)}`), { headers: admin.headers });
       if (!res.ok) throw new Error(String(res.status));
       const evs = ((await res.json()) as { events: MatchEvent[] }).events;
       setEvents(evs);
@@ -248,7 +248,7 @@ export function AdminScreen() {
   const saveHighlights = () =>
     guard(async () => {
       if (!selected) return;
-      const res = await fetch(`/api/admin/matches/${encodeURIComponent(selected.matchId)}/highlights`, {
+      const res = await fetch(apiUrl(`/api/admin/matches/${encodeURIComponent(selected.matchId)}/highlights`), {
         method: 'POST',
         headers: { ...admin.headers, 'content-type': 'application/json' },
         body: JSON.stringify({ userId: selected.userId, eventIds: [...marked] }),

@@ -7,6 +7,8 @@ import { DiskProofStorage } from './store/proofStorage';
 import { TelegramHttp } from './notify/telegram';
 
 const PORT = Number(process.env.PORT ?? 8787);
+// Production hosts (Railway, Render, Docker) need the server reachable from outside.
+const HOST = process.env.HOST ?? (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
 const isProd = process.env.NODE_ENV === 'production';
 const dataDir = process.env.DATA_DIR ?? fileURLToPath(new URL('../data', import.meta.url));
 
@@ -56,10 +58,12 @@ const { app, bot } = buildApp({
   contactUrl,
   telegram,
   webUrl,
+  // The game page (e.g. on Vercel) calls this API from the browser.
+  corsOrigins: [webUrl, ...(process.env.CORS_ORIGINS ?? '').split(',')].filter((o): o is string => !!o && o.trim() !== ''),
   logger: true,
 });
 app
-  .listen({ port: PORT, host: '127.0.0.1' })
+  .listen({ port: PORT, host: HOST })
   .then(() => bot?.start())
   .catch((err) => {
     app.log.error(err);
