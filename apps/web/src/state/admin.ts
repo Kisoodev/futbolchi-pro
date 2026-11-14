@@ -8,6 +8,8 @@
 import { adminApi } from './api';
 
 const KEY = 'futbolchi.adminToken';
+/** Fired after a successful admin login. */
+export const ADMIN_EVENT = 'futbolchi-admin';
 
 export function getAdminToken(): string | null {
   try {
@@ -20,6 +22,7 @@ export function getAdminToken(): string | null {
 export function setAdminToken(token: string): void {
   try {
     localStorage.setItem(KEY, token);
+    window.dispatchEvent(new Event(ADMIN_EVENT));
   } catch {
     /* storage blocked: admin mode lasts for this page only */
   }

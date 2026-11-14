@@ -20,6 +20,9 @@ export type StatKey = (typeof STAT_KEYS)[number];
 export type Stats = Record<StatKey, number>;
 
 /** Cosmetic options chosen at creation. They never affect the simulation. */
+/** Boy or girl. Cosmetic only: it changes the look and the story texts, never the simulation. */
+export const GENDERS = ['male', 'female'] as const;
+export type Gender = (typeof GENDERS)[number];
 /** Face shapes. Kept to natural, flattering ones. */
 export const HEAD_SHAPES = ['oval', 'round', 'square'] as const;
 export type HeadShape = (typeof HEAD_SHAPES)[number];
@@ -36,8 +39,16 @@ export const HAIR_STYLES = [
   'long',
   'dreads',
   'bald',
+  'ponytail',
+  'bun',
+  'braid',
 ] as const;
 export type HairStyle = (typeof HAIR_STYLES)[number];
+/** Hairstyles offered for each gender (kept short so the creator stays simple). */
+export const HAIR_STYLES_BY_GENDER: Record<Gender, readonly HairStyle[]> = {
+  male: ['short', 'sidepart', 'spiky', 'buzz', 'curly', 'afro', 'long', 'dreads', 'bald'],
+  female: ['ponytail', 'bun', 'braid', 'long', 'short', 'curly'],
+};
 /** Natural hair colours of young players. */
 export const HAIR_COLORS = ['black', 'chestnut', 'brown', 'blonde', 'red'] as const;
 export type HairColor = (typeof HAIR_COLORS)[number];
@@ -63,6 +74,7 @@ export const FEET = ['right', 'left'] as const;
 export type Foot = (typeof FEET)[number];
 
 export interface Appearance {
+  gender: Gender;
   headShape: HeadShape;
   skinTone: SkinTone;
   hairStyle: HairStyle;

@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import type { GameState } from '@futbolchi/engine';
 import { tx } from '../i18n';
 import { PitchReplay } from '../replay/PitchReplay';
+import { CoachGuide } from '../coach/CoachGuide';
 
 interface Props {
   state: GameState;
@@ -46,6 +47,7 @@ export function MatchScreen({ state, matchId, onContinue }: Props) {
           </div>
         }
       />
+      <CoachGuide lesson="match" vars={{ name: state.persona.name, g: state.persona.appearance.gender }} delay={900} />
     </div>
   );
 }

@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { playWeek, startNextSeason, type GameState, type TrainingId } from '@futbolchi/engine';
 import { tx, useLang } from './i18n';
 import { api } from './state/api';
-import { openAdmin } from './state/admin';
-import { getUserId, getUserName, loadGame, saveGame } from './state/store';
+import { ADMIN_EVENT, openAdmin, verifiedAdminToken } from './state/admin';
+import { getUserId, getUserName, introSeen, loadGame, markIntroSeen, saveGame } from './state/store';
+import { IntroPlayer } from './intro/IntroPlayer';
 import { LoadingScreen } from './screens/LoadingScreen';
 import { NameScreen } from './screens/NameScreen';
 import { MenuScreen } from './screens/MenuScreen';
@@ -23,6 +24,7 @@ import { SettingsButton } from './components/Settings';
  * Flow: loading (counter) → name (first visit only) → menu
  *   menu → new career → pay (receipt) → create (persona) → game
  *   menu → load game → game
+ *   create → intro (opening film, once per persona) → game
  *   menu → info
  */
 type Route =
@@ -33,7 +35,30 @@ type Route =
   | { name: 'pay' }
   | { name: 'create'; entitlementId: string }
   | { name: 'game' }
+  /** The opening film; the game follows. */
+  | { name: 'intro' }
   | { name: 'match'; matchId: string };
+
+/**
+ * The video recorder is for the owner only: its code is a separate chunk that
+ * is downloaded and mounted only after the server accepts the admin token.
+ */
+const RecorderDock = lazy(() => import('./recorder/RecorderDock'));
+
+function useIsAdmin(): boolean {
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    const check = () => void verifiedAdminToken().then((t) => alive && setAdmin(!!t));
+    check();
+    window.addEventListener(ADMIN_EVENT, check);
+    return () => {
+      alive = false;
+      window.removeEventListener(ADMIN_EVENT, check);
+    };
+  }, []);
+  return admin;
+}
 
 const useHash = () => {
   const [hash, setHash] = useState(location.hash);
@@ -49,6 +74,12 @@ export function App() {
   // Re-render the whole tree when the language changes.
   useLang();
   const hash = useHash();
+  const isAdmin = useIsAdmin();
+  const recorder = isAdmin ? (
+    <Suspense fallback={null}>
+      <RecorderDock />
+    </Suspense>
+  ) : null;
   const [game, setGame] = useState<GameState | null>(() => loadGame());
   const [userName, setUserNameState] = useState(() => getUserName());
   const [route, setRoute] = useState<Route>({ name: 'loading' });
@@ -79,6 +110,20 @@ export function App() {
         <main>
           <AdminScreen />
         </main>
+        {recorder}
+      </div>
+    );
+  }
+
+  if (route.name === 'intro' && game) {
+    const done = () => {
+      markIntroSeen(game.persona.id);
+      setRoute({ name: 'game' });
+    };
+    return (
+      <div className="intro-screen">
+        <IntroPlayer name={game.persona.name} appearance={game.persona.appearance} onDone={done} />
+        {recorder}
       </div>
     );
   }
@@ -132,7 +177,7 @@ export function App() {
           entitlementId={route.entitlementId}
           onCreated={(s) => {
             update(s);
-            setRoute({ name: 'game' });
+            setRoute({ name: 'intro' });
           }}
         />
       );
@@ -169,7 +214,7 @@ export function App() {
           name={userName}
           game={game}
           onNewCareer={() => setRoute({ name: 'pay' })}
-          onLoadGame={() => setRoute({ name: 'game' })}
+          onLoadGame={() => setRoute(game && !introSeen(game.persona.id) ? { name: 'intro' } : { name: 'game' })}
           onInfo={() => setRoute({ name: 'info' })}
           onChangeName={() => setRoute({ name: 'name' })}
         />
@@ -183,9 +228,10 @@ export function App() {
         <button className="brand" onClick={() => setRoute(home)}>
           <PixelArt sprite={BALL} scale={2} /> {tx.appName}
         </button>
-        {showLangSwitch ? <LangSwitch /> : <SettingsButton />}
+        {showLangSwitch ? <LangSwitch /> : <SettingsButton onReplayIntro={game ? () => setRoute({ name: 'intro' }) : undefined} />}
       </header>
       <main>{body}</main>
+      {recorder}
     </div>
   );
 }

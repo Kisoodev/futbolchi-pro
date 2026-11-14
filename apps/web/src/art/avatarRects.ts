@@ -206,7 +206,7 @@ export function avatarLayout(a: Appearance): AvatarLayout {
     torsoTop,
     torsoLen,
     torsoW,
-    shoulderW: torsoW + 6,
+    shoulderW: torsoW + (a.gender === 'female' ? 3 : 6),
     upperArm: Math.round(torsoLen * 0.58),
     foreArm: Math.round(torsoLen * 0.56),
     legTop,
@@ -244,6 +244,20 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   if (a.hairStyle === 'long') {
     back.rect(cx - maxW / 2 - 2, headTop + 3, maxW + 4, headH + 3);
     for (let x = cx - maxW / 2 - 2; x < cx + maxW / 2 + 2; x += 3) back.set(x + 1, headTop + headH + 6);
+  }
+  if (a.hairStyle === 'ponytail') {
+    // Tail tied high at the back, swinging down past the right ear.
+    const x0 = cx + maxW / 2 - 3;
+    for (let i = 0; i < headH + 6; i++) {
+      const w = i < 3 ? 5 : i < headH ? 4 : 3;
+      back.rect(x0 + (i > headH / 2 ? 1 : 0), headTop + 2 + i, w, 1);
+    }
+  }
+  if (a.hairStyle === 'bun') back.ellipse(cx - 0.5, headTop - 2, 5, 3.5);
+  if (a.hairStyle === 'braid') {
+    // One braid over the right shoulder: small alternating plaits.
+    const x0 = cx + maxW / 2 - 3;
+    for (let i = 0; i < headH + 12; i++) back.rect(x0 + (i % 4 < 2 ? 0 : 1), headTop + 4 + i, 3, 1);
   }
   if (a.hairStyle === 'dreads') {
     for (let x = cx - maxW / 2 - 3; x <= cx + maxW / 2 + 1; x += 3) {
@@ -444,6 +458,13 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
     put(out, cx - 4, eyeY, shade(eye, 0.45)); // catch-light
     put(out, cx + 3, eyeY, shade(eye, 0.45));
   }
+  if (a.gender === 'female' && !squint) {
+    const lash = '#1d1a24';
+    put(out, cx - 7, eyeY, lash);
+    put(out, cx - 6, eyeY - 1, lash);
+    put(out, cx + 6, eyeY, lash);
+    put(out, cx + 5, eyeY - 1, lash);
+  }
   // Eyebrows
   const brow = luminance(hair) > 0.55 ? shade(hair, -0.4) : hair;
   const browY = headTop + 6;
@@ -489,7 +510,7 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
     put(out, cx, headTop + 14, WHITE);
     put(out, cx - 1, headTop + 16, '#c4534a');
   } else {
-    for (let x = cx - 2; x <= cx + 1; x++) put(out, x, headTop + 14, MOUTH);
+    for (let x = cx - 2; x <= cx + 1; x++) put(out, x, headTop + 14, a.gender === 'female' ? '#b5525e' : MOUTH);
     put(out, cx - 3, headTop + 13, shade(skin, -0.2));
     put(out, cx + 2, headTop + 13, shade(skin, -0.2));
   }
@@ -552,6 +573,12 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
       }
       sideburns(12);
       break;
+    case 'ponytail':
+    case 'bun':
+    case 'braid':
+      dome(9, 4, 1);
+      sideburns(9);
+      break;
     case 'bald':
       break;
   }
@@ -582,6 +609,18 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
       const x = p % AVATAR_W;
       const y = (p - x) / AVATAR_W;
       if ((x * 3 + y * 2) % 7 === 0 && out[p] === back.color) put(out, x, y, shade(hair, -0.32));
+    }
+  }
+  if (a.hairStyle === 'ponytail' || a.hairStyle === 'bun' || a.hairStyle === 'braid') {
+    // Middle parting, a hair tie and the plait pattern
+    for (let y = headTop - 1; y <= headTop + 2; y++) put(out, cx - 1, y, shade(hair, -0.3));
+    if (a.hairStyle === 'ponytail') for (let x = cx + maxW / 2 - 1; x < cx + maxW / 2 + 2; x++) put(out, x, headTop + 6, '#d9425a');
+    if (a.hairStyle === 'braid') {
+      for (const p of back.px) {
+        const x = p % AVATAR_W;
+        const y = (p - x) / AVATAR_W;
+        if (y > headTop + 4 && (y - headTop) % 2 === 0 && out[p] === back.color) put(out, x, y, shade(hair, -0.3));
+      }
     }
   }
   if (a.hairStyle === 'sidepart') {

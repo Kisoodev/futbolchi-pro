@@ -37,6 +37,7 @@ export const HEIGHT_MAX_CM = 200;
 export const WEIGHT_MIN_KG = 55;
 export const WEIGHT_MAX_KG = 100;
 export const DEFAULT_APPEARANCE: Appearance = {
+  gender: 'male',
   headShape: 'round',
   skinTone: 'medium',
   hairStyle: 'short',

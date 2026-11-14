@@ -10,7 +10,8 @@
  *  - free access: a free persona slot for this browser
  *  - highlights: mark match events (no video pipeline yet)
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { recTexts } from '../i18n/recorder';
 import type { MatchEvent } from '@futbolchi/engine';
 import { formatMoney, tx } from '../i18n';
 import { adminApi, api, apiUrl, type AdminPayment, type AdminPlayer } from '../state/api';
@@ -26,7 +27,9 @@ interface MatchSummary {
   score: [number, number];
 }
 
-type Tab = 'payments' | 'players' | 'free' | 'highlights';
+type Tab = 'payments' | 'players' | 'free' | 'highlights' | 'recording';
+/** Video recorder (admin only, loaded on demand). */
+const RecorderPanel = lazy(() => import('../recorder/RecorderPanel'));
 type Filter = 'waiting' | 'all';
 
 /** New receipts show up within a few seconds. */
@@ -315,9 +318,9 @@ export function AdminScreen() {
           <div><span>{tx.adminStatRevenue}</span><strong>{formatMoney(revenue)}</strong></div>
         </div>
         <nav className="admin-tabs" role="tablist">
-          {(['payments', 'players', 'free', 'highlights'] as const).map((t) => (
+          {(['payments', 'players', 'free', 'highlights', 'recording'] as const).map((t) => (
             <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
-              {tx.adminTabs[t]}
+              {t === 'recording' ? recTexts().tab : tx.adminTabs[t]}
               {t === 'payments' && waiting.length > 0 && <span className="count">{waiting.length}</span>}
             </button>
           ))}
@@ -443,6 +446,12 @@ export function AdminScreen() {
                 ))}
             </ul>
           </section>
+        )}
+
+        {tab === 'recording' && (
+          <Suspense fallback={<p className="muted">{tx.loading}</p>}>
+            <RecorderPanel />
+          </Suspense>
         )}
 
         {tab === 'free' && (

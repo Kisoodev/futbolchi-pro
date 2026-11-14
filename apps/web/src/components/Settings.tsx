@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react';
 import { tx } from '../i18n';
 import { LangSwitch } from './LangSwitch';
+import { coachTexts } from '../i18n/coach';
+import { setCoachOn, useCoachState } from '../coach/coachStore';
 
 /** ⚙️ in the in-game top bar: a small sheet with the language choice. */
-export function SettingsButton() {
+/** `onReplayIntro` adds a button that plays the opening film again. */
+export function SettingsButton({ onReplayIntro }: { onReplayIntro?: () => void } = {}) {
   const [open, setOpen] = useState(false);
+  const coach = useCoachState();
+  const ct = coachTexts();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
@@ -24,6 +29,33 @@ export function SettingsButton() {
               <span>{tx.settingsLanguage}</span>
               <LangSwitch />
             </div>
+            <button type="button" className={coach.off ? 'big' : 'big on'} aria-pressed={!coach.off} onClick={() => setCoachOn(coach.off)}>
+              {coach.off ? ct.settingsOff : ct.settingsOn}
+            </button>
+            {!coach.off && coach.seen.length > 0 && (
+              <button
+                type="button"
+                className="big"
+                onClick={() => {
+                  setOpen(false);
+                  setCoachOn(true);
+                }}
+              >
+                {ct.replay}
+              </button>
+            )}
+            {onReplayIntro && (
+              <button
+                type="button"
+                className="big"
+                onClick={() => {
+                  setOpen(false);
+                  onReplayIntro();
+                }}
+              >
+                {tx.settingsReplayIntro}
+              </button>
+            )}
             <button type="button" className="big" onClick={() => setOpen(false)}>
               {tx.close}
             </button>

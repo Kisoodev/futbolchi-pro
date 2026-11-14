@@ -426,3 +426,69 @@ a.link { color: var(--ink-muted); font-weight: 600; text-decoration: none; displ
 @media (min-width: 900px) { .player-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .team-name { display: flex; align-items: center; gap: 10px; }
 .flag-uz { border-radius: 3px; box-shadow: 0 0 0 1px var(--line); flex: none; }
+
+/* ----- Intro film ----- */
+.intro-screen { position: fixed; inset: 0; z-index: 60; background: #000; }
+.intro-stage { position: relative; width: 100%; height: 100%; display: grid; place-items: center; overflow: hidden; }
+.intro-canvas { display: block; width: 100%; height: 100%; }
+.intro-stage.fixed-size .intro-canvas { width: auto; height: 100%; max-width: 100%; object-fit: contain; }
+.intro-loading { position: absolute; color: #e6eeff; font-family: var(--pixel); margin: 0; }
+.intro-skip { position: absolute; top: max(12px, env(safe-area-inset-top)); right: 12px; background: rgba(8, 12, 26, 0.55); color: #fff; border: 1px solid rgba(255, 255, 255, 0.35); border-radius: 999px; padding: 6px 14px; font: 700 0.85rem var(--body); box-shadow: none; animation: skip-in 0.4s ease; }
+.intro-skip:hover { background: rgba(8, 12, 26, 0.8); }
+@keyframes skip-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* ----- Admin video recorder ----- */
+.admin-rec .rec-grid { display: grid; gap: 12px; align-items: start; }
+@media (min-width: 900px) { .admin-rec .rec-grid { grid-template-columns: 1.35fr 0.85fr 1.2fr; } }
+.rec-card { background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 8px; align-content: start; }
+.rec-card .chips.tight { display: flex; flex-wrap: wrap; gap: 6px; }
+.rec-card .chip { padding: 4px 10px; min-height: 0; }
+.rec-card .field.inline { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rec-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rec-row button { font-size: 0.85rem; padding: 8px 6px; }
+.admin-rec .rec-intro { margin: 0 0 8px; }
+.rec-card h3 { margin: 0; font-family: var(--pixel); }
+.rec-card p { margin: -4px 0 0; }
+.rec-card .field { display: grid; gap: 4px; }
+.rec-checks { display: grid; gap: 6px; font-weight: 700; font-size: 0.9rem; }
+.rec-checks label { display: flex; align-items: center; gap: 8px; }
+.rec-checks input { width: auto; margin: 0; flex: none; }
+.rec-stage { position: fixed; inset: 0; z-index: 70; background: #000; display: grid; place-items: center; }
+.rec-stage .intro-stage { width: 100%; height: 100%; }
+.rec-countdown { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; pointer-events: none; }
+.rec-countdown span { font: 700 min(30vw, 30vh) var(--pixel); color: #fff; text-shadow: 0 6px 30px rgba(0, 0, 0, 0.6); animation: rec-pop 0.8s ease-out both; }
+@keyframes rec-pop { from { transform: scale(1.6); opacity: 0; } 30% { opacity: 1; } to { transform: scale(0.9); opacity: 0.2; } }
+.rec-pill { position: fixed; top: 10px; left: 10px; z-index: 95; display: flex; align-items: center; gap: 8px; background: rgba(12, 14, 22, 0.82); color: #fff; padding: 4px 6px 4px 10px; border-radius: 999px; font: 700 0.75rem var(--body); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3); }
+.rec-pill button { padding: 2px 8px; font-size: 0.75rem; min-height: 0; box-shadow: none; }
+.rec-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff3b3b; animation: rec-blink 1s steps(2) infinite; }
+.rec-pill.paused .rec-dot { animation: none; background: #f2c84b; }
+.rec-time { font-variant-numeric: tabular-nums; }
+@keyframes rec-blink { 50% { opacity: 0.25; } }
+.rec-result { z-index: 96; }
+.rec-result .modal-box { max-width: min(92vw, 720px); display: grid; gap: 10px; }
+.rec-video { width: 100%; max-height: 62vh; background: #000; border-radius: 8px; }
+.rec-video.a9x16 { width: auto; max-width: 100%; margin: 0 auto; }
+.rec-card > * { margin: 0; }
+
+/* ----- In-game coach ----- */
+.coach-dim { position: fixed; inset: 0; z-index: 57; background: rgba(8, 12, 26, 0.45); animation: coach-fade 0.25s ease; }
+.coach-spot { position: fixed; z-index: 57; border-radius: 12px; pointer-events: none; box-shadow: 0 0 0 3px #f2c84b, 0 0 0 200vmax rgba(8, 12, 26, 0.5); transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease; }
+.coach-guide { position: fixed; z-index: 58; left: 50%; transform: translateX(-50%); bottom: calc(12px + env(safe-area-inset-bottom)); width: min(560px, calc(100vw - 20px)); display: flex; gap: 12px; align-items: flex-start; background: #fffdf6; border: 3px solid #1b2a44; border-radius: 16px; padding: 10px 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); animation: coach-up 0.3s ease; }
+.coach-guide.top { bottom: auto; top: calc(10px + env(safe-area-inset-top)); animation-name: coach-down; }
+.coach-portrait { flex: none; border-radius: 12px; background: linear-gradient(180deg, #7ec3f0, #d8f0ff); border: 2px solid #1b2a44; image-rendering: pixelated; }
+.coach-body { flex: 1; min-width: 0; display: grid; gap: 4px; }
+.coach-head { display: flex; align-items: baseline; gap: 8px; font-size: 0.85rem; }
+.coach-head b { color: #b07a10; font-family: var(--pixel); font-size: 1rem; }
+.coach-head .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.coach-count { margin-left: auto; color: var(--ink-muted); font-weight: 700; }
+.coach-text { margin: 0; font-weight: 700; line-height: 1.35; animation: coach-fade 0.3s ease; }
+.coach-actions { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.coach-actions .row { display: flex; gap: 6px; margin: 0; }
+.coach-actions button { padding: 6px 12px; min-height: 0; font-size: 0.9rem; }
+.coach-skip { font-size: 0.85rem; padding: 6px 0; white-space: nowrap; }
+@keyframes coach-up { from { opacity: 0; transform: translate(-50%, 16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes coach-down { from { opacity: 0; transform: translate(-50%, -16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes coach-fade { from { opacity: 0; } to { opacity: 1; } }
+/* phones: sit above the floating tab bar */
+@media (max-width: 767px) { .week ~ .coach-guide:not(.top), .coach-guide:not(.top) { bottom: calc(76px + env(safe-area-inset-bottom)); } .coach-text { font-size: 0.92rem; } }
+.settings-sheet .big.on { border-color: var(--grass); }

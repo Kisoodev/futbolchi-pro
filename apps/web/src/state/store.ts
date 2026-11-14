@@ -72,3 +72,23 @@ export function setUserName(name: string): void {
     /* ignore */
   }
 }
+
+const INTRO_KEY = 'futbolchi.introSeen';
+
+/** Whether the opening film was already shown for this persona (shown once per persona). */
+export function introSeen(personaId: string): boolean {
+  try {
+    return (localStorage.getItem(INTRO_KEY) ?? '').split(',').includes(personaId);
+  } catch {
+    return true;
+  }
+}
+
+export function markIntroSeen(personaId: string): void {
+  try {
+    const ids = (localStorage.getItem(INTRO_KEY) ?? '').split(',').filter(Boolean);
+    if (!ids.includes(personaId)) localStorage.setItem(INTRO_KEY, [...ids, personaId].slice(-20).join(','));
+  } catch {
+    /* storage blocked: the film may show again next time */
+  }
+}

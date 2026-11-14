@@ -15,6 +15,7 @@ import {
 import { lang, tx } from '../i18n';
 import { FatigueMeter, LeagueTable, PersonaHeader, StatBars } from '../components/common';
 import { Avatar } from '../art/Avatar';
+import { CoachGuide } from '../coach/CoachGuide';
 
 interface Props {
   state: GameState;
@@ -160,6 +161,9 @@ export function WeekScreen({ state, onPlay }: Props) {
         <h2>{tx.table}</h2>
         <LeagueTable season={season} clubs={state.clubs} highlightId={club.id} />
       </section>
+
+      {/* First week: the coach explains the screen (once, skippable) */}
+      <CoachGuide lesson="week" vars={{ name: persona.name, g: persona.appearance.gender }} onView={setView} />
 
       <nav className="m-tabs" aria-label={tx.navMenu}>
         {(['me', 'train', 'table'] as const).map((v) => (

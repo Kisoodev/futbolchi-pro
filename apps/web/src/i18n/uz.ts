@@ -75,6 +75,8 @@ export const uz = {
     tan: 'Qoramtir',
     dark: "To'q",
   } satisfies Record<SkinTone, string>,
+  genderLabel: "Jinsi",
+  genders: { male: "O'g'il bola", female: "Qiz bola" },
   hairStyleLabel: 'Soch turmagi',
   hairStyles: {
     short: 'Kalta',
@@ -86,6 +88,9 @@ export const uz = {
     long: 'Uzun',
     dreads: 'Dredlar',
     bald: 'Sochsiz',
+    ponytail: "Dumcha",
+    bun: "Tugun",
+    braid: "O'rim",
   } satisfies Record<HairStyle, string>,
   hairColorLabel: 'Soch rangi',
   hairColors: {
@@ -304,6 +309,7 @@ export const uz = {
   awayLabel: 'Mehmonda',
   settingsTitle: 'Sozlamalar',
   settingsLanguage: 'Til',
+  settingsReplayIntro: "🎬 Introni qayta ko'rish",
   career: 'Karyera',
   careerLine: (apps: number, goals: number, assists: number) => `${apps} o'yin · ${goals} gol · ${assists} golli pas`,
 

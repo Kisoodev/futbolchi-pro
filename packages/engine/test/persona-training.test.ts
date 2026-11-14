@@ -60,6 +60,20 @@ describe('persona creation', () => {
     expect(bad({})).toBeNull();
   });
 
+  it('keeps the look consistent with the gender', () => {
+    const bad = (over: object) => validatePersonaInput({ name: 'Malika', position: 'W', bonus: {}, appearance: { ...C.DEFAULT_APPEARANCE, ...over } as never });
+    expect(bad({ gender: 'female', hairStyle: 'ponytail' })).toBeNull();
+    expect(bad({ gender: 'female', hairStyle: 'braid', facialHair: 'beard' })).toBe('bad_appearance');
+    expect(bad({ gender: 'female', hairStyle: 'dreads' })).toBe('bad_appearance');
+    expect(bad({ gender: 'male', hairStyle: 'bun' })).toBe('bad_appearance');
+    expect(bad({ gender: 'other' })).toBe('bad_appearance');
+    // a girl's saved look survives normalisation; old saves without a gender become boys
+    const girl = { ...C.DEFAULT_APPEARANCE, gender: 'female' as const, hairStyle: 'ponytail' as const };
+    expect(normalizeAppearance(girl)).toEqual(girl);
+    const { gender: _drop, ...old } = C.DEFAULT_APPEARANCE;
+    expect(normalizeAppearance(old as never).gender).toBe('male');
+  });
+
   it('fills old or broken appearances with defaults, keeping valid fields', () => {
     expect(normalizeAppearance(undefined)).toEqual(C.DEFAULT_APPEARANCE);
     const old = { headShape: 'oval', skinTone: 'dark', hairStyle: 'curly', hairColor: 'red', heightCm: 190, weightKg: 80, foot: 'left' };

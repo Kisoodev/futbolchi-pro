@@ -47,6 +47,8 @@ export const ru: Messages = {
   headShapes: { oval: 'Овальная', round: 'Круглая', square: 'Волевое' },
   skinToneLabel: 'Цвет кожи',
   skinTones: { light: 'Светлый', medium: 'Средний', tan: 'Смуглый', dark: 'Тёмный' },
+  genderLabel: "Пол",
+  genders: { male: "Парень", female: "Девушка" },
   hairStyleLabel: 'Причёска',
   hairStyles: {
     short: 'Короткая',
@@ -58,6 +60,9 @@ export const ru: Messages = {
     long: 'Длинные',
     dreads: 'Дреды',
     bald: 'Без волос',
+    ponytail: "Хвост",
+    bun: "Пучок",
+    braid: "Коса",
   },
   hairColorLabel: 'Цвет волос',
   hairColors: {
@@ -252,6 +257,7 @@ export const ru: Messages = {
   awayLabel: 'В гостях',
   settingsTitle: 'Настройки',
   settingsLanguage: 'Язык',
+  settingsReplayIntro: "🎬 Посмотреть интро снова",
   career: 'Карьера',
   careerLine: (apps, goals, assists) =>
     `${p(apps, 'матч', 'матча', 'матчей')} · ${p(goals, 'гол', 'гола', 'голов')} · ${p(assists, 'передача', 'передачи', 'передач')}`,

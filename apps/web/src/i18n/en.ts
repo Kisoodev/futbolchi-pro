@@ -51,6 +51,8 @@ export const en: Messages = {
   headShapes: { oval: 'Oval', round: 'Round', square: 'Strong jaw' },
   skinToneLabel: 'Skin tone',
   skinTones: { light: 'Light', medium: 'Medium', tan: 'Tan', dark: 'Dark' },
+  genderLabel: "Gender",
+  genders: { male: "Boy", female: "Girl" },
   hairStyleLabel: 'Hairstyle',
   hairStyles: {
     short: 'Short',
@@ -62,6 +64,9 @@ export const en: Messages = {
     long: 'Long',
     dreads: 'Dreadlocks',
     bald: 'Bald',
+    ponytail: "Ponytail",
+    bun: "Bun",
+    braid: "Braid",
   },
   hairColorLabel: 'Hair colour',
   hairColors: {
@@ -256,6 +261,7 @@ export const en: Messages = {
   awayLabel: 'Away',
   settingsTitle: 'Settings',
   settingsLanguage: 'Language',
+  settingsReplayIntro: "🎬 Watch the intro again",
   career: 'Career',
   careerLine: (apps, goals, assists) => `${s(apps, 'match', 'matches')} · ${s(goals, 'goal', 'goals')} · ${s(assists, 'assist', 'assists')}`,
 

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { currentSeason, seasonFacts, seasonStory, type GameState } from '@futbolchi/engine';
 import { lang, tx } from '../i18n';
 import { LeagueTable } from '../components/common';
+import { CoachGuide } from '../coach/CoachGuide';
 import { renderShareCard, shareOrDownload } from '../share/ShareCard';
 
 interface Props {
@@ -84,6 +85,7 @@ export function SummaryScreen({ state, onNextSeason }: Props) {
           </div>
         </div>
       )}
+      <CoachGuide lesson="summary" vars={{ name: state.persona.name, g: state.persona.appearance.gender }} />
     </div>
   );
 }

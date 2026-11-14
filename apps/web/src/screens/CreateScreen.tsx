@@ -11,7 +11,8 @@ import {
   FACIAL_HAIR,
   FEET,
   HAIR_COLORS,
-  HAIR_STYLES,
+  GENDERS,
+  HAIR_STYLES_BY_GENDER,
   HEAD_SHAPES,
   NOSES,
   POSITIONS,
@@ -59,12 +60,12 @@ function randomLook(prev: Appearance): Appearance {
     ...prev,
     headShape: pick(HEAD_SHAPES),
     skinTone: pick(SKIN_TONES),
-    hairStyle: pick(HAIR_STYLES),
+    hairStyle: pick(HAIR_STYLES_BY_GENDER[prev.gender]),
     hairColor: pick(HAIR_COLORS),
     eyeColor: pick(EYE_COLORS),
     brows: pick(BROWS),
     nose: pick(NOSES),
-    facialHair: Math.random() < 0.55 ? 'none' : pick(FACIAL_HAIR),
+    facialHair: prev.gender === 'female' || Math.random() < 0.55 ? 'none' : pick(FACIAL_HAIR),
     heightCm: tall,
     weightKg: weight,
     boots: pick(BOOT_COLORS),
@@ -190,6 +191,13 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof Appearance>(k: K, v: Appearance[K]) => setLook((prev) => ({ ...prev, [k]: v }));
+  /** Switching gender keeps the face but starts from that gender's first hairstyle and drops the beard. */
+  const setGender = (g: Appearance['gender']) =>
+    setLook((prev) => {
+      const styles = HAIR_STYLES_BY_GENDER[g];
+      const hairStyle = g === prev.gender ? prev.hairStyle : styles[0];
+      return { ...prev, gender: g, hairStyle, facialHair: g === 'female' ? 'none' : prev.facialHair };
+    });
 
   const openTab = (t: LookTab) => {
     setTab(t);
@@ -291,6 +299,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
 
           {tab === 'face' && (
             <>
+              <Choice label={tx.genderLabel} options={GENDERS} value={look.gender} names={tx.genders} onChange={setGender} cols={2} inline />
               <Portraits label={tx.headShapeLabel} field="headShape" options={HEAD_SHAPES} look={look} names={tx.headShapes} onChange={(v) => set('headShape', v)} />
               <Portraits label={tx.skinToneLabel} field="skinTone" options={SKIN_TONES} look={look} names={tx.skinTones} onChange={(v) => set('skinTone', v)} />
               <IconChoices label={tx.eyeColorLabel} options={EYE_COLORS} value={look.eyeColor} names={tx.eyeColors} icon={(o) => <EyeIcon color={EYE_HEX[o]} />} onChange={(v) => set('eyeColor', v)} />
@@ -301,7 +310,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
 
           {tab === 'hair' && (
             <>
-              <Portraits label={tx.hairStyleLabel} field="hairStyle" options={HAIR_STYLES} look={look} names={tx.hairStyles} onChange={(v) => set('hairStyle', v)} />
+              <Portraits label={tx.hairStyleLabel} field="hairStyle" options={HAIR_STYLES_BY_GENDER[look.gender]} look={look} names={tx.hairStyles} onChange={(v) => set('hairStyle', v)} />
               <Portraits
                 label={tx.hairColorLabel}
                 field="hairColor"
@@ -311,7 +320,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
                 preview={(l) => (l.hairStyle === 'bald' || l.hairStyle === 'buzz' ? { ...l, hairStyle: 'short' } : l)}
                 onChange={(v) => set('hairColor', v)}
               />
-              <Portraits label={tx.facialHairLabel} field="facialHair" options={FACIAL_HAIR} look={look} names={tx.facialHairNames} onChange={(v) => set('facialHair', v)} />
+              {look.gender === 'male' && <Portraits label={tx.facialHairLabel} field="facialHair" options={FACIAL_HAIR} look={look} names={tx.facialHairNames} onChange={(v) => set('facialHair', v)} />}
             </>
           )}
 

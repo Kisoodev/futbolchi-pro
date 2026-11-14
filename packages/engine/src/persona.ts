@@ -13,6 +13,8 @@ import {
   FEET,
   HAIR_COLORS,
   HAIR_STYLES,
+  GENDERS,
+  HAIR_STYLES_BY_GENDER,
   HEAD_SHAPES,
   POSITIONS,
   SKIN_TONES,
@@ -49,6 +51,9 @@ export function isValidAppearance(a: Appearance): boolean {
   const int = (v: unknown, lo: number, hi: number) => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
   return (
     !!a &&
+    GENDERS.includes(a.gender) &&
+    HAIR_STYLES_BY_GENDER[a.gender].includes(a.hairStyle) &&
+    (a.gender === 'male' || a.facialHair === 'none') &&
     HEAD_SHAPES.includes(a.headShape) &&
     SKIN_TONES.includes(a.skinTone) &&
     HAIR_STYLES.includes(a.hairStyle) &&
