@@ -42,6 +42,16 @@ export interface RecorderTexts {
   cancelled: string;
   overlayVisible: string;
   mp4Tip: string;
+  recordMatch: string;
+  recordMatchNote: string;
+  share: string;
+  shareHint: string;
+  fabTitle: string;
+  fabNoSource: string;
+  matchHint: string;
+  pickMatch: string;
+  noMatches: string;
+  matchLabel: (week: number, home: string, score: string, away: string) => string;
 }
 
 const uz: RecorderTexts = {
@@ -86,6 +96,16 @@ const uz: RecorderTexts = {
   cancelled: 'Yozish bekor qilindi.',
   overlayVisible: "Diqqat: bu brauzerda qizil indikator videoga tushishi mumkin (Chrome 132+ da yashiriladi).",
   mp4Tip: "Brauzer MP4 yozmadi, WebM chiqdi. Telegram va YouTube WebM'ni qabul qiladi; Instagram uchun MP4 ga o'tkazing.",
+  recordMatch: "⚽ O'yinni yozish",
+  recordMatchNote: "Maydon, hisob va izohlar toza kadrda. Telefonda ham ishlaydi.",
+  share: '📲 Galereyaga saqlash',
+  shareHint: "Telefonda: «Galereyaga saqlash» → «Videoni saqlash» (iPhone) yoki Galereya/Google Foto (Android).",
+  fabTitle: 'Video yozish',
+  fabNoSource: "Telefonda o'yin (match) va intro yoziladi. Boshqa ekranlar uchun telefonning o'zidagi ekran yozish funksiyasidan foydalaning.",
+  matchHint: "Ro'yxatdan o'yinni tanlang — u shu yerda ochiladi va toza kadrda yoziladi.",
+  pickMatch: "O'yinni tanlang",
+  noMatches: "Bu brauzerda hali o'ynalgan o'yin yo'q. Avval o'yinda bir hafta o'ynang.",
+  matchLabel: (w, h, sc, a) => `${w}-hafta: ${h} ${sc} ${a}`,
 };
 
 const en: RecorderTexts = {
@@ -129,6 +149,16 @@ const en: RecorderTexts = {
   cancelled: 'Recording cancelled.',
   overlayVisible: 'Note: in this browser the red indicator may show in the video (Chrome 132+ hides it).',
   mp4Tip: 'The browser recorded WebM, not MP4. Telegram and YouTube accept WebM; convert to MP4 for Instagram.',
+  recordMatch: '⚽ Record the match',
+  recordMatchNote: 'The pitch, score and commentary in a clean frame. Works on phones too.',
+  share: '📲 Save to gallery',
+  shareHint: 'On a phone: "Save to gallery" → "Save Video" (iPhone) or Gallery/Google Photos (Android).',
+  fabTitle: 'Record video',
+  fabNoSource: "On phones you can record matches and the intro. For other screens use the phone's own screen recorder.",
+  matchHint: 'Pick a match from the list — it opens here and is recorded in a clean frame.',
+  pickMatch: 'Choose a match',
+  noMatches: 'No matches played in this browser yet. Play a week in the game first.',
+  matchLabel: (w, h, sc, a) => `Week ${w}: ${h} ${sc} ${a}`,
 };
 
 const ru: RecorderTexts = {
@@ -172,6 +202,16 @@ const ru: RecorderTexts = {
   cancelled: 'Запись отменена.',
   overlayVisible: 'Внимание: в этом браузере красный индикатор может попасть в видео (Chrome 132+ его скрывает).',
   mp4Tip: 'Браузер записал WebM, а не MP4. Telegram и YouTube принимают WebM; для Instagram конвертируйте в MP4.',
+  recordMatch: '⚽ Записать матч',
+  recordMatchNote: 'Поле, счёт и комментарии в чистом кадре. Работает и на телефоне.',
+  share: '📲 Сохранить в галерею',
+  shareHint: 'На телефоне: «Сохранить в галерею» → «Сохранить видео» (iPhone) или Галерея/Google Фото (Android).',
+  fabTitle: 'Запись видео',
+  fabNoSource: 'На телефоне записываются матчи и интро. Для других экранов используйте встроенную запись экрана телефона.',
+  matchHint: 'Выберите матч из списка — он откроется здесь и запишется в чистом кадре.',
+  pickMatch: 'Выберите матч',
+  noMatches: 'В этом браузере ещё нет сыгранных матчей. Сначала сыграйте неделю в игре.',
+  matchLabel: (w, h, sc, a) => `Неделя ${w}: ${h} ${sc} ${a}`,
 };
 
 const TEXTS: Record<Lang, RecorderTexts> = { uz, en, ru };

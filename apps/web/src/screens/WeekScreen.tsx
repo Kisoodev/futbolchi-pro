@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   currentSeason,
+  dayOf,
   getTrainingOption,
   personaOvr,
   personaView,
@@ -16,10 +17,16 @@ import { lang, tx } from '../i18n';
 import { FatigueMeter, LeagueTable, PersonaHeader, StatBars } from '../components/common';
 import { Avatar } from '../art/Avatar';
 import { CoachGuide } from '../coach/CoachGuide';
+import { progressTexts } from '../i18n/progress';
 
 interface Props {
   state: GameState;
-  onPlay: (option: TrainingId) => void;
+  /** Day 1: run the chosen training session. */
+  onTrain: (option: TrainingId) => void;
+  /** Day 2: play the match. */
+  onPlayMatch: () => void;
+  /** The coach waits while another sheet is open. */
+  coachHold?: boolean;
 }
 
 function Effects({ id }: { id: TrainingId }) {
@@ -46,7 +53,7 @@ function Effects({ id }: { id: TrainingId }) {
 type View = 'me' | 'train' | 'table';
 const VIEW_ICONS: Record<View, string> = { me: '👤', train: '⚽', table: '🏆' };
 
-export function WeekScreen({ state, onPlay }: Props) {
+export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
   const [view, setView] = useState<View>('train');
   const season = currentSeason(state);
   const offer = trainingOffer(state);
@@ -69,9 +76,12 @@ export function WeekScreen({ state, onPlay }: Props) {
       return mine > theirs ? 'W' : mine < theirs ? 'L' : 'D';
     }) as ('W' | 'D' | 'L')[];
   const atHome = fx ? fx.homeId === club.id : false;
+  const pt = progressTexts();
+  const day = dayOf(state);
+  const lastTraining = season.trainingLog.find((l) => l.week === season.week)?.optionId ?? null;
 
   return (
-    <div className={`screen grid week view-${view}`}>
+    <div className={`screen grid week view-${view} day-${day}`}>
       {/* Phone: who you are and where you stand, on the training and table tabs */}
       <header className="m-status" style={{ borderColor: club.color }}>
         <Avatar appearance={persona.appearance} kit={club.color} scale={1} crop="bust" className="m-status-avatar" />
@@ -134,6 +144,18 @@ export function WeekScreen({ state, onPlay }: Props) {
             </div>
           </div>
         )}
+        <span className={`day-chip ${day}`}>{pt.dayChip(day === 'training' ? 1 : 2)}</span>
+        {day === 'match' ? (
+          <div className="match-day">
+            <h2>{pt.matchDayTitle}</h2>
+            <p className="muted">{pt.matchDayText}</p>
+            <p className="trained-line">{lastTraining === 'rest' || lastTraining === null ? pt.todayRested : pt.todayTrained(tx.trainingNames[lastTraining as TrainingId])}</p>
+            <button className="primary big play-btn" onClick={onPlayMatch}>
+              {pt.playMatch}
+            </button>
+          </div>
+        ) : (
+          <>
         <h2>{tx.trainingTitle}</h2>
         <p className="muted">{tx.trainingHint}</p>
         <div className="options" role="radiogroup" aria-label={tx.trainingTitle}>
@@ -152,9 +174,11 @@ export function WeekScreen({ state, onPlay }: Props) {
           ))}
         </div>
         {fx && <p className="next-match">{tx.nextMatch(state.clubs[fx.homeId].name, state.clubs[fx.awayId].name)}</p>}
-        <button className="primary big play-btn" disabled={!choice} onClick={() => choice && onPlay(choice)}>
-          {tx.playWeek} →
+        <button className="primary big play-btn" disabled={!choice} onClick={() => choice && onTrain(choice)}>
+          {pt.trainButton} →
         </button>
+          </>
+        )}
       </section>
 
       <section className={`card table-card ${view === 'table' ? 'm-on' : ''}`}>
@@ -163,13 +187,13 @@ export function WeekScreen({ state, onPlay }: Props) {
       </section>
 
       {/* First week: the coach explains the screen (once, skippable) */}
-      <CoachGuide lesson="week" vars={{ name: persona.name, g: persona.appearance.gender }} onView={setView} />
+      <CoachGuide key={day} lesson={day === 'training' ? 'week' : 'matchDay'} vars={{ name: persona.name, g: persona.appearance.gender }} onView={setView} hold={coachHold} />
 
       <nav className="m-tabs" aria-label={tx.navMenu}>
         {(['me', 'train', 'table'] as const).map((v) => (
           <button key={v} className={view === v ? 'on' : ''} aria-pressed={view === v} onClick={() => setView(v)}>
-            <span aria-hidden>{VIEW_ICONS[v]}</span>
-            {tx.weekTabs[v]}
+            <span aria-hidden>{v === 'train' && day === 'match' ? '🏟️' : VIEW_ICONS[v]}</span>
+            {v === 'train' ? pt.tabToday[day] : tx.weekTabs[v]}
           </button>
         ))}
       </nav>

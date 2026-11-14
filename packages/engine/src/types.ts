@@ -250,6 +250,38 @@ export interface TransferOffer {
 }
 
 export type GamePhase = 'training' | 'seasonSummary';
+/** Each game week has two days: a training day, then a match day. */
+export type WeekDay = 'training' | 'match';
+
+export type MissionKind = 'train' | 'play' | 'goodGame' | 'win' | 'contribute' | 'ovr';
+
+/** Lifetime counters of the account (they drive missions). */
+export interface AccountCounters {
+  trainings: number;
+  matches: number;
+  wins: number;
+  /** Matches rated 7.0 or more. */
+  goodGames: number;
+  /** Goals + assists (+ one per 3 saves for keepers). */
+  contributions: number;
+  /** OVR points gained in total (fractional). */
+  ovrGained: number;
+  seasons: number;
+  promotions: number;
+}
+
+/** The player's account level (see account.ts). */
+export interface Account {
+  level: number;
+  /** XP inside the current level. */
+  xp: number;
+  totalXp: number;
+  counters: AccountCounters;
+  /** Active missions: their index in the endless list and the counter value when they started. */
+  missions: { index: number; base: number }[];
+  nextMission: number;
+  missionsDone: number;
+}
 
 export interface GameState {
   version: 1;
@@ -261,4 +293,10 @@ export interface GameState {
   matches: Record<string, Match>;
   phase: GamePhase;
   transferOffers: TransferOffer[];
+  /** Today's day of the week; missing in older saves (= training). */
+  day?: WeekDay;
+  /** Extra injury risk from this week's training, used on match day. */
+  pendingInjuryRisk?: number;
+  /** Account level and missions; missing in older saves. */
+  account?: Account;
 }

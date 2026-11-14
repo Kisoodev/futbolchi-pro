@@ -385,6 +385,9 @@ export function buildApp(opts: AppOptions): { app: Hono; payments: PaymentServic
                 career: persona.career,
                 promotions: s.seasons.filter((x) => x.outcome === 'promoted').length,
                 matches: Object.keys(s.matches).length,
+                /** Account level (1 for saves made before levels existed). */
+                level: s.account?.level ?? 1,
+                missionsDone: s.account?.missionsDone ?? 0,
               }
             : null,
       };

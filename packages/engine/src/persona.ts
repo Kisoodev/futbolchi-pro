@@ -155,10 +155,24 @@ export function changeStat(p: Persona, stat: StatKey, base: number): Persona {
   return { ...p, stats: { ...p.stats, [stat]: value } };
 }
 
-/** Small growth from playing a match: the position's most important stats. */
-export function applyMatchXp(p: Persona): Persona {
+/**
+ * Growth from playing a match: the position's most important stats. A good
+ * performance grows more (rating 7 → normal, 8 → ×1.5, 9+ → ×2; below 6 → a little).
+ */
+export function applyMatchXp(p: Persona, rating: number | null = 7): Persona {
+  const k = rating === null ? 1 : Math.max(0.3, Math.min(2, (rating - 5) / 2));
   let out = p;
-  for (const s of topStats(p.position, C.MATCH_XP_TOP_STATS)) out = changeStat(out, s, C.MATCH_XP_BASE);
+  for (const s of topStats(p.position, C.MATCH_XP_TOP_STATS)) out = changeStat(out, s, C.MATCH_XP_BASE * k);
+  return out;
+}
+
+/** Stat changes between two versions of a persona (for the growth animation). */
+export function statDeltas(before: Persona, after: Persona): Partial<Record<StatKey, number>> {
+  const out: Partial<Record<StatKey, number>> = {};
+  for (const k of Object.keys(after.stats) as StatKey[]) {
+    const d = after.stats[k] - before.stats[k];
+    if (Math.abs(d) > 1e-9) out[k] = d;
+  }
   return out;
 }
 

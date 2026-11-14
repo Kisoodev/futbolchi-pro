@@ -12,7 +12,7 @@ import type { Appearance } from '@futbolchi/engine';
 import type { IntroHandle } from '../intro/IntroPlayer';
 import { introScript } from '../i18n/intro';
 import { recTexts } from '../i18n/recorder';
-import { canCaptureScreen, canRecord, captureTab, Compositor, DEFAULT_SETTINGS, mixAudio, pickMime, streamVideo, Take, type Recording, type RecSettings } from './media';
+import { canCaptureScreen, canRecord, captureTab, Compositor, DEFAULT_SETTINGS, matchDecorations, mixAudio, pickMime, streamVideo, Take, type Recording, type RecSettings } from './media';
 
 export type Phase = 'idle' | 'arming' | 'countdown' | 'recording' | 'paused' | 'finishing' | 'done';
 
@@ -23,12 +23,14 @@ export interface IntroJob {
 
 export interface RecState {
   phase: Phase;
-  kind: 'intro' | 'screen' | null;
+  kind: 'intro' | 'screen' | 'match' | null;
   countdown: number;
   elapsed: number;
   settings: RecSettings;
   /** Intro being recorded (the dock mounts its player). */
   intro: IntroJob | null;
+  /** Saved match being replayed for recording (the dock mounts the replay). */
+  replay: { matchId: string } | null;
   result: Recording | null;
   message: string | null;
   /** True when the REC indicator could show up in a screen recording. */
@@ -51,6 +53,7 @@ let state: RecState = {
   elapsed: 0,
   settings: readSettings(),
   intro: null,
+  replay: null,
   result: null,
   message: null,
   overlayWarning: false,
@@ -59,6 +62,8 @@ const listeners = new Set<() => void>();
 const set = (patch: Partial<RecState>) => {
   state = { ...state, ...patch };
   listeners.forEach((l) => l());
+  const active = state.phase !== 'idle' && state.phase !== 'done';
+  window.dispatchEvent(new CustomEvent('futbolchi-rec', { detail: { active } }));
 };
 export const useRecorder = () =>
   useSyncExternalStore(
@@ -91,7 +96,7 @@ export function updateSettings(patch: Partial<RecSettings>) {
 
 function fail(message: string) {
   teardown();
-  set({ phase: 'idle', kind: null, intro: null, message });
+  set({ phase: 'idle', kind: null, intro: null, replay: null, message });
 }
 
 function teardown() {
@@ -189,6 +194,38 @@ export async function recordScreen() {
   await begin([cap.stream]);
 }
 
+// ---------------------------------------------------------------- match replay (works on phones too)
+/** The replay's pitch canvas inside the recording stage. */
+export const matchCanvas = () => document.querySelector<HTMLCanvasElement>('.rec-stage canvas.pitch');
+
+let lastReplay: string | null = null;
+
+/** Counts down, then the dock mounts the replay; recording starts when its pitch is on screen. */
+export async function recordReplay(matchId: string) {
+  if (state.phase !== 'idle' && state.phase !== 'done') return;
+  if (!canRecord()) return set({ message: recTexts().notSupported });
+  lastReplay = matchId;
+  releaseResult();
+  set({ phase: 'arming', kind: 'match', message: null, overlayWarning: false, replay: null });
+  await countdown();
+  set({ phase: 'arming', replay: { matchId } });
+}
+
+/** Called by the dock once the replay's pitch canvas exists. */
+export async function replayMounted(canvas: HTMLCanvasElement) {
+  if (compositor) return;
+  compositor = new Compositor(canvas, { settings: state.settings, playNow: introScript().playNow, url: URL_TEXT, fit: 'contain', decorate: matchDecorations() });
+  compositor.start();
+  await begin([]);
+}
+
+/** The replay reached full time: keep the final score on screen a moment, then stop. */
+export function replayFinished() {
+  setTimeout(() => {
+    if (state.kind === 'match' && (state.phase === 'recording' || state.phase === 'paused')) void finish();
+  }, 1800);
+}
+
 // ---------------------------------------------------------------- controls
 export function pause() {
   if (state.phase !== 'recording' || !take) return;
@@ -211,13 +248,16 @@ export async function finish() {
   if (state.settings.endCard) await compositor.endCard();
   const result = await take.stop();
   teardown();
-  set({ phase: 'done', result, intro: null });
+  set({ phase: 'done', result, intro: null, replay: null });
 }
 
 /** Start/stop toggle for the keyboard shortcut. */
 export function toggle() {
   if (state.phase === 'recording' || state.phase === 'paused') void finish();
-  else if (state.phase === 'idle' || state.phase === 'done') void recordScreen();
+  else if (state.phase === 'idle' || state.phase === 'done') {
+    if (canCaptureScreen()) void recordScreen();
+    else set({ message: recTexts().fabNoSource });
+  }
 }
 
 function releaseResult() {
@@ -235,5 +275,10 @@ export function again() {
   const kind = state.kind;
   closeResult();
   if (kind === 'intro' && lastIntro) recordIntro(lastIntro);
-  else void recordScreen();
+  else if (kind === 'match' && lastReplay) void recordReplay(lastReplay);
+  else if (canCaptureScreen()) void recordScreen();
+}
+
+export function clearMessage() {
+  set({ message: null });
 }

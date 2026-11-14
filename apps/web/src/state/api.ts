@@ -107,6 +107,8 @@ export interface AdminPlayer {
     career: { seasons: number; apps: number; goals: number; assists: number; saves: number };
     promotions: number;
     matches: number;
+    level: number;
+    missionsDone: number;
   } | null;
 }
 

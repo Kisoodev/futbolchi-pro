@@ -7,7 +7,7 @@
 import type { Gender } from '@futbolchi/engine';
 import { lang, type Lang } from './index';
 
-export type LessonId = 'week' | 'match' | 'summary';
+export type LessonId = 'week' | 'matchDay' | 'match' | 'summary';
 export type WeekView = 'me' | 'train' | 'table';
 
 export interface CoachVars {
@@ -52,10 +52,15 @@ const uz: CoachTexts = {
       { text: () => "Bu sening kartang: pozitsiya, klub, OVR — umumiy reyting va jadvaldagi o'rning. Chiziq — charchoq: qizarsa, dam ber.", target: CARD, view: 'train' },
       { text: () => "Bu haftaning o'yini: raqib, uyda yoki mehmonda va oxirgi natijalar (G — g'alaba, D — durang, M — mag'lubiyat).", target: ['.fixture'], view: 'train' },
       { text: () => "Har hafta bitta mashg'ulot tanlaysan. Yashil — nima o'sadi, qizil — charchoq va jarohat xavfi. Og'ir mashq tez o'stiradi, lekin charchatadi.", target: ['.options'], view: 'train' },
-      { text: () => "Tanlagach, shu tugmani bos: mashg'ulot o'tadi, o'yin esa o'zi o'ynaladi — sen kuzatasan.", target: ['.play-btn'], view: 'train' },
+      { text: () => "Tanlagach, shu tugmani bos: mashg'ulot o'tadi va ko'rsatkichlaring o'sadi. Ertasi kuni — o'yin kuni.", target: ['.play-btn'], view: 'train' },
       { text: () => 'Bu jadval. Mavsum oxirida birinchi 2 ta jamoa yuqori ligaga chiqadi. Maqsadimiz — eng yuqori liga!', target: ['.table-card'], view: 'table' },
       { text: () => "Pastdagi tugmalar: «Futbolchi» — ko'rsatkichlaring, «Mashg'ulot» va «Jadval».", target: ['.m-tabs'], view: 'train' },
       { text: () => 'Hammasi shu. Senga ishonaman — birinchi mashg\'ulotni tanla!', view: 'train' },
+    ],
+    matchDay: [
+      { text: () => "Bugun o'yin kuni! Kecha mashg'ulot qilding — endi maydonda ko'rsat. Yaxshi o'ynasang, ko'proq o'sasan.", target: ['.match-day'], view: 'train' },
+      { text: () => "Bu sening akkaunt darajang. Mashg'ulot, o'yin, g'alaba va missiyalar uchun XP olasan. Bosib, missiyalarni ko'r.", target: ['.account-badge'] },
+      { text: () => "Tayyormisan? «O'yinga chiqish»ni bos!", target: ['.play-btn'], view: 'train' },
     ],
     match: [
       { text: () => "Bu sening o'yining. Maydonda o'zingni ismingdan topasan — kuzat va o'rgan." },
@@ -85,10 +90,15 @@ const en: CoachTexts = {
       { text: () => 'This is your card: position, club, OVR (overall rating) and your place in the table. The bar is fatigue: when it turns red, rest.', target: CARD, view: 'train' },
       { text: () => "This week's match: the opponent, home or away, and recent results (W — win, D — draw, L — loss).", target: ['.fixture'], view: 'train' },
       { text: () => 'Each week you pick one training. Green shows what grows, red shows fatigue and injury risk. Hard sessions grow you fast but wear you out.', target: ['.options'], view: 'train' },
-      { text: () => 'Once you choose, press this button: the training happens and the match plays itself — you watch.', target: ['.play-btn'], view: 'train' },
+      { text: () => 'Once you choose, press this button: you train and your stats grow. The next day is match day.', target: ['.play-btn'], view: 'train' },
       { text: () => "The table. At the end of the season the top 2 teams go up a league. Our goal is the top league!", target: ['.table-card'], view: 'table' },
       { text: () => 'The buttons at the bottom: "Player" for your stats, "Training" and "Table".', target: ['.m-tabs'], view: 'train' },
       { text: () => "That's it. I believe in you — pick your first training!", view: 'train' },
+    ],
+    matchDay: [
+      { text: () => 'Match day! You trained yesterday — now show it on the pitch. Play well and you grow more.', target: ['.match-day'], view: 'train' },
+      { text: () => 'This is your account level. You earn XP for training, matches, wins and missions. Tap it to see your missions.', target: ['.account-badge'] },
+      { text: () => 'Ready? Press "Go to the match"!', target: ['.play-btn'], view: 'train' },
     ],
     match: [
       { text: () => "This is your match. Find yourself on the pitch by your name — watch and learn." },
@@ -118,10 +128,15 @@ const ru: CoachTexts = {
       { text: () => 'Это твоя карточка: позиция, клуб, OVR — общий рейтинг и место в таблице. Полоска — усталость: покраснела — дай себе отдых.', target: CARD, view: 'train' },
       { text: () => 'Матч этой недели: соперник, дома или в гостях и последние результаты (В — победа, Н — ничья, П — поражение).', target: ['.fixture'], view: 'train' },
       { text: () => 'Каждую неделю выбираешь одну тренировку. Зелёное — что растёт, красное — усталость и риск травмы. Тяжёлая тренировка растит быстро, но выматывает.', target: ['.options'], view: 'train' },
-      { text: ({ g }) => `${g === 'female' ? 'Выбрала' : 'Выбрал'} — жми эту кнопку: тренировка пройдёт, а матч сыграется сам, ты смотришь.`, target: ['.play-btn'], view: 'train' },
+      { text: ({ g }) => `${g === 'female' ? 'Выбрала' : 'Выбрал'} — жми эту кнопку: тренировка пройдёт, и показатели вырастут. На следующий день — матч.`, target: ['.play-btn'], view: 'train' },
       { text: () => 'Это таблица. В конце сезона первые 2 команды выходят в лигу выше. Наша цель — высшая лига!', target: ['.table-card'], view: 'table' },
       { text: () => 'Кнопки внизу: «Игрок» — твои показатели, «Тренировка» и «Таблица».', target: ['.m-tabs'], view: 'train' },
       { text: () => 'Вот и всё. Я в тебя верю — выбирай первую тренировку!', view: 'train' },
+    ],
+    matchDay: [
+      { text: () => 'День матча! Вчера была тренировка — теперь покажи себя на поле. Хорошая игра — больше роста.', target: ['.match-day'], view: 'train' },
+      { text: () => 'Это уровень твоего аккаунта. XP дают за тренировки, матчи, победы и миссии. Нажми, чтобы увидеть миссии.', target: ['.account-badge'] },
+      { text: () => 'Готов(а)? Жми «На матч»!', target: ['.play-btn'], view: 'train' },
     ],
     match: [
       { text: () => 'Это твой матч. Найди себя на поле по имени — смотри и учись.' },

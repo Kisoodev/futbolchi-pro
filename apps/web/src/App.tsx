@@ -1,5 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { playWeek, startNextSeason, type GameState, type TrainingId } from '@futbolchi/engine';
+import { playMatchDay, startNextSeason, trainDay, type GameState, type TrainingId } from '@futbolchi/engine';
+import { GrowthReveal, type GrowthData } from './components/GrowthReveal';
+import { AccountBadge } from './components/AccountBadge';
 import { tx, useLang } from './i18n';
 import { api } from './state/api';
 import { ADMIN_EVENT, openAdmin, verifiedAdminToken } from './state/admin';
@@ -75,7 +77,14 @@ export function App() {
   useLang();
   const hash = useHash();
   const isAdmin = useIsAdmin();
-  const recorder = isAdmin ? (
+  // a screen recording started in the admin panel keeps its small REC indicator while the owner plays
+  const [recActive, setRecActive] = useState(false);
+  useEffect(() => {
+    const on = (e: Event) => setRecActive(!!(e as CustomEvent<{ active: boolean }>).detail?.active);
+    window.addEventListener('futbolchi-rec', on);
+    return () => window.removeEventListener('futbolchi-rec', on);
+  }, []);
+  const recorder = isAdmin && (hash === '#/admin' || recActive) ? (
     <Suspense fallback={null}>
       <RecorderDock />
     </Suspense>
@@ -83,6 +92,10 @@ export function App() {
   const [game, setGame] = useState<GameState | null>(() => loadGame());
   const [userName, setUserNameState] = useState(() => getUserName());
   const [route, setRoute] = useState<Route>({ name: 'loading' });
+  /** The growth animation to show (after a training day, or after a match). */
+  const [growth, setGrowth] = useState<GrowthData | null>(null);
+  /** Match-day growth waits until the match has been watched. */
+  const [afterMatch, setAfterMatch] = useState<GrowthData | null>(null);
 
   const update = (next: GameState) => {
     setGame(next);
@@ -176,7 +189,7 @@ export function App() {
           name={userName}
           entitlementId={route.entitlementId}
           onCreated={(s) => {
-            update(s);
+            update({ ...s, account: game?.account ?? s.account });
             setRoute({ name: 'intro' });
           }}
         />
@@ -184,7 +197,15 @@ export function App() {
       break;
     case 'match':
       body = game ? (
-        <MatchScreen state={game} matchId={route.matchId} onContinue={() => setRoute({ name: 'game' })} />
+        <MatchScreen
+          state={game}
+          matchId={route.matchId}
+          onContinue={() => {
+            setRoute({ name: 'game' });
+            if (afterMatch) setGrowth(afterMatch);
+            setAfterMatch(null);
+          }}
+        />
       ) : (
         <></>
       );
@@ -197,9 +218,21 @@ export function App() {
           ) : (
             <WeekScreen
               state={game}
-              onPlay={(opt: TrainingId) => {
-                const r = playWeek(game, opt);
+              onTrain={(opt: TrainingId) => {
+                const r = trainDay(game, opt);
                 update(r.state);
+                setGrowth({ kind: 'training', before: game.persona.stats, after: r.state.persona.stats, ovrBefore: r.ovrBefore, ovrAfter: r.ovrAfter, reward: r.reward, account: r.state.account, rested: opt === 'rest' });
+              }}
+              coachHold={!!growth}
+              onPlayMatch={() => {
+                const r = playMatchDay(game);
+                update(r.state);
+                const before = game.persona.stats;
+                // growth from the performance only (fatigue and recovery are not "growth")
+                const after = { ...before };
+                for (const [k, d] of Object.entries(r.deltas)) after[k as keyof typeof after] = before[k as keyof typeof before] + (d ?? 0);
+                const played = (r.state.matches[r.matchId]?.personaStats?.minutes ?? 0) > 0;
+                setAfterMatch({ kind: 'match', before, after, ovrBefore: r.ovrBefore, ovrAfter: r.ovrAfter, reward: r.reward, account: r.state.account, benched: !played });
                 setRoute({ name: 'match', matchId: r.matchId });
               }}
             />
@@ -228,9 +261,13 @@ export function App() {
         <button className="brand" onClick={() => setRoute(home)}>
           <PixelArt sprite={BALL} scale={2} /> {tx.appName}
         </button>
-        {showLangSwitch ? <LangSwitch /> : <SettingsButton onReplayIntro={game ? () => setRoute({ name: 'intro' }) : undefined} />}
+        <span className="topbar-right">
+          {game && !showLangSwitch && <AccountBadge account={game.account} />}
+          {showLangSwitch ? <LangSwitch /> : <SettingsButton onReplayIntro={game ? () => setRoute({ name: 'intro' }) : undefined} />}
+        </span>
       </header>
       <main>{body}</main>
+      {growth && <GrowthReveal data={growth} onClose={() => setGrowth(null)} />}
       {recorder}
     </div>
   );

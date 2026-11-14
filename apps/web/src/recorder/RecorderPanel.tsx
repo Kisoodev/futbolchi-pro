@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { constants as C, type Appearance, type Gender } from '@futbolchi/engine';
 import { recTexts } from '../i18n/recorder';
 import { loadGame } from '../state/store';
-import { recordIntro, recordScreen, updateSettings, useRecorder } from './controller';
+import { recordIntro, recordReplay, recordScreen, updateSettings, useRecorder } from './controller';
 import { canCaptureScreen, canRecord, type Aspect } from './media';
 
 /** Ready-made looks for a sample hero when there is no saved game in this browser. */
@@ -23,6 +23,14 @@ export default function RecorderPanel() {
   const [gender, setGender] = useState<Gender>(saved?.appearance.gender ?? 'male');
   const [name, setName] = useState(saved?.name ?? SAMPLE.male.name);
   const busy = st.phase !== 'idle' && st.phase !== 'done';
+  // matches played in this browser, newest first
+  const game = loadGame();
+  const matches = game
+    ? Object.values(game.matches)
+        .sort((a, b) => b.week - a.week || b.id.localeCompare(a.id))
+        .slice(0, 20)
+    : [];
+  const [matchId, setMatchId] = useState<string>(matches[0]?.id ?? '');
 
   const heroLook = (): Appearance => (saved && saved.appearance.gender === gender ? saved.appearance : SAMPLE[gender].look);
   const switchGender = (g: Gender) => {
@@ -109,6 +117,24 @@ export default function RecorderPanel() {
             </button>
           </div>
           <p className="muted small">{canCaptureScreen() ? t.recordScreenNote : t.noScreen}</p>
+          <div className="rec-match">
+            {matches.length ? (
+              <>
+                <select value={matchId} disabled={busy} onChange={(e) => setMatchId(e.target.value)} aria-label={t.pickMatch}>
+                  {matches.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {t.matchLabel(m.week, game!.clubs[m.homeId]?.name ?? '', `${m.score[0]}:${m.score[1]}`, game!.clubs[m.awayId]?.name ?? '')}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" disabled={busy || !canRecord() || !matchId} title={t.matchHint} onClick={() => void recordReplay(matchId)}>
+                  {t.recordMatch}
+                </button>
+              </>
+            ) : (
+              <p className="muted small">{t.noMatches}</p>
+            )}
+          </div>
         </div>
       </div>
     </section>

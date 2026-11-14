@@ -65,6 +65,10 @@ export const canCaptureScreen = () => !!navigator.mediaDevices?.getDisplayMedia 
 // ---------------------------------------------------------------- compositor
 export interface CompositorOptions {
   settings: RecSettings;
+  /** "cover" fills the frame (intro, screen); "contain" shows the whole source on a backdrop (match). */
+  fit?: 'cover' | 'contain';
+  /** Extra drawing on top of the source (e.g. the match scoreboard). */
+  decorate?: (ctx: CanvasRenderingContext2D, w: number, h: number, box: { x: number; y: number; w: number; h: number }) => void;
   /** Words on the end card. */
   playNow: string;
   url: string;
@@ -141,10 +145,16 @@ export class Compositor {
     // "cover": fill the frame, cropping the source's longer side around its centre
     const sw = this.source.videoWidth || this.source.width || W;
     const sh = this.source.videoHeight || this.source.height || H;
-    const k = Math.max(W / sw, H / sh);
+    const contain = this.opts.fit === 'contain';
+    const k = contain ? Math.min((W * 0.96) / sw, (H * 0.7) / sh) : Math.max(W / sw, H / sh);
     const dw = sw * k;
     const dh = sh * k;
-    ctx.fillStyle = '#000';
+    if (contain) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, '#0f3d1e');
+      g.addColorStop(1, '#06210f');
+      ctx.fillStyle = g;
+    } else ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
@@ -153,6 +163,7 @@ export class Compositor {
     } catch {
       /* the video has no frame yet */
     }
+    this.opts.decorate?.(ctx, W, H, { x: (W - dw) / 2, y: (H - dh) / 2, w: dw, h: dh });
     if (this.opts.settings.watermark) {
       ctx.globalAlpha = this.opts.settings.watermarkOpacity / 100;
       const m = Math.round(W * 0.035);
@@ -333,4 +344,87 @@ export function fileName(kind: string, aspect: Aspect, mime: string): string {
   const p = (n: number) => String(n).padStart(2, '0');
   const stamp = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
   return `futbolchi-${kind}-${aspect.replace(':', 'x')}-${stamp}.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
+}
+
+/** Opens the phone's share sheet with the video (there: "Save Video" puts it in the gallery). */
+export async function shareVideo(rec: Recording, name: string): Promise<boolean> {
+  try {
+    const file = new File([rec.blob], name, { type: rec.mime });
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    if (!nav.share || !nav.canShare?.({ files: [file] })) return false;
+    await nav.share({ files: [file], title: 'Futbolchi Pro' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export const canShareFiles = () => {
+  try {
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+    return !!nav.share && !!nav.canShare?.({ files: [new File([new Blob(['x'])], 'x.mp4', { type: 'video/mp4' })] });
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Draws the match scoreboard, minute and the live caption (they are HTML on
+ * the page, not part of the pitch canvas) around the pitch in the video.
+ */
+export function matchDecorations(): NonNullable<CompositorOptions['decorate']> {
+  return (ctx, W, H, box) => {
+    const board = document.querySelector('.scoreboard');
+    const teams = [...(board?.querySelectorAll('.team') ?? [])].map((e) => e.textContent ?? '');
+    const score = board?.querySelector('.score')?.textContent ?? '';
+    const minute = board?.querySelector('.minute')?.textContent ?? '';
+    const caption = document.querySelector('.pitch-wrap .caption')?.textContent ?? '';
+    const fs = Math.round(Math.min(W, H * 0.6) * 0.045);
+    ctx.save();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // the game's name in the free space at the top of tall videos
+    if (box.y > fs * 7) {
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `700 ${Math.round(fs * 1.7)}px "Pixelify Sans", sans-serif`;
+      ctx.fillText('FUTBOLCHI PRO', W / 2, box.y * 0.38);
+      ctx.fillStyle = '#9fe08a';
+      ctx.font = `800 ${Math.round(fs * 0.8)}px "Nunito", sans-serif`;
+      ctx.fillText('futbolchi-pro.vercel.app', W / 2, box.y * 0.38 + fs * 1.6);
+    }
+    // scoreboard above the pitch
+    const by = Math.max(fs * 1.4, box.y - fs * 2.2);
+    ctx.fillStyle = 'rgba(8,12,26,0.78)';
+    ctx.beginPath();
+    ctx.roundRect(W * 0.04, by - fs * 1.1, W * 0.92, fs * 2.2, fs * 0.6);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `700 ${fs}px "Nunito", sans-serif`;
+    if (teams.length === 2) {
+      ctx.textAlign = 'right';
+      ctx.fillText(teams[0], W * 0.4, by, W * 0.33);
+      ctx.textAlign = 'left';
+      ctx.fillText(teams[1], W * 0.6, by, W * 0.33);
+    }
+    ctx.textAlign = 'center';
+    ctx.font = `700 ${Math.round(fs * 1.25)}px "Pixelify Sans", sans-serif`;
+    ctx.fillStyle = '#f2c84b';
+    ctx.fillText(score.trim(), W / 2, by);
+    ctx.font = `800 ${Math.round(fs * 0.75)}px "Nunito", sans-serif`;
+    ctx.fillStyle = '#cfe6fa';
+    ctx.fillText(minute, W / 2, by + fs * 1.6);
+    // the live caption under the pitch
+    if (caption.trim()) {
+      const cy = Math.min(H - fs * 2, box.y + box.h + fs * 1.8);
+      ctx.font = `700 ${fs}px "Nunito", sans-serif`;
+      const tw = Math.min(W * 0.92, ctx.measureText(caption).width + fs * 1.4);
+      ctx.fillStyle = 'rgba(8,12,26,0.78)';
+      ctx.beginPath();
+      ctx.roundRect(W / 2 - tw / 2, cy - fs, tw, fs * 2, fs * 0.5);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(caption, W / 2, cy, W * 0.88);
+    }
+    ctx.restore();
+  };
 }

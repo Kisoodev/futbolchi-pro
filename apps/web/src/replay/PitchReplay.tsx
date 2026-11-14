@@ -29,6 +29,8 @@ interface Props {
   /** Shown above / below the event feed in the side column. */
   sideTop?: ReactNode;
   sideBottom?: ReactNode;
+  /** While true the replay stands still (the recorder holds it until recording runs, and on pause). */
+  hold?: boolean;
 }
 
 const SPEEDS = [1, 2, 4];
@@ -39,12 +41,15 @@ export const FIT_QUERY = '(min-width: 900px) and (min-height: 520px)';
 const COLORS = { grassA: '#62b533', grassB: '#6cc23a', sun: '#ffcf33', ink: '#12324f' };
 const PIXEL_FONT = "'Pixelify Sans', system-ui, sans-serif";
 
-export function PitchReplay({ match, clubs, personaName, personaPosition, onFinished, sideTop, sideBottom }: Props) {
+export function PitchReplay({ match, clubs, personaName, personaPosition, onFinished, sideTop, sideBottom, hold = false }: Props) {
   const events = match.events;
   const { areaRef, boardRef, frameW } = useFitPitch();
   const { segments, total } = useMemo(() => buildTimeline(events), [events]);
   const [t, setT] = useState(0);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(!hold);
+  useEffect(() => {
+    setPlaying(!hold);
+  }, [hold]);
   const [speed, setSpeed] = useState(1);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);

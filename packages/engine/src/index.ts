@@ -8,3 +8,4 @@ export * from './training';
 export * from './league';
 export * from './season';
 export * from './story';
+export * from './account';

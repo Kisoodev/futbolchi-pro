@@ -17,6 +17,8 @@ interface Props {
   onView?: (v: WeekView) => void;
   /** Wait a little so the screen has laid out (ms). */
   delay?: number;
+  /** Wait while something else is on top (e.g. the growth animation). */
+  hold?: boolean;
 }
 
 const visible = (el: Element | null): el is HTMLElement => {
@@ -32,17 +34,20 @@ const findTarget = (step: CoachStep): HTMLElement | null => {
   return null;
 };
 
-export function CoachGuide({ lesson, vars, onView, delay = 350 }: Props) {
+export function CoachGuide({ lesson, vars, onView, delay = 350, hold = false }: Props) {
   const coach = useCoachState();
   const t = coachTexts();
   const steps = t.lessons[lesson];
   const [i, setI] = useState(0);
   const [ready, setReady] = useState(false);
   const [rect, setRect] = useState<DOMRect | null>(null);
-  const due = lessonDue(coach, lesson);
+  const due = lessonDue(coach, lesson) && !hold;
 
   useEffect(() => {
-    if (!due) return;
+    if (!due) {
+      setReady(false);
+      return;
+    }
     setI(0);
     const id = setTimeout(() => setReady(true), delay);
     return () => clearTimeout(id);

@@ -430,6 +430,7 @@ export function AdminScreen() {
                             {tx.careerLine(p.game.career.apps, p.game.career.goals, p.game.career.assists)}
                           </div>
                           <div className="chips-row">
+                            <span className="badge lvl">⭐ {p.game.level}</span>
                             <span className="badge">{tx.adminMatchesPlayed(p.game.matches)}</span>
                             <span className="badge paid">{tx.adminPromotions(p.game.promotions)}</span>
                           </div>

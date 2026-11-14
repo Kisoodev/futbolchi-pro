@@ -5,11 +5,12 @@
 import * as C from './constants';
 import { applyResult, clubAvg, doubleRoundRobin, emptyTable, generateWorld, sortTable } from './league';
 import { simulateMatch } from './match';
-import { addFatigue, applyMatchXp, createPersona, personaOvr, type CreatePersonaInput } from './persona';
+import { addFatigue, applyMatchXp, createPersona, personaOvr, statDeltas, type CreatePersonaInput } from './persona';
+import { applyAccountEvents, normalizeAccount, type AccountEvent, type AccountReward } from './account';
 import { createRng, hashSeed } from './rng';
 import { seasonFacts, seasonStoryUz } from './story';
 import { applyTraining, offerTraining, weeklyRecovery, type TrainingId } from './training';
-import type { Club, GameState, Match, Persona, PersonaRole, Season, SeasonOutcome, Tier } from './types';
+import type { Club, GameState, Match, Persona, PersonaRole, Season, SeasonOutcome, StatKey, Tier, WeekDay } from './types';
 
 export interface NewGameInput {
   seed: number;
@@ -86,20 +87,77 @@ export interface WeekResult {
 }
 
 /** The player's only weekly decision: one training option. Everything else is simulated. */
-export function playWeek(state: GameState, optionId: TrainingId): WeekResult {
+/** Today's day of the week (older saves have no day: training). */
+export const dayOf = (state: GameState): WeekDay => state.day ?? 'training';
+
+export interface TrainingDayResult {
+  state: GameState;
+  /** Stat changes from the session (for the growth animation). */
+  deltas: Partial<Record<StatKey, number>>;
+  ovrBefore: number;
+  ovrAfter: number;
+  reward: AccountReward;
+}
+
+/**
+ * Day 1 of a week: the training session. Stats grow (or the persona rests);
+ * the match is played on the next day with playMatchDay().
+ */
+export function trainDay(state: GameState, optionId: TrainingId): TrainingDayResult {
   if (state.phase !== 'training') throw new Error('season is over; start the next season');
-  const season = currentSeason(state);
+  if (dayOf(state) !== 'training') throw new Error('today is match day');
   const offer = trainingOffer(state);
   if (!offer.includes(optionId)) throw new Error(`option ${optionId} not offered this week`);
+  const season = currentSeason(state);
+  const before = state.persona;
+  const trained = applyTraining(before, optionId);
+  const ovrBefore = personaOvr(before);
+  const ovrAfter = personaOvr(trained.persona);
+  const { account, reward } = applyAccountEvents(normalizeAccount(state.account), [
+    { type: 'training' },
+    { type: 'ovr', delta: ovrAfter - ovrBefore },
+  ]);
+  const nextSeason: Season = { ...season, trainingLog: [...season.trainingLog, { week: season.week, optionId }] };
+  return {
+    state: {
+      ...state,
+      persona: trained.persona,
+      day: 'match',
+      pendingInjuryRisk: trained.injuryRiskBonus,
+      account,
+      seasons: [...state.seasons.slice(0, -1), nextSeason],
+    },
+    deltas: trained.deltas,
+    ovrBefore,
+    ovrAfter,
+    reward,
+  };
+}
 
-  const trained = applyTraining(state.persona, optionId);
-  let persona = trained.persona;
+export interface MatchDayResult extends WeekResult {
+  /** Stat growth earned by the performance. */
+  deltas: Partial<Record<StatKey, number>>;
+  ovrBefore: number;
+  ovrAfter: number;
+  reward: AccountReward;
+}
+
+/** Day 2 of a week: the match. The performance grows the persona; then the week ends. */
+export function playMatchDay(state: GameState): MatchDayResult {
+  if (state.phase !== 'training') throw new Error('season is over; start the next season');
+  if (dayOf(state) !== 'match') throw new Error('train first: today is training day');
+  const season = currentSeason(state);
+  const before = state.persona;
+  let persona = before;
   const club = state.clubs[persona.clubId];
   const role = pickRole(persona, club, hashSeed(season.seed, 'selection', season.week));
+  const injuryRiskBonus = state.pendingInjuryRisk ?? 0;
 
   let table = season.table;
   const matches = { ...state.matches };
   let personaMatchId = '';
+  let grown = persona;
+  const events: AccountEvent[] = [];
   for (const fx of season.fixtures.filter((f) => f.week === season.week)) {
     const involved = fx.homeId === persona.clubId || fx.awayId === persona.clubId;
     const seed = hashSeed(season.seed, 'match', fx.matchId);
@@ -110,14 +168,7 @@ export function playWeek(state: GameState, optionId: TrainingId): WeekResult {
       home: { id: fx.homeId, ratings: state.clubs[fx.homeId].ratings },
       away: { id: fx.awayId, ratings: state.clubs[fx.awayId].ratings },
       persona: involved
-        ? {
-            side,
-            position: persona.position,
-            stats: persona.stats,
-            fatigue: persona.fatigue,
-            role,
-            injuryRiskBonus: trained.injuryRiskBonus,
-          }
+        ? { side, position: persona.position, stats: persona.stats, fatigue: persona.fatigue, role, injuryRiskBonus }
         : null,
     });
     table = applyResult(table, fx.homeId, fx.awayId, result.score);
@@ -137,9 +188,11 @@ export function playWeek(state: GameState, optionId: TrainingId): WeekResult {
       };
       matches[match.id] = match;
       const ps = result.personaStats!;
+      const [mine, theirs] = side === 'home' ? result.score : [result.score[1], result.score[0]];
       if (ps.minutes > 0) {
         persona = addFatigue(persona, (C.FATIGUE_PER_FULL_MATCH * ps.minutes) / 90);
-        persona = applyMatchXp(persona);
+        persona = applyMatchXp(persona, ps.rating);
+        grown = persona;
         persona = {
           ...persona,
           career: {
@@ -151,21 +204,54 @@ export function playWeek(state: GameState, optionId: TrainingId): WeekResult {
           },
         };
       }
+      events.push({ type: 'match', played: ps.minutes > 0, won: mine > theirs, rating: ps.rating, contributions: ps.goals + ps.assists + Math.floor(ps.saves / 3) });
       persona = weeklyRecovery(persona);
       if (ps.injuryWeeks > 0) persona = { ...persona, injuryWeeksLeft: ps.injuryWeeks };
     }
   }
 
+  const ovrBefore = personaOvr(before);
+  const ovrAfter = personaOvr(persona);
+  events.push({ type: 'ovr', delta: ovrAfter - ovrBefore });
+  const { account, reward } = applyAccountEvents(normalizeAccount(state.account), events);
+
   const nextSeason: Season = {
     ...season,
     week: season.week + 1,
     table,
-    trainingLog: [...season.trainingLog, { week: season.week, optionId }],
     matchIds: [...season.matchIds, personaMatchId],
   };
-  let next: GameState = { ...state, persona, matches, seasons: [...state.seasons.slice(0, -1), nextSeason] };
-  if (nextSeason.week > seasonWeeks(nextSeason)) next = finalizeSeason(next);
-  return { state: next, matchId: personaMatchId };
+  let next: GameState = {
+    ...state,
+    persona,
+    matches,
+    day: 'training',
+    pendingInjuryRisk: 0,
+    account,
+    seasons: [...state.seasons.slice(0, -1), nextSeason],
+  };
+  let seasonReward = reward;
+  if (nextSeason.week > seasonWeeks(nextSeason)) {
+    next = finalizeSeason(next);
+    const promoted = currentSeason(next).outcome === 'promoted';
+    const done = applyAccountEvents(normalizeAccount(next.account), [{ type: 'season', promoted }]);
+    next = { ...next, account: done.account };
+    seasonReward = {
+      xp: reward.xp + done.reward.xp,
+      levelBefore: reward.levelBefore,
+      levelAfter: done.reward.levelAfter,
+      missionsDone: [...reward.missionsDone, ...done.reward.missionsDone],
+    };
+  }
+  return { state: next, matchId: personaMatchId, deltas: statDeltas(before, grown), ovrBefore, ovrAfter, reward: seasonReward };
+}
+
+/** A whole week at once (training day + match day). Kept for tests and tools. */
+export function playWeek(state: GameState, optionId: TrainingId): WeekResult {
+  if (state.phase !== 'training') throw new Error('season is over; start the next season');
+  const day1 = dayOf(state) === 'training' ? trainDay(state, optionId).state : state;
+  const r = playMatchDay(day1);
+  return { state: r.state, matchId: r.matchId };
 }
 
 /** Ranking of a tier: real table for the simulated tier, rating + noise for others. */
