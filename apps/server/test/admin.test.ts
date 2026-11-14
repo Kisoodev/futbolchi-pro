@@ -144,3 +144,20 @@ describe('CORS for the game on another domain', () => {
     await app.close();
   });
 });
+
+describe('admin players list', () => {
+  it('lists every registered account with its game, paid slots and achievements', async () => {
+    const { app } = buildApp({ provider: new MockPaymentProvider('x'), adminToken: TOKEN });
+    const headers = { 'x-admin-token': TOKEN };
+    await app.inject({ method: 'POST', url: '/api/users', payload: { userId: 'u1', name: 'Aziz' } });
+    await app.inject({ method: 'POST', url: '/api/users', payload: { userId: 'u2', name: 'Sardor' } });
+    await app.inject({ method: 'PUT', url: '/api/saves/u1', payload: gameWithMatches(2) });
+    expect((await app.inject({ method: 'GET', url: '/api/admin/players' })).statusCode).toBe(401);
+    const players = (await app.inject({ method: 'GET', url: '/api/admin/players', headers })).json().players;
+    expect(players.map((p: { name: string }) => p.name).sort()).toEqual(['Aziz', 'Sardor']);
+    const aziz = players.find((p: { name: string }) => p.name === 'Aziz');
+    expect(aziz.game).toMatchObject({ persona: 'Aziz', position: 'ST', season: 1, matches: 2 });
+    expect(aziz.game.ovr).toBeGreaterThan(0);
+    expect(players.find((p: { name: string }) => p.name === 'Sardor').game).toBeNull();
+  });
+});

@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { MatchEvent } from '@futbolchi/engine';
 import { formatMoney, tx } from '../i18n';
-import { adminApi, api, apiUrl, type AdminPayment } from '../state/api';
+import { adminApi, api, apiUrl, type AdminPayment, type AdminPlayer } from '../state/api';
 import { clearAdminToken, getAdminToken, setAdminToken } from '../state/admin';
 import { getUserId } from '../state/store';
 
@@ -26,7 +26,7 @@ interface MatchSummary {
   score: [number, number];
 }
 
-type Tab = 'payments' | 'free' | 'highlights';
+type Tab = 'payments' | 'players' | 'free' | 'highlights';
 type Filter = 'waiting' | 'all';
 
 /** New receipts show up within a few seconds. */
@@ -83,6 +83,8 @@ export function AdminScreen() {
   const known = useRef<Set<string> | null>(null);
 
   const [matches, setMatches] = useState<MatchSummary[] | null>(null);
+  const [playerList, setPlayerList] = useState<AdminPlayer[] | null>(null);
+  const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<MatchSummary | null>(null);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [marked, setMarked] = useState<Set<string>>(new Set());
@@ -260,6 +262,7 @@ export function AdminScreen() {
   // Load matches the first time the highlights tab opens.
   useEffect(() => {
     if (authed && tab === 'highlights' && matches === null) void loadMatches();
+    if (authed && tab === 'players') void guard(async () => setPlayerList((await admin.players()).players));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, tab]);
 
@@ -312,7 +315,7 @@ export function AdminScreen() {
           <div><span>{tx.adminStatRevenue}</span><strong>{formatMoney(revenue)}</strong></div>
         </div>
         <nav className="admin-tabs" role="tablist">
-          {(['payments', 'free', 'highlights'] as const).map((t) => (
+          {(['payments', 'players', 'free', 'highlights'] as const).map((t) => (
             <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'on' : ''} onClick={() => setTab(t)}>
               {tx.adminTabs[t]}
               {t === 'payments' && waiting.length > 0 && <span className="count">{waiting.length}</span>}
@@ -393,6 +396,51 @@ export function AdminScreen() {
                   </li>
                 );
               })}
+            </ul>
+          </section>
+        )}
+
+        {tab === 'players' && (
+          <section className="admin-players">
+            <div className="card-head">
+              <input type="search" placeholder={tx.adminSearch} value={search} onChange={(e) => setSearch(e.target.value)} />
+              <button onClick={() => guard(async () => setPlayerList((await admin.players()).players))}>{tx.adminRefresh}</button>
+            </div>
+            {playerList === null && <p className="muted">{tx.loading}</p>}
+            {playerList?.length === 0 && <p className="muted">{tx.adminPlayersEmpty}</p>}
+            <ul className="player-list">
+              {(playerList ?? [])
+                .filter((p) => !search.trim() || `${p.name} ${p.game?.persona ?? ''}`.toLowerCase().includes(search.trim().toLowerCase()))
+                .map((p) => (
+                  <li key={p.userId}>
+                    <div className="pay-row">
+                      <strong>{p.name}</strong>
+                      <span className={p.paidSlots ? 'badge paid' : 'badge'}>{p.paidSlots ? tx.adminPaid(p.paidSlots) : tx.adminNotPaid}</span>
+                    </div>
+                    {p.game ? (
+                      <div className="player-game">
+                        <span className="ovr-chip">{p.game.ovr}</span>
+                        <div>
+                          <b>{p.game.persona}</b> · {p.game.position} · {p.game.club}
+                          <div className="muted small">
+                            {tx.menuLoadGameOf(p.game.persona, p.game.season, p.game.week)} ·{' '}
+                            {tx.careerLine(p.game.career.apps, p.game.career.goals, p.game.career.assists)}
+                          </div>
+                          <div className="chips-row">
+                            <span className="badge">{tx.adminMatchesPlayed(p.game.matches)}</span>
+                            <span className="badge paid">{tx.adminPromotions(p.game.promotions)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="muted small">{tx.adminNoGame}</p>
+                    )}
+                    <p className="muted small">
+                      {tx.adminRegistered(new Date(p.registeredAt).toLocaleDateString())}
+                      {p.lastSeen ? ` · ${tx.adminLastSeen(new Date(p.lastSeen).toLocaleDateString())}` : ''}
+                    </p>
+                  </li>
+                ))}
             </ul>
           </section>
         )}

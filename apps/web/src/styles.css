@@ -402,3 +402,27 @@ a.link { color: var(--ink-muted); font-weight: 600; text-decoration: none; displ
   .stat-bars li, .fatigue { grid-template-columns: 92px 1fr 28px; }
   .tiles strong { font-size: 1.35rem; }
 }
+
+/* ----- Info: the team ----- */
+.team-card { background: linear-gradient(160deg, var(--sky-pale), #fff 70%); border: 2px solid var(--line); border-radius: 12px; padding: 16px; display: grid; gap: 8px; align-content: start; }
+.team-card p, .team-card h2 { margin: 0; }
+.team-name { font-size: 1.6rem; color: var(--sky-deep); }
+.team-facts { display: flex; flex-wrap: wrap; gap: 8px; }
+.team-facts span { background: #fff; border: 2px solid var(--line); border-radius: 999px; padding: 4px 12px; font-weight: 700; font-size: 0.9rem; }
+.mission { border-left: 4px solid var(--grass); padding-left: 10px; font-style: italic; }
+.members { list-style: none; padding: 0; margin: 0 0 8px; display: grid; gap: 6px; }
+.members li { display: flex; align-items: center; gap: 10px; background: #fff; border: 2px solid var(--line); border-radius: 10px; padding: 5px 12px; }
+.member-badge { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--sky-deep); color: #fff; font-weight: 800; flex: none; }
+
+/* ----- Admin: players ----- */
+.admin-players .card-head { display: flex; gap: 8px; margin-bottom: 10px; }
+.admin-players .card-head input { flex: 1; min-width: 0; }
+.player-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.player-list li { background: #fff; border: 2px solid var(--line); border-radius: 10px; padding: 12px; display: grid; gap: 6px; }
+.player-list p { margin: 0; }
+.player-game { display: flex; gap: 10px; align-items: flex-start; min-width: 0; overflow-wrap: anywhere; }
+.ovr-chip { flex: none; min-width: 40px; height: 40px; border-radius: 8px; display: grid; place-items: center; background: var(--grass-pale); color: var(--grass-ink); font-weight: 900; font-size: 1.1rem; }
+.chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+@media (min-width: 900px) { .player-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.team-name { display: flex; align-items: center; gap: 10px; }
+.flag-uz { border-radius: 3px; box-shadow: 0 0 0 1px var(--line); flex: none; }

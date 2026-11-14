@@ -139,11 +139,6 @@ a.button:hover { filter: brightness(1.05); }
 
 /* ---------- Info page ---------- */
 .info-grid { display: grid; gap: 24px; }
-.credits { margin: 0; display: grid; gap: 12px; }
-.credits div { background: var(--sky-pale); border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px; }
-.credits dt { font-weight: 800; color: var(--sky-deep); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
-.credits dd { margin: 2px 0 0; font-family: var(--pixel); font-size: 1.15rem; }
-.credits dd.tba { font-family: var(--body); font-style: italic; font-size: 0.95rem; color: var(--ink-muted); }
 .legal { background: var(--sky-pale); border-left: 4px solid var(--sky); padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; }
 
 /* ---------- Payment page ---------- */

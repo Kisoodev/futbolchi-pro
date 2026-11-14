@@ -63,14 +63,30 @@ export function MenuScreen({ name, game, onNewCareer, onLoadGame, onInfo, onChan
         </div>
       ) : (
         <nav className="menu-card" aria-label={tx.navMenu}>
-          <button className="primary big menu-btn" onClick={() => (game ? setConfirming(true) : onNewCareer())}>
-            <span>▶ {tx.menuNewCareer}</span>
-            {price !== null && <small>{tx.menuPrice(formatMoney(price))}</small>}
-          </button>
-          <button className="big menu-btn" onClick={onLoadGame} disabled={!game}>
-            <span>{tx.menuLoadGame}</span>
-            <small>{saveLabel}</small>
-          </button>
+          {game ? (
+            <>
+              {/* A player with a saved career continues first; a new career is the second choice. */}
+              <button className="primary big menu-btn" onClick={onLoadGame}>
+                <span>▶ {tx.menuContinue}</span>
+                <small>{saveLabel}</small>
+              </button>
+              <button className="big menu-btn" onClick={() => setConfirming(true)}>
+                <span>{tx.menuNewCareer}</span>
+                {price !== null && <small>{tx.menuPrice(formatMoney(price))}</small>}
+              </button>
+            </>
+          ) : (
+            <>
+              <button className="primary big menu-btn" onClick={onNewCareer}>
+                <span>▶ {tx.menuNewCareer}</span>
+                {price !== null && <small>{tx.menuPrice(formatMoney(price))}</small>}
+              </button>
+              <button className="big menu-btn" onClick={onLoadGame} disabled>
+                <span>{tx.menuLoadGame}</span>
+                <small>{saveLabel}</small>
+              </button>
+            </>
+          )}
           <button className="big menu-btn" onClick={onInfo}>
             <span>{tx.menuInfo}</span>
             <small>{tx.menuInfoNote}</small>

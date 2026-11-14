@@ -5,7 +5,7 @@
  * Every path starts with /api, as the game expects.
  */
 import { Hono, type Context } from 'hono';
-import type { GameState, MatchEvent } from '@futbolchi/engine';
+import { personaOvr, type GameState, type MatchEvent } from '@futbolchi/engine';
 import type { Db } from './db';
 import { REJECT_REASONS, type ProductId, type RejectReason } from './domain';
 import { parseProofDataUrl, sha256Hex } from './images';
@@ -352,6 +352,46 @@ export function buildApp(opts: AppOptions): { app: Hono; payments: PaymentServic
     const { userId } = await body<{ userId: unknown }>(c);
     if (!isString(userId)) return c.json({ error: 'bad_request' }, 400);
     return c.json({ entitlement: await payments.adminGrant(userId, 'persona_slot') });
+  });
+
+  // --- Players: every registered account, its game and achievements ---
+  app.get('/api/admin/players', async (c) => {
+    const [users, saves, pays] = await Promise.all([db.listUsers(1000), db.listSaves(), db.listPayments(1000)]);
+    const saveOf = new Map(saves.map((s) => [s.userId, s]));
+    const paidOf = new Map<string, number>();
+    for (const p of pays) if (p.status === 'paid') paidOf.set(p.userId, (paidOf.get(p.userId) ?? 0) + 1);
+    const players = users.map((u) => {
+      const save = saveOf.get(u.id);
+      const s = save?.state;
+      const season = s?.seasons[s.seasons.length - 1];
+      const persona = s?.persona;
+      return {
+        userId: u.id,
+        name: u.name,
+        registeredAt: u.createdAt,
+        paidSlots: paidOf.get(u.id) ?? 0,
+        lastSeen: save?.updatedAt ?? null,
+        game:
+          s && persona && season
+            ? {
+                persona: persona.name,
+                position: persona.position,
+                age: persona.age,
+                ovr: Math.round(personaOvr(persona)),
+                club: s.clubs[persona.clubId]?.name ?? persona.clubId,
+                tier: season.tier,
+                season: season.index,
+                week: season.week,
+                career: persona.career,
+                promotions: s.seasons.filter((x) => x.outcome === 'promoted').length,
+                matches: Object.keys(s.matches).length,
+              }
+            : null,
+      };
+    });
+    // Active players first (latest save), then new registrations.
+    players.sort((a, b) => (b.lastSeen ?? b.registeredAt).localeCompare(a.lastSeen ?? a.registeredAt));
+    return c.json({ players });
   });
 
   // --- Matches & highlights ---

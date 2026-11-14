@@ -37,6 +37,9 @@ export class StoreDb implements Db {
   async getUsers(ids: string[]) {
     return this.read((db) => ids.map((id) => db.users[id]).filter((u): u is NonNullable<typeof u> => !!u));
   }
+  async listUsers(limit: number) {
+    return this.read((db) => Object.values(db.users).sort(byNewest).slice(0, limit));
+  }
   async countUsers() {
     return this.store.read((db) => Object.keys(db.users).length);
   }
@@ -185,7 +188,7 @@ export class StoreDb implements Db {
     return this.read((db) => db.saves[userId] ?? null);
   }
   async listSaves(): Promise<SaveRecord[]> {
-    return this.read((db) => Object.values(db.saves));
+    return this.read((db) => Object.values(db.saves).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 500));
   }
   async getHighlights(key: string) {
     return this.read((db) => db.highlights[key] ?? []);

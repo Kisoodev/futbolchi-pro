@@ -181,6 +181,9 @@ export class SupabaseDb implements Db {
   async getUsers(ids: string[]) {
     return ids.length ? (await this.selectIn('users', 'id', ids, '&select=*')).map(toUser) : [];
   }
+  async listUsers(limit: number) {
+    return (await this.select(`users?select=*&order=created_at.desc&limit=${limit}`)).map(toUser);
+  }
   async countUsers() {
     const res = await this.fetchFn(`${this.rest}/users?select=id`, { method: 'HEAD', headers: this.headers({ prefer: 'count=exact' }) });
     if (!res.ok) throw new SupabaseError(res.status, `count users → ${res.status}`);
@@ -345,7 +348,7 @@ export class SupabaseDb implements Db {
     return r ? toSave(r) : null;
   }
   async listSaves() {
-    return (await this.select('saves?select=*&order=updated_at.desc&limit=200')).map(toSave);
+    return (await this.select('saves?select=*&order=updated_at.desc&limit=500')).map(toSave);
   }
   async getHighlights(key: string) {
     const r = await this.first(`highlights?key=eq.${enc(key)}&select=*`);

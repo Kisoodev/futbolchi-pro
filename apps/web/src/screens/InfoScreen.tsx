@@ -1,7 +1,8 @@
 import { tx } from '../i18n';
-import { APP_VERSION, CREDITS } from '../content/credits';
+import { FlagUz } from '../art/FlagUz';
+import { APP_VERSION, TEAM, TEAM_NAME } from '../content/credits';
 
-/** About the game and the people who made it. */
+/** About the team (Oyinlab.uz), its mission, and the game. */
 export function InfoScreen({ onBack }: { onBack: () => void }) {
   return (
     <div className="screen panel info">
@@ -10,22 +11,31 @@ export function InfoScreen({ onBack }: { onBack: () => void }) {
         <h1>{tx.infoTitle}</h1>
       </header>
       <div className="panel-body info-grid">
+        <section className="team-card">
+          <p className="eyebrow">{tx.infoTeamTitle}</p>
+          <h2 className="team-name"><FlagUz /> {TEAM_NAME}</h2>
+          <p>{tx.infoTeamText}</p>
+          <div className="team-facts">
+            <span>📅 {tx.infoFounded}</span>
+            <span>👥 {tx.infoTeamSize}</span>
+          </div>
+          <h2>{tx.infoMissionTitle}</h2>
+          <p className="mission">{tx.infoMissionText}</p>
+        </section>
         <section>
+          <h2>{tx.infoMembersTitle}</h2>
+          <ul className="members">
+            {TEAM.map((n) => (
+              <li key={n}>
+                <span className="member-badge" aria-hidden>{n.charAt(0).toUpperCase()}</span>
+                <strong>{n}</strong>
+              </li>
+            ))}
+          </ul>
           <h2>{tx.infoAboutTitle}</h2>
           <p>{tx.infoAboutText}</p>
           <p className="legal">{tx.infoLegal}</p>
           <p className="muted small">{tx.infoVersion(APP_VERSION)}</p>
-        </section>
-        <section>
-          <h2>{tx.infoCreditsTitle}</h2>
-          <dl className="credits">
-            {CREDITS.map((g) => (
-              <div key={g.role}>
-                <dt>{tx.creditRoles[g.role]}</dt>
-                {g.names.length > 0 ? g.names.map((n) => <dd key={n}>{n}</dd>) : <dd className="tba">{tx.infoTba}</dd>}
-              </div>
-            ))}
-          </dl>
         </section>
       </div>
     </div>

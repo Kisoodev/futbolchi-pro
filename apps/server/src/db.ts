@@ -33,6 +33,8 @@ export interface Db {
   upsertUser(id: string, name: string, now: string): Promise<User>;
   getUser(id: string): Promise<User | null>;
   getUsers(ids: string[]): Promise<User[]>;
+  /** Newest first. */
+  listUsers(limit: number): Promise<User[]>;
   countUsers(): Promise<number>;
 
   // ----- payments -----

@@ -89,6 +89,27 @@ export interface AdminPayment {
   proof: { status: ProofStatus; uploadedAt: string } | null;
 }
 
+export interface AdminPlayer {
+  userId: string;
+  name: string;
+  registeredAt: string;
+  paidSlots: number;
+  lastSeen: string | null;
+  game: {
+    persona: string;
+    position: string;
+    age: number;
+    ovr: number;
+    club: string;
+    tier: number;
+    season: number;
+    week: number;
+    career: { seasons: number; apps: number; goals: number; assists: number; saves: number };
+    promotions: number;
+    matches: number;
+  } | null;
+}
+
 export const adminApi = (token: string) => {
   const h = { 'x-admin-token': token };
   return {
@@ -97,6 +118,7 @@ export const adminApi = (token: string) => {
     decide: (paymentId: string, decision: 'approve' | 'reject', note?: string) =>
       call<{ outcome: string; status: PaymentStatus }>('POST', `/api/admin/payments/${paymentId}/decision`, { decision, note }, h),
     grant: (userId: string) => call<{ entitlement: Entitlement }>('POST', '/api/admin/grant', { userId }, h),
+    players: () => call<{ players: AdminPlayer[] }>('GET', '/api/admin/players', undefined, h),
     /** Receipt image as an object URL (the endpoint needs the token header, so <img src> can't load it directly). */
     proofUrl: async (paymentId: string): Promise<string> => {
       const res = await fetch(apiUrl(`/api/admin/payments/${paymentId}/proof`), { headers: h });

@@ -1,21 +1,10 @@
 /**
- * Info page content. Role titles are translated in the i18n files
- * (creditRoles); names are written as people spell them.
- * TODO(credits): fill in real names before release.
+ * Info page content: the team behind the game. Names are written as people
+ * spell them; everything else is translated in the i18n files.
  */
-import type { Messages } from '../i18n';
+export const APP_VERSION = '0.5.0';
 
-export const APP_VERSION = '0.4.0';
+export const TEAM_NAME = 'Oyinlab.uz';
 
-export interface CreditGroup {
-  role: keyof Messages['creditRoles'];
-  /** Empty → shown as "to be announced". */
-  names: string[];
-}
-
-export const CREDITS: CreditGroup[] = [
-  { role: 'lead', names: [] },
-  { role: 'dev', names: [] },
-  { role: 'design', names: [] },
-  { role: 'balance', names: [] },
-];
+/** Team members, as they want to be shown. */
+export const TEAM: string[] = ['Kiso dev', 'Usmoxan', 'Qodirxon'];
