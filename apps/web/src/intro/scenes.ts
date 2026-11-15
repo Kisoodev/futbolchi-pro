@@ -512,7 +512,7 @@ const title: Scene = {
     sky(p, '#ffb36a', '#ffe7b8');
     academy(p, s.academySign);
     person(p.ctx, cast.heroSprite('hands_hips'), -16, 0, { bob: breathe(t) });
-    person(p.ctx, cast.coach(), 34, 0, { bob: breathe(t, 500) });
+    person(p.ctx, cast.coachMatch(), 34, 0, { bob: breathe(t, 500) });
     glow(p, 0, -320, 420, '#ffd27a', 0.35);
     vignette(p, 0.45);
   },

@@ -230,7 +230,13 @@ export function headBox(a: Appearance): { x: number; y: number; w: number; h: nu
 }
 
 // ---------- the painter ----------
-export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand', outfit: Outfit = 'kit'): Pixels {
+/** Filled by avatarPixels when the face is drawn later at double resolution. */
+interface HdFace {
+  snap?: Pixels;
+  headPx?: Set<number>;
+}
+
+export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand', outfit: Outfit = 'kit', hd?: HdFace): Pixels {
   const casual = outfit === 'casual';
   const L = avatarLayout(a);
   const { cx, headTop, headRows } = L;
@@ -417,9 +423,11 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand', o
   head.paint(out);
   put(out, rowX0(9) - 1, headTop + 10, shade(skin, -0.3));
   put(out, rowX1(9) + 1, headTop + 10, shade(skin, -0.3));
-  // Cheek blush and chin shadow
-  put(out, cx - 6, headTop + 12, mix(skin, '#e0705a', 0.18));
-  put(out, cx + 5, headTop + 12, mix(skin, '#e0705a', 0.18));
+  // Cheek blush and chin shadow (the HD face draws its own)
+  if (!hd) {
+    put(out, cx - 6, headTop + 12, mix(skin, '#e0705a', 0.18));
+    put(out, cx + 5, headTop + 12, mix(skin, '#e0705a', 0.18));
+  }
 
   // ---- facial hair (under the mouth/nose details) ----
   const fh = HAIR_HEX[a.hairColor];
@@ -427,7 +435,7 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand', o
     const i = y - headTop;
     return i >= 0 && i < headH && x >= rowX0(i) && x <= rowX1(i);
   };
-  if (a.facialHair === 'stubble' || a.facialHair === 'beard') {
+  if ((a.facialHair === 'stubble' && !hd) || a.facialHair === 'beard') {
     const from = a.facialHair === 'beard' ? 11 : 12;
     for (let y = headTop + from; y < headTop + headH; y++) {
       for (let x = rowX0(y - headTop); x <= rowX1(y - headTop); x++) {
@@ -458,6 +466,10 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand', o
   }
 
   // ---- face ----
+  if (hd) {
+    hd.snap = out.slice();
+    hd.headPx = head.px;
+  } else {
   // Eyes (closed and squeezed when shouting in celebration)
   const eye = EYE_HEX[a.eyeColor];
   const squint = pose === 'arms_up' || pose === 'ear_cup' || pose === 'fists';
@@ -539,6 +551,8 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand', o
     put(out, cx + 2, headTop + 13, shade(skin, -0.2));
   }
 
+  }
+
   // ---- hair in front ----
   const front = new Layer(hair);
   const dome = (ry: number, clipRow: number, extra = 1) => front.ellipse(cx - 0.5, headTop + 7, maxW / 2 + extra, ry, headTop + clipRow);
@@ -573,6 +587,12 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand', o
       break;
     case 'buzz':
       dome(8, 3, 0);
+      break;
+    case 'undercut':
+      // short faded sides, a long top combed back with volume
+      dome(8, 3, 0);
+      front.ellipse(cx - 0.5, headTop - 0.5, maxW / 2 - 0.5, 3.5, headTop + 3);
+      front.ellipse(cx - 0.5, headTop + 1.5, maxW / 2, 2.5, headTop + 3);
       break;
     case 'curly':
       dome(11, 5, 2);
@@ -646,6 +666,14 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand', o
         if (y > headTop + 4 && (y - headTop) % 2 === 0 && out[p] === back.color) put(out, x, y, shade(hair, -0.3));
       }
     }
+  }
+  if (a.hairStyle === 'undercut') {
+    // the faded sides show the skin; the combed top catches the light
+    for (let y = headTop + 3; y <= headTop + 6; y++) {
+      put(out, rowX0(y - headTop), y, mix(skin, hair, 0.55));
+      put(out, rowX1(y - headTop), y, mix(skin, hair, 0.55));
+    }
+    for (const [dx, dy] of [[-4, -3], [-3, -2], [0, -4], [1, -3], [4, -3], [5, -2]]) put(out, cx + dx, headTop + dy, shade(hair, 0.35));
   }
   if (a.hairStyle === 'sidepart') {
     for (let y = headTop - 1; y <= headTop + 2; y++) put(out, cx - 4, y, shade(hair, 0.45));
@@ -867,30 +895,264 @@ export interface AvatarRect {
   color: string;
 }
 
-/** Same picture as horizontal runs of one colour (few hundred rects). */
-export function avatarRects(a: Appearance, kit: string, pose: Pose = 'stand', outfit: Outfit = 'kit'): AvatarRect[] {
-  const px = avatarPixels(a, kit, pose, outfit);
-  const rects: AvatarRect[] = [];
+// ---------- double resolution ----------
+/**
+ * The avatar is drawn at 64×128 and then shown at double resolution
+ * (128×256): the picture is smoothed with Scale2x (round shoulders, heads and
+ * hair instead of staircases), the outline is thinned to one fine pixel, and
+ * the face — eyes with lids and irises, shaped brows, a nose with nostrils,
+ * two-tone lips, stubble — is drawn directly at the finer resolution, so
+ * people look like people and not like a few coloured squares.
+ */
+export const HD = 2;
+export const HD_W = AVATAR_W * HD;
+export const HD_H = AVATAR_H * HD;
+const hidx = (x: number, y: number) => y * HD_W + x;
+
+function scale2x(src: Pixels): Pixels {
+  const out: Pixels = new Array(HD_W * HD_H).fill(null);
+  const at = (x: number, y: number) => (inside(x, y) ? src[idx(x, y)] : null);
   for (let y = 0; y < AVATAR_H; y++) {
+    for (let x = 0; x < AVATAR_W; x++) {
+      const P = src[idx(x, y)];
+      const A = at(x, y - 1);
+      const B = at(x + 1, y);
+      const C = at(x - 1, y);
+      const D = at(x, y + 1);
+      let e0 = P;
+      let e1 = P;
+      let e2 = P;
+      let e3 = P;
+      if (C === A && C !== D && A !== B) e0 = A;
+      if (A === B && A !== C && B !== D) e1 = B;
+      if (D === C && D !== B && C !== A) e2 = C;
+      if (B === D && B !== A && D !== C) e3 = D;
+      out[hidx(2 * x, 2 * y)] = e0;
+      out[hidx(2 * x + 1, 2 * y)] = e1;
+      out[hidx(2 * x, 2 * y + 1)] = e2;
+      out[hidx(2 * x + 1, 2 * y + 1)] = e3;
+    }
+  }
+  return out;
+}
+
+/** The outline came out two fine pixels thick: keep the outer one. */
+function thinOutline(px: Pixels) {
+  const copy = px.slice();
+  const get = (x: number, y: number) => (x >= 0 && x < HD_W && y >= 0 && y < HD_H ? copy[hidx(x, y)] : null);
+  for (let y = 0; y < HD_H; y++)
+    for (let x = 0; x < HD_W; x++) {
+      if (copy[hidx(x, y)] !== OUTLINE) continue;
+      const n = [get(x - 1, y), get(x + 1, y), get(x, y - 1), get(x, y + 1)];
+      if (n.some((c) => c === null || c === SHADOW)) continue;
+      const fill = n.find((c) => c && c !== OUTLINE);
+      if (fill) px[hidx(x, y)] = fill;
+    }
+}
+
+/** The finer face, drawn only where the face is visible (not under hair, hands or a ball). */
+function hdFace(px: Pixels, a: Appearance, pose: Pose, low: Pixels, info: HdFace) {
+  const L = avatarLayout(a);
+  const { cx, headTop, headRows } = L;
+  const skin = SKIN_HEX[a.skinTone];
+  const hair = HAIR_HEX[a.hairColor];
+  const female = a.gender === 'female';
+  const snap = info.snap!;
+  const headPx = info.headPx!;
+  const visible = (X: number, Y: number) => {
+    const p = idx(X >> 1, Y >> 1);
+    return headPx.has(p) && low[p] === snap[p];
+  };
+  const P = (X: number, Y: number, c: string) => {
+    X = Math.round(X);
+    Y = Math.round(Y);
+    if (X >= 0 && X < HD_W && Y >= 0 && Y < HD_H && visible(X, Y)) px[hidx(X, Y)] = c;
+  };
+  const T = (row: number) => (headTop + row) * HD; // first fine row of a head row
+  const C = cx * HD; // the centre line lies between C − 1 and C
+  const celebrating = (CELEBRATIONS as readonly string[]).includes(pose) && pose !== 'shush';
+  const squint = pose === 'arms_up' || pose === 'ear_cup' || pose === 'fists';
+  const deep = shade(skin, -0.1);
+  const deeper = shade(skin, -0.2);
+  const light = shade(skin, 0.12);
+
+  // -- soft modelling: deep-set eye sockets, cheekbones, the line under the cheekbone, chin
+  for (let X = C - 13; X <= C - 3; X++) P(X, T(7), deep);
+  for (let X = C + 2; X <= C + 12; X++) P(X, T(7), deep);
+  for (const X of [C - 13, C - 12, C - 11]) P(X, T(10), light);
+  for (const X of [C + 9, C + 10, C + 11]) P(X, T(10), deep);
+  for (let k = 0; k < 3; k++) {
+    P(C - 12 + k, T(12) + k, shade(skin, -0.07));
+    P(C + 11 - k, T(12) + k, shade(skin, -0.12));
+  }
+  for (let X = C - 3; X <= C + 2; X++) P(X, T(headRows.length - 2) + 1, deep);
+  if (female || a.facialHair === 'none') {
+    for (const X of [C - 12, C - 11]) P(X, T(12), mix(skin, '#e0705a', 0.2));
+    for (const X of [C + 10, C + 11]) P(X, T(12), mix(skin, '#e0705a', 0.2));
+  }
+
+  // -- stubble: fine dots on the jaw, chin and upper lip
+  if (a.facialHair === 'stubble') {
+    const dot = mix(skin, hair, 0.32);
+    for (let Y = T(12); Y < T(headRows.length); Y++) {
+      const row = Math.floor(Y / HD) - headTop;
+      const x0 = (cx - headRows[row] / 2) * HD;
+      const x1 = (cx + headRows[row] / 2) * HD - 1;
+      for (let X = x0 + 1; X < x1; X++) {
+        const mouth = Math.abs(X - C + 0.5) < 5 && Y >= T(14) - 1 && Y <= T(14) + 3;
+        const nose = Math.abs(X - C + 0.5) < 4 && Y < T(13);
+        const h = ((X * 73856093) ^ (Y * 19349663)) >>> 0;
+        if (!mouth && !nose && h % 5 === 0) P(X, Y, dot);
+      }
+    }
+  }
+
+  // -- eyes: 6×4 each — upper lid, white, iris with a dark top and a catch-light, lower lid
+  const eye = EYE_HEX[a.eyeColor];
+  const lid = mix(shade(skin, -0.6), '#1d1416', 0.5);
+  const white = '#efe9e2';
+  const eyeTop = T(8);
+  [C - 12, C + 6].forEach((x0, side) => {
+    const inner = side === 0 ? x0 + 5 : x0;
+    const outer = side === 0 ? x0 : x0 + 5;
+    if (squint) {
+      for (let i = 0; i < 6; i++) P(x0 + i, eyeTop + 2, lid);
+      P(outer, eyeTop + 1, lid);
+      P(inner, eyeTop + 1, deeper);
+      return;
+    }
+    for (let i = 0; i < 5; i++) P(x0 + i + (side === 0 ? 1 : 0), eyeTop, lid);
+    for (let i = 0; i < 6; i++) P(x0 + i, eyeTop + 1, white);
+    for (let i = 1; i < 5; i++) P(x0 + i, eyeTop + 2, white);
+    P(outer, eyeTop + 2, deep);
+    P(inner, eyeTop + 2, deep);
+    const ix = x0 + 2;
+    P(ix, eyeTop + 1, shade(eye, 0.5));
+    P(ix + 1, eyeTop + 1, shade(eye, -0.55));
+    P(ix, eyeTop + 2, eye);
+    P(ix + 1, eyeTop + 2, shade(eye, -0.25));
+    for (let i = 1; i < 5; i++) P(x0 + i, eyeTop + 3, deep);
+    if (female) {
+      const o = outer + (side === 0 ? -1 : 1);
+      P(o, eyeTop, lid);
+      P(o, eyeTop - 1, lid);
+      P(outer, eyeTop - 1, lid);
+    }
+  });
+
+  // -- brows: two rows at the inner end, tapering outwards
+  const brow = luminance(hair) > 0.55 ? shade(hair, -0.4) : shade(hair, -0.05);
+  const browSoft = mix(brow, skin, 0.45);
+  const bY = T(6);
+  const thick = a.brows === 'thick';
+  const thin = a.brows === 'thin';
+  for (let X = C - 12; X <= C - 4; X++) P(X, bY, brow);
+  for (let X = C - (thin ? 7 : 10); X <= C - 4; X++) P(X, bY + 1, brow);
+  P(C - 13, bY + 1, browSoft);
+  for (let X = C + 3; X <= C + 11; X++) P(X, bY, brow);
+  for (let X = C + 3; X <= C + (thin ? 6 : 9); X++) P(X, bY + 1, brow);
+  P(C + 12, bY + 1, browSoft);
+  if (thick) {
+    for (let X = C - 10; X <= C - 4; X++) P(X, bY - 1, brow);
+    for (let X = C + 3; X <= C + 9; X++) P(X, bY - 1, brow);
+  }
+  if (celebrating) for (const X of [C - 5, C - 4, C + 3, C + 4]) P(X, bY + 2, brow);
+
+  // -- nose: light from the top left, the shadow side on the right
+  const nose = a.nose;
+  const bridgeFrom = nose === 'large' ? T(8) + 1 : nose === 'medium' ? T(9) : T(10);
+  const tipY = T(12) + (nose === 'small' ? 0 : 1);
+  for (let Y = bridgeFrom; Y < tipY; Y++) P(C, Y, shade(skin, -0.13));
+  for (let Y = bridgeFrom + 1; Y < tipY - 1; Y++) P(C - 1, Y, shade(skin, 0.1));
+  const half = nose === 'large' ? 4 : nose === 'medium' ? 3 : 2;
+  for (let X = C - half + 1; X <= C + half - 2; X++) P(X, tipY, shade(skin, -0.05));
+  P(C - 1, tipY - 1, shade(skin, 0.2));
+  for (let X = C - half + 1; X <= C + half - 2; X++) P(X, tipY + 1, shade(skin, -0.2));
+  P(C - half, tipY + 1, shade(skin, -0.38));
+  P(C + half - 1, tipY + 1, shade(skin, -0.38));
+  P(C + half, tipY, shade(skin, -0.14));
+
+  // -- mouth
+  const mY = T(14);
+  if (celebrating) {
+    for (let Y = mY - 2; Y <= mY + 5; Y++) {
+      const w = Y === mY - 2 || Y === mY + 5 ? 3 : Y === mY - 1 || Y === mY + 4 ? 5 : 6;
+      for (let X = C - w; X < C + w; X++) P(X, Y, MOUTH_OPEN);
+    }
+    for (let X = C - 4; X < C + 4; X++) P(X, mY - 1, WHITE);
+    for (let X = C - 3; X < C + 3; X++) P(X, mY + 4, '#c4534a');
+  } else {
+    const upper = female ? '#a24654' : mix(MOUTH, skin, 0.25);
+    const lower = female ? '#c9666f' : mix('#b8624f', skin, 0.35);
+    P(C - 1, mY - 2, deep); // philtrum
+    P(C, mY - 2, deep);
+    for (let X = C - 4; X < C + 4; X++) P(X, mY, upper);
+    P(C - 5, mY + 1, shade(skin, -0.25));
+    P(C + 4, mY + 1, shade(skin, -0.25));
+    for (let X = C - 3; X < C + 3; X++) P(X, mY + 1, lower);
+    P(C - 2, mY + 1, shade(lower, 0.25));
+    for (let X = C - 2; X < C + 2; X++) P(X, mY + 2, deep);
+  }
+}
+
+/** The avatar at double resolution (HD_W × HD_H). */
+export function avatarPixelsHD(a: Appearance, kit: string, pose: Pose = 'stand', outfit: Outfit = 'kit'): Pixels {
+  const info: HdFace = {};
+  const low = avatarPixels(a, kit, pose, outfit, info);
+  const px = scale2x(low);
+  thinOutline(px);
+  hdFace(px, a, pose, low, info);
+  return px;
+}
+
+/**
+ * The picture as horizontal runs of one colour, in sprite units (1 = one of
+ * the 64×128 pixels; the finer pixels are halves).
+ */
+export function avatarRects(a: Appearance, kit: string, pose: Pose = 'stand', outfit: Outfit = 'kit'): AvatarRect[] {
+  const px = avatarPixelsHD(a, kit, pose, outfit);
+  const rects: AvatarRect[] = [];
+  for (let y = 0; y < HD_H; y++) {
     let x = 0;
-    while (x < AVATAR_W) {
-      const c = px[idx(x, y)];
+    while (x < HD_W) {
+      const c = px[hidx(x, y)];
       if (!c) {
         x++;
         continue;
       }
       let end = x + 1;
-      while (end < AVATAR_W && px[idx(end, y)] === c) end++;
-      rects.push({ x, y, w: end - x, h: 1, color: c });
+      while (end < HD_W && px[hidx(end, y)] === c) end++;
+      rects.push({ x: x / HD, y: y / HD, w: (end - x) / HD, h: 1 / HD, color: c });
       x = end;
     }
   }
   return rects;
 }
 
-export function drawAvatar(ctx: CanvasRenderingContext2D, a: Appearance, kit: string, x: number, y: number, scale: number, pose: Pose = 'stand', outfit: Outfit = 'kit'): void {
-  for (const r of avatarRects(a, kit, pose, outfit)) {
-    ctx.fillStyle = r.color;
-    ctx.fillRect(x + r.x * scale, y + r.y * scale, r.w * scale, r.h * scale);
+const hdCache = new Map<string, HTMLCanvasElement>();
+/** The HD picture on a canvas (cached). */
+export function avatarCanvas(a: Appearance, kit: string, pose: Pose = 'stand', outfit: Outfit = 'kit'): HTMLCanvasElement {
+  const key = JSON.stringify([a, kit, pose, outfit]);
+  let c = hdCache.get(key);
+  if (!c) {
+    c = document.createElement('canvas');
+    c.width = HD_W;
+    c.height = HD_H;
+    const ctx = c.getContext('2d')!;
+    for (const r of avatarRects(a, kit, pose, outfit)) {
+      ctx.fillStyle = r.color;
+      ctx.fillRect(r.x * HD, r.y * HD, r.w * HD, r.h * HD);
+    }
+    if (hdCache.size > 300) hdCache.clear();
+    hdCache.set(key, c);
   }
+  return c;
+}
+
+/** Draws the avatar with its top-left at (x, y); `scale` = screen pixels per 64×128 sprite pixel (2+ keeps the fine detail). */
+export function drawAvatar(ctx: CanvasRenderingContext2D, a: Appearance, kit: string, x: number, y: number, scale: number, pose: Pose = 'stand', outfit: Outfit = 'kit'): void {
+  const smooth = ctx.imageSmoothingEnabled;
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(avatarCanvas(a, kit, pose, outfit), x, y, AVATAR_W * scale, AVATAR_H * scale);
+  ctx.imageSmoothingEnabled = smooth;
 }

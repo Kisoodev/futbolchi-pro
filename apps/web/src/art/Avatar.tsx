@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { Appearance } from '@futbolchi/engine';
-import { AVATAR_H, AVATAR_W, avatarLayout, avatarRects, headBox, type Pose } from './avatarRects';
+import { AVATAR_H, AVATAR_W, avatarCanvas, avatarLayout, headBox, type Pose } from './avatarRects';
 
 /** Where the "camera" looks in the full-size picture. */
 export type AvatarFocus = 'full' | 'head' | 'face';
@@ -33,7 +33,8 @@ function focusBox(a: Appearance, focus: AvatarFocus) {
 export function Avatar({ appearance, kit, scale, pose = 'stand', crop = 'full', focus = 'full', className }: Props) {
   const key = JSON.stringify(appearance);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const rects = useMemo(() => avatarRects(appearance, kit, pose), [key, kit, pose]);
+  // one crisp image of the double-resolution picture (far lighter than thousands of rects)
+  const src = useMemo(() => avatarCanvas(appearance, kit, pose).toDataURL(), [key, kit, pose]);
   const box = crop === 'bust' ? headBox(appearance) : { x: 0, y: 0, w: AVATAR_W, h: AVATAR_H };
   // Camera: scale the picture so the focus box fills the frame, centred on it.
   let transform: string | undefined;
@@ -58,9 +59,7 @@ export function Avatar({ appearance, kit, scale, pose = 'stand', crop = 'full', 
         className="avatar-camera"
         style={crop === 'full' ? { transform: transform ?? 'translate(0px, 0px) scale(1)', transformOrigin: '0 0' } : undefined}
       >
-        {rects.map((r, i) => (
-          <rect key={i} x={r.x} y={r.y} width={r.w} height={r.h} fill={r.color} />
-        ))}
+        <image href={src} x={0} y={0} width={AVATAR_W} height={AVATAR_H} preserveAspectRatio="none" style={{ imageRendering: 'pixelated' }} />
       </g>
     </svg>
   );

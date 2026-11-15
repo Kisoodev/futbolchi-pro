@@ -88,7 +88,7 @@ export default function RecorderDock() {
 
       {st.kind === 'match' && replayMatch && game && st.phase !== 'done' && st.phase !== 'idle' && (
         <div className="rec-stage rec-replay">
-          <PitchReplay match={replayMatch} clubs={game.clubs} personaName={game.persona.name} personaPosition={game.persona.position} onFinished={replayFinished} hold={st.phase !== 'recording'} />
+          <PitchReplay match={replayMatch} clubs={game.clubs} personaName={game.persona.name} personaPosition={game.persona.position} personaLook={game.persona.appearance} onFinished={replayFinished} hold={st.phase !== 'recording'} />
         </div>
       )}
 

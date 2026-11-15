@@ -60,6 +60,15 @@ export interface ProgressTexts {
   stage: (n: number, of: number) => string;
   goalUp: (league: string, next: string) => string;
   goalTop: string;
+  paywallCoach: string;
+  paywallRestart: string;
+  lineupTitle: string;
+  lineupButton: string;
+  lineupBench: string;
+  lineupYou: string;
+  lineupRival: string;
+  lineupFriend: string;
+  rivalLine: (name: string, theirs: number, mine: number) => string;
 }
 
 const uz: ProgressTexts = {
@@ -121,6 +130,15 @@ const uz: ProgressTexts = {
   stage: (n, of) => `${n}/${of}-bosqich`,
   goalUp: (l, n) => `Maqsad: ${l}ni yutib, ${n}ga chiqish`,
   goalTop: "Maqsad: 1-liga chempioni bo'lish",
+  paywallCoach: "«Ertaga soat 7 da maydondasan. Kechikma!» Karyerangni boshlash uchun akademiyaga yozil.",
+  paywallRestart: 'Boshqa futbolchi yaratish',
+  lineupTitle: 'Bugungi tarkib',
+  lineupButton: '📋 Tarkibni ko\'rish',
+  lineupBench: 'Zaxirada',
+  lineupYou: 'Sen',
+  lineupRival: 'Odil — raqib',
+  lineupFriend: "Abu — do'st",
+  rivalLine: (n, a, b) => (a > b ? `😏 ${n} ${a} · Sen ${b} — ${a - b} ochko oldinda` : `🔥 ${n} ${a} · Sen ${b} — ${n}ni quvib o'tding!`),
 };
 
 const en: ProgressTexts = {
@@ -182,6 +200,15 @@ const en: ProgressTexts = {
   stage: (n, of) => `Stage ${n} of ${of}`,
   goalUp: (l, n) => `Goal: win the ${l} and go up to the ${n}`,
   goalTop: 'Goal: become champions of the First League',
+  paywallCoach: '"Tomorrow, 7 a.m., on the pitch. Don\'t be late!" Join the academy to start your career.',
+  paywallRestart: 'Create a different player',
+  lineupTitle: "Today's team",
+  lineupButton: '📋 See the team',
+  lineupBench: 'On the bench',
+  lineupYou: 'You',
+  lineupRival: 'Odil — rival',
+  lineupFriend: 'Abu — friend',
+  rivalLine: (n, a, b) => (a > b ? `😏 ${n} ${a} · You ${b} — ${a - b} ahead` : `🔥 ${n} ${a} · You ${b} — you passed ${n}!`),
 };
 
 const ru: ProgressTexts = {
@@ -243,6 +270,15 @@ const ru: ProgressTexts = {
   stage: (n, of) => `Этап ${n} из ${of}`,
   goalUp: (l, n) => `Цель: выиграть «${l}» и выйти в «${n}»`,
   goalTop: 'Цель: стать чемпионом Первой лиги',
+  paywallCoach: '«Завтра в 7 утра — на поле. Не опаздывай!» Запишись в академию, чтобы начать карьеру.',
+  paywallRestart: 'Создать другого игрока',
+  lineupTitle: 'Состав на сегодня',
+  lineupButton: '📋 Посмотреть состав',
+  lineupBench: 'В запасе',
+  lineupYou: 'Ты',
+  lineupRival: 'Одил — соперник',
+  lineupFriend: 'Абу — друг',
+  rivalLine: (n, a, b) => (a > b ? `😏 ${n} ${a} · Ты ${b} — впереди на ${a - b}` : `🔥 ${n} ${a} · Ты ${b} — ты обошёл ${n}!`),
 };
 
 const TEXTS: Record<Lang, ProgressTexts> = { uz, en, ru };

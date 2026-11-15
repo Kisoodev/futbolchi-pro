@@ -46,7 +46,7 @@ export const en: Messages = {
 
   // Persona creation
   createTitle: 'Create your footballer',
-  createPaid: 'Payment confirmed!',
+  createPaid: "Step 1: create your player",
   appearanceTitle: 'Appearance',
   headShapeLabel: 'Head shape',
   headShapes: { oval: 'Oval', round: 'Round', square: 'Strong jaw' },
@@ -58,6 +58,7 @@ export const en: Messages = {
   hairStyles: {
     short: 'Short',
     sidepart: 'Side part',
+    undercut: 'Undercut',
     spiky: 'Spiky',
     buzz: 'Buzz cut',
     curly: 'Curly',
@@ -297,6 +298,13 @@ export const en: Messages = {
     subIn: (name) => `${name} comes on!`,
     subOut: (name) => `${name} is substituted.`,
     subTeam: (club) => `${club}: substitution.`,
+    goalBy: (player: string, club: string) => `GOAL! ${player} (${club}) puts it in!`,
+    shotBy: (player: string, saved: boolean, keeper?: string) => `${player} shoots — ${saved ? `${keeper ?? 'the keeper'} saves` : 'just wide'}.`,
+    saveBy: (keeper: string, player?: string) => `${keeper} saves${player ? ` from ${player}` : ''}!`,
+    cardBy: (player: string, club: string, red: boolean) => `${player} (${club}) gets a ${red ? 'red' : 'yellow'} card.`,
+    injuryBy: (player: string) => `${player} is injured.`,
+    subSwap: (club: string, out: string, inName: string) => `${club}: ${inName} on for ${out}.`,
+    subOutFor: (name: string, inName: string) => `${name} comes off, ${inName} on.`,
   },
   eventIcons: {
     goal: '⚽',

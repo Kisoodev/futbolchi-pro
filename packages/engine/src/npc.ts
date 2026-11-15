@@ -7,6 +7,7 @@
  */
 import { PROGRESSION_CONFIG as P, tierConfig } from './progression';
 import { clamp, createRng, hashSeed, type Rng } from './rng';
+import { npcName } from './roster';
 import type { ClubRatings, NpcPlayer, NpcRole, Position, Tier } from './types';
 
 const ROLES: NpcRole[] = ['regular', 'good', 'strong'];
@@ -49,9 +50,13 @@ export function generateSquad(clubId: string, tier: Tier, seed: number): NpcPlay
     ...Array<NpcRole>(counts.good).fill('good'),
     ...Array<NpcRole>(counts.regular).fill('regular'),
   ]);
+  const sideCount: Partial<Record<Position, number>> = {};
   const squad: NpcPlayer[] = P.SQUAD.positions.map((position, i) => ({
     id: `${clubId}-p${i + 1}`,
+    name: npcName(`${clubId}-p${i + 1}`, seed),
     position,
+    // wingers and full-backs alternate sides
+    side: position === 'W' || position === 'FB' ? ((sideCount[position] = (sideCount[position] ?? 0) + 1) % 2 ? 'R' : 'L') : undefined,
     role: roles[i],
     ovr: rollOvr(rng, tier, roles[i], strength),
     captain: false,

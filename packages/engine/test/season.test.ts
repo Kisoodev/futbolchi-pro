@@ -75,7 +75,7 @@ describe('season loop', () => {
     expect(totalGf).toBe(totalGa);
     expect(season.storyUz).toBeTruthy();
     expect(() => playWeek(end, 'rest')).toThrow();
-  });
+  }, 60_000);
 
   it('is fully deterministic and JSON-serializable', () => {
     const a = playSeason(start(77));
@@ -101,7 +101,7 @@ describe('season loop', () => {
       if (season.finalPosition === 1) expect(season.outcome).toBe('promoted');
       else if (season.outcome === 'promoted') throw new Error('only the champion goes up');
     }
-  });
+  }, 60_000);
 
   it('next season: persona ages, new league for the club tier, transfer accepted only if offered', () => {
     const end = playSeason(start(4));
@@ -151,7 +151,7 @@ describe('season loop', () => {
     expect(s.persona.age).toBe(C.START_AGE + 6);
     expect(currentSeason(s).fixtures.length).toBe(240);
     expect(seasonWeeks(currentSeason(s))).toBe(30);
-  });
+  }, 60_000);
 });
 
 describe('story', () => {

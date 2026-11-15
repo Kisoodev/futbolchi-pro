@@ -138,6 +138,8 @@ export const CARD_PERSONA_SHARE = 0.12;
 export const RED_STRAIGHT_SHARE = 0.08;
 
 export const TEAM_SUBS = 2;
+/** Chance an NPC starter gets hurt during a match (forced change). */
+export const NPC_INJURY_CHANCE = 0.02;
 /** While on the pitch, the persona's team ratings shift by (personaOVR − teamAvg) × this. */
 export const PERSONA_TEAM_INFLUENCE = 0.1;
 export const SUB_MINUTE_MIN = 55;

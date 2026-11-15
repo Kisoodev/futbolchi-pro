@@ -281,6 +281,23 @@ td.club, th.club { text-align: left; }
   text-align: center;
 }
 .caption.me { background: var(--sun); color: var(--ink); box-shadow: 0 3px 0 #c99b00; }
+/* live replay: what the player on the ball is doing */
+.action-line {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  max-width: calc(100% - 16px);
+  background: rgba(18, 50, 79, 0.72);
+  color: #fff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
 .controls { display: flex; gap: 8px; margin: 12px 0; }
 .controls button { flex: 1; }
 .event-feed { list-style: none; padding: 0; margin: 0; max-height: 260px; overflow: auto; }
@@ -624,3 +641,44 @@ a.link { color: var(--ink-muted); font-weight: 600; text-decoration: none; displ
 .league-path li.done { background: var(--grass-pale); color: var(--grass-ink); }
 .league-path p { margin: 4px 0 0; font-size: 0.8rem; color: var(--ink-muted); }
 .league-path p b { color: var(--sky-deep); }
+
+/* ----- Paywall: the hero just created ----- */
+.pay-hero { display: flex; gap: 10px; align-items: center; margin-top: 6px; background: #fffdf6; border: 2px solid #f2c84b; border-radius: 12px; padding: 6px 10px; }
+.pay-hero-avatar { flex: none; width: 44px; height: 44px; }
+.pay-hero b { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.pay-hero p { margin: 2px 0 0; font-size: 0.85rem; line-height: 1.3; }
+.pay-hero-coach { font-weight: 800; color: #b07a10; }
+.pay-hero-restart { font-size: 0.8rem; padding: 0; }
+/* Paywall on wide screens: the hero card sits beside the title, so the payment steps stay in view. */
+@media (min-width: 900px) {
+  .pay-head > div:first-child { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 48%); column-gap: 16px; align-items: start; }
+  .pay-head > div:first-child > :not(.pay-hero) { grid-column: 1; }
+  .pay-head .pay-hero { grid-column: 2; grid-row: 1 / span 3; margin-top: 0; padding: 4px 8px; }
+  .pay-hero-avatar { width: 38px; height: 38px; }
+  .pay-hero p { font-size: 0.8rem; }
+  .pay-head > div:first-child > .link { justify-self: start; }
+}
+
+/* ----- Lineup board ----- */
+.lineup-btn { width: 100%; }
+.lineup-modal { z-index: 64; }
+.lineup-box { display: grid; gap: 8px; max-width: min(94vw, 460px); }
+.lineup-box h2, .lineup-box h3 { margin: 0; }
+.lineup-pitch { position: relative; aspect-ratio: 3 / 3.6; max-height: 52vh; width: 100%; margin: 0 auto; border-radius: 10px; background: repeating-linear-gradient(0deg, #4aa835 0 10%, #3f9a2e 10% 20%); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.7); overflow: hidden; }
+.lineup-pitch::before { content: ''; position: absolute; left: 50%; top: 50%; width: 26%; aspect-ratio: 1; border: 2px solid rgba(255, 255, 255, 0.6); border-radius: 50%; transform: translate(-50%, -50%); }
+.lineup-pitch::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 2px solid rgba(255, 255, 255, 0.6); }
+.lineup-chip { position: absolute; transform: translate(-50%, -50%); z-index: 1; display: grid; justify-items: center; background: rgba(12, 26, 48, 0.85); color: #fff; border-radius: 8px; padding: 2px 6px; line-height: 1.1; max-width: 30%; text-align: center; }
+.lineup-chip b { font-size: 0.72rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.lineup-chip small { font-size: 0.6rem; opacity: 0.85; }
+.lineup-chip.me { background: linear-gradient(180deg, #ffd65a, #f2b21b); color: #3a2600; box-shadow: 0 0 0 2px #fff; }
+.lineup-chip.rival { box-shadow: 0 0 0 2px #e35b5b; }
+.lineup-chip.friend { box-shadow: 0 0 0 2px #6fd64a; }
+.lineup-legend { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; font-size: 0.78rem; font-weight: 700; }
+.lineup-legend .me { color: #b07a10; }
+.lineup-legend .rival { color: #c63b3b; }
+.lineup-legend .friend { color: var(--grass-ink); }
+.lineup-bench { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.lineup-bench li { background: #eef3f8; border-radius: 999px; padding: 2px 10px; font-weight: 700; font-size: 0.8rem; }
+.lineup-bench li.rival { box-shadow: inset 0 0 0 2px #e35b5b; }
+.lineup-bench li.friend { box-shadow: inset 0 0 0 2px #6fd64a; }
+.rival-line { color: #9a3b3b; }

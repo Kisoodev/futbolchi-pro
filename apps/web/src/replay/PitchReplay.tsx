@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Club, Match, MatchEvent, PitchPoint, Position } from '@futbolchi/engine';
+import type { Appearance, Club, Match, MatchEvent, PitchPoint, Position } from '@futbolchi/engine';
 import { tx } from '../i18n';
 import { eventText } from '../i18n/events';
 import { buildTimeline, frameAt, personaWindow, type Frame } from './timeline';
 import { kitColors, kitStroke } from './kits';
+import { LiveReplay } from './LiveReplay';
+import { replayTexts } from '../i18n/replay';
 
 /** Home formation (home attacks towards x = 100). Away is mirrored. */
 const FORMATION: { pos: Position; x: number; y: number }[] = [
@@ -20,11 +22,13 @@ const FORMATION: { pos: Position; x: number; y: number }[] = [
   { pos: 'ST', x: 68, y: 50 },
 ];
 
-interface Props {
+export interface ReplayProps {
   match: Match;
   clubs: Record<string, Club>;
   personaName: string;
   personaPosition: Position;
+  /** The persona's look, for their face in the live replay. */
+  personaLook?: Appearance;
   onFinished?: () => void;
   /** Shown above / below the event feed in the side column. */
   sideTop?: ReactNode;
@@ -33,15 +37,20 @@ interface Props {
   hold?: boolean;
 }
 
-const SPEEDS = [1, 2, 4];
+export const SPEEDS = [1, 2, 4];
 /** Same breakpoint as the fit-to-screen layout in styles.css. */
 export const FIT_QUERY = '(min-width: 900px) and (min-height: 520px)';
 
 /** Canvas can't read CSS variables cheaply; keep in sync with styles.css. */
-const COLORS = { grassA: '#62b533', grassB: '#6cc23a', sun: '#ffcf33', ink: '#12324f' };
-const PIXEL_FONT = "'Pixelify Sans', system-ui, sans-serif";
+export const COLORS = { grassA: '#62b533', grassB: '#6cc23a', sun: '#ffcf33', ink: '#12324f' };
+export const PIXEL_FONT = "'Pixelify Sans', system-ui, sans-serif";
 
-export function PitchReplay({ match, clubs, personaName, personaPosition, onFinished, sideTop, sideBottom, hold = false }: Props) {
+/** v2 matches get the live replay (22 named players in their team shape); older matches the classic one. */
+export function PitchReplay(props: ReplayProps) {
+  return props.match.engine === 2 && props.match.lineups ? <LiveReplay {...props} /> : <ClassicReplay {...props} />;
+}
+
+function ClassicReplay({ match, clubs, personaName, personaPosition, onFinished, sideTop, sideBottom, hold = false }: ReplayProps) {
   const events = match.events;
   const { areaRef, boardRef, frameW } = useFitPitch();
   const { segments, total } = useMemo(() => buildTimeline(events), [events]);
@@ -175,7 +184,7 @@ export function PitchReplay({ match, clubs, personaName, personaPosition, onFini
  * the largest 105:68 size that fits the free area. On narrow screens the page
  * scrolls normally and the pitch simply takes the full width.
  */
-function useFitPitch() {
+export function useFitPitch() {
   const areaRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const [frameW, setFrameW] = useState<number | null>(null);
@@ -216,30 +225,7 @@ function drawFrame(
   const X = (x: number) => (x / 100) * w;
   const Y = (y: number) => (y / 100) * h;
 
-  // Grass (bright, like the stadium art)
-  for (let i = 0; i < 10; i++) {
-    ctx.fillStyle = i % 2 ? COLORS.grassA : COLORS.grassB;
-    ctx.fillRect((i * w) / 10, 0, w / 10 + 1, h);
-  }
-  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-  ctx.lineWidth = 2;
-  const m = 4;
-  ctx.strokeRect(m, m, w - 2 * m, h - 2 * m);
-  ctx.beginPath();
-  ctx.moveTo(w / 2, m);
-  ctx.lineTo(w / 2, h - m);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(w / 2, h / 2, h * 0.13, 0, Math.PI * 2);
-  ctx.stroke();
-  for (const side of [0, 1]) {
-    const bx = side ? w - m - w * 0.16 : m;
-    ctx.strokeRect(bx, h * 0.2, w * 0.16, h * 0.6);
-    const sx = side ? w - m - w * 0.055 : m;
-    ctx.strokeRect(sx, h * 0.37, w * 0.055, h * 0.26);
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.fillRect(side ? w - m : 0, h * 0.44, m, h * 0.12);
-  }
+  drawPitchBase(ctx, w, h);
 
   // Players drift with the ball.
   const ball = frame.ball;
@@ -303,8 +289,35 @@ function drawFrame(
     ctx.textAlign = 'center';
     ctx.lineWidth = 6;
     ctx.strokeStyle = COLORS.ink;
-    ctx.strokeText('GOL!', w / 2, h / 2 + 14);
+    ctx.strokeText(replayTexts().outcome.GOAL ?? '', w / 2, h / 2 + 14);
     ctx.fillStyle = current.actor === 'persona' ? COLORS.sun : '#fff';
-    ctx.fillText('GOL!', w / 2, h / 2 + 14);
+    ctx.fillText(replayTexts().outcome.GOAL ?? '', w / 2, h / 2 + 14);
+  }
+}
+
+/** Grass and lines (shared by both replays). */
+export function drawPitchBase(ctx: CanvasRenderingContext2D, w: number, h: number) {
+  for (let i = 0; i < 10; i++) {
+    ctx.fillStyle = i % 2 ? COLORS.grassA : COLORS.grassB;
+    ctx.fillRect((i * w) / 10, 0, w / 10 + 1, h);
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = 2;
+  const m = 4;
+  ctx.strokeRect(m, m, w - 2 * m, h - 2 * m);
+  ctx.beginPath();
+  ctx.moveTo(w / 2, m);
+  ctx.lineTo(w / 2, h - m);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(w / 2, h / 2, h * 0.13, 0, Math.PI * 2);
+  ctx.stroke();
+  for (const side of [0, 1]) {
+    const bx = side ? w - m - w * 0.16 : m;
+    ctx.strokeRect(bx, h * 0.2, w * 0.16, h * 0.6);
+    const sx = side ? w - m - w * 0.055 : m;
+    ctx.strokeRect(sx, h * 0.37, w * 0.055, h * 0.26);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillRect(side ? w - m : 0, h * 0.44, m, h * 0.12);
   }
 }

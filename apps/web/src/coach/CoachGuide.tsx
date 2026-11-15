@@ -1,5 +1,5 @@
 /**
- * The in-game coach: Rustam Sobirov's portrait and words at the bottom of the
+ * The in-game coach: Bahodir Rahimov's portrait and words at the bottom of the
  * screen, walking the player through a lesson step by step. The part of the
  * screen he talks about is lit up (everything else dims). Every lesson can be
  * skipped; it is shown once (see coachStore).
@@ -113,7 +113,8 @@ export function CoachGuide({ lesson, vars, onView, delay = 350, hold = false }: 
         <div className="coach-dim" aria-hidden />
       )}
       <div className={atTop ? 'coach-guide top' : 'coach-guide'} role="dialog" aria-label={t.title}>
-        <Portrait id="coach" size={60} className="coach-portrait" />
+        {/* match days: the long black puffer; other days: the tracksuit */}
+        <Portrait id={lesson === 'match' ? 'coachMatch' : 'coach'} size={60} className="coach-portrait" />
         <div className="coach-body">
           <div className="coach-head">
             <b>{t.title}</b>

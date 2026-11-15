@@ -48,14 +48,14 @@ const uz: CoachTexts = {
   replay: "🧑‍🏫 Murabbiy darsini qayta ko'rish",
   lessons: {
     week: [
-      { text: ({ name }) => `Salom, ${name}! Men Rustam Sobirov — murabbiyingman. Boshlashdan oldin o'yinni qisqacha tushuntirib beraman.`, view: 'train' },
+      { text: ({ name }) => `${name}. Men Usmoxan Kapadze. Bu yerda hamma meni shunchaki Kapadze deydi. Bir marta tushuntiraman — eshit.`, view: 'train' },
       { text: () => "Bu sening kartang: pozitsiya, klub, OVR — umumiy reyting va jadvaldagi o'rning. Chiziq — charchoq: qizarsa, dam ber.", target: CARD, view: 'train' },
       { text: () => "Bu haftaning o'yini: raqib, uyda yoki mehmonda va oxirgi natijalar (G — g'alaba, D — durang, M — mag'lubiyat).", target: ['.fixture'], view: 'train' },
       { text: () => "Mashg'ulot kunida uchta mashg'ulotdan bittasini tanlaysan. ▲ — u qaysi ko'rsatkichni kuchaytiradi; pastda — qanchalik charchatadi va jarohat xavfi bormi.", target: ['.options'], view: 'train' },
       { text: () => "Tanlagach, shu tugmani bos: ko'rsatkichlaring o'sadi. Ertasi kuni — o'yin kuni: yaxshi o'ynasang, asosiy ko'rsatkichlaring yana o'sadi.", target: ['.play-btn'], view: 'train' },
       { text: () => 'Bu jadval. Mavsum oxirida birinchi 2 ta jamoa yuqori ligaga chiqadi. Maqsadimiz — eng yuqori liga!', target: ['.table-card'], view: 'table' },
       { text: () => "Pastdagi tugmalar: «Futbolchi» — ko'rsatkichlaring, «Mashg'ulot» va «Jadval».", target: ['.m-tabs'], view: 'train' },
-      { text: () => 'Hammasi shu. Senga ishonaman — birinchi mashg\'ulotni tanla!', view: 'train' },
+      { text: () => "Hammasi shu. Maydon yolg'on gapirmaydi. Birinchi mashg'ulotni tanla.", view: 'train' },
     ],
     matchDay: [
       { text: () => "Bugun o'yin kuni! Kecha mashg'ulot qilding — endi maydonda ko'rsat. Yaxshi o'ynasang, ko'proq o'sasan.", target: ['.match-day'], view: 'train' },
@@ -86,14 +86,14 @@ const en: CoachTexts = {
   replay: "🧑‍🏫 Replay the coach's lesson",
   lessons: {
     week: [
-      { text: ({ name }) => `Hi, ${name}! I'm Rustam Sobirov, your coach. Before we start, let me show you how it all works.`, view: 'train' },
+      { text: ({ name }) => `${name}. I'm Usmoxan Kapadze. Here everyone just calls me Kapadze. I'll explain this once — listen.`, view: 'train' },
       { text: () => 'This is your card: position, club, OVR (overall rating) and your place in the table. The bar is fatigue: when it turns red, rest.', target: CARD, view: 'train' },
       { text: () => "This week's match: the opponent, home or away, and recent results (W — win, D — draw, L — loss).", target: ['.fixture'], view: 'train' },
       { text: () => 'On a training day you pick one of three trainings. ▲ shows what it strengthens; below — how tiring it is and whether it risks an injury.', target: ['.options'], view: 'train' },
       { text: () => 'Once you pick, press this button: your attributes grow. The next day is match day — play well and your main attributes grow again.', target: ['.play-btn'], view: 'train' },
       { text: () => "The table. At the end of the season the top 2 teams go up a league. Our goal is the top league!", target: ['.table-card'], view: 'table' },
       { text: () => 'The buttons at the bottom: "Player" for your stats, "Training" and "Table".', target: ['.m-tabs'], view: 'train' },
-      { text: () => "That's it. I believe in you — pick your first training!", view: 'train' },
+      { text: () => "That's all. The pitch doesn't lie. Pick your first training.", view: 'train' },
     ],
     matchDay: [
       { text: () => 'Match day! You trained yesterday — now show it on the pitch. Play well and you grow more.', target: ['.match-day'], view: 'train' },
@@ -124,14 +124,14 @@ const ru: CoachTexts = {
   replay: '🧑‍🏫 Повторить урок тренера',
   lessons: {
     week: [
-      { text: ({ name }) => `Привет, ${name}! Я Рустам Собиров, твой тренер. Прежде чем начать, коротко объясню игру.`, view: 'train' },
+      { text: ({ name }) => `${name}. Я Усмохан Кападзе. Здесь все зовут меня просто Кападзе. Объясню один раз — слушай.`, view: 'train' },
       { text: () => 'Это твоя карточка: позиция, клуб, OVR — общий рейтинг и место в таблице. Полоска — усталость: покраснела — дай себе отдых.', target: CARD, view: 'train' },
       { text: () => 'Матч этой недели: соперник, дома или в гостях и последние результаты (В — победа, Н — ничья, П — поражение).', target: ['.fixture'], view: 'train' },
       { text: () => 'В день тренировки выбираешь одну из трёх. ▲ — что она усиливает; ниже — насколько она утомляет и есть ли риск травмы.', target: ['.options'], view: 'train' },
       { text: ({ g }) => `${g === 'female' ? 'Выбрала' : 'Выбрал'} — жми эту кнопку: показатели вырастут. На следующий день — матч: хорошая игра снова усилит главные показатели.`, target: ['.play-btn'], view: 'train' },
       { text: () => 'Это таблица. В конце сезона первые 2 команды выходят в лигу выше. Наша цель — высшая лига!', target: ['.table-card'], view: 'table' },
       { text: () => 'Кнопки внизу: «Игрок» — твои показатели, «Тренировка» и «Таблица».', target: ['.m-tabs'], view: 'train' },
-      { text: () => 'Вот и всё. Я в тебя верю — выбирай первую тренировку!', view: 'train' },
+      { text: () => 'Вот и всё. Поле не врёт. Выбирай первую тренировку.', view: 'train' },
     ],
     matchDay: [
       { text: () => 'День матча! Вчера была тренировка — теперь покажи себя на поле. Хорошая игра — больше роста.', target: ['.match-day'], view: 'train' },

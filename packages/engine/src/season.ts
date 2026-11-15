@@ -10,11 +10,13 @@ import { applyMatchGrowth, applyXp, matchXp, milestonesBetween, personaLevel, PR
 import { getTrainingOption } from './training';
 import { statDeltas } from './persona';
 import { driftSquad, ratingsFromSquad, squadAvg } from './npc';
+import { academySquad } from './roster';
+import { pickLineup } from './lineup';
 import { applyAccountEvents, normalizeAccount, type AccountEvent, type AccountReward } from './account';
 import { createRng, hashSeed } from './rng';
 import { seasonFacts, seasonStoryUz } from './story';
 import { applyTrainingDay, offerTraining, weeklyRecovery, type TrainingId } from './training';
-import type { Club, GameState, Match, Persona, PersonaRole, Season, SeasonOutcome, StatKey, Tier, WeekDay } from './types';
+import type { Club, GameState, Match, MatchLineup, Persona, PersonaRole, Season, SeasonOutcome, Side, StatKey, Tier, WeekDay } from './types';
 
 export interface NewGameInput {
   seed: number;
@@ -25,7 +27,11 @@ export function newGame(input: NewGameInput): GameState {
   const clubs = generateWorld(input.seed);
   const rng = createRng(hashSeed(input.seed, 'startClub'));
   const academyClubs = Object.values(clubs).filter((c) => c.tier === 4);
-  const club = rng.pick(academyClubs);
+  const picked = rng.pick(academyClubs);
+  // the persona's first club plays with the academy team of docs/CHARACTERS.md
+  const squad = academySquad(picked.id, input.seed, picked.squad);
+  const club = { ...picked, squad, ratings: ratingsFromSquad(squad) };
+  clubs[club.id] = club;
   const persona = createPersona({ ...input.persona, clubId: club.id, seed: input.seed });
   const state: GameState = {
     version: 2,
@@ -78,17 +84,30 @@ export function startChance(persona: Persona, club: Club): number {
   return Math.min(C.SELECTION_HI, Math.max(C.SELECTION_LO, p));
 }
 
-function pickRole(persona: Persona, club: Club, seed: number): PersonaRole {
-  if (persona.injuryWeeksLeft > 0) return 'injured';
-  const rng = createRng(seed);
-  if (rng.chance(startChance(persona, club))) return 'start';
-  return rng.chance(C.SUB_APPEARANCE_CHANCE) ? 'sub' : 'bench';
-}
 
 export interface WeekResult {
   state: GameState;
   /** The persona's club match this week. */
   matchId: string;
+}
+
+/** Both teams' lineups for this week's match of the persona (same input → same XI). */
+export function weekLineups(state: GameState, homeId: string, awayId: string): Record<'home' | 'away', MatchLineup> {
+  const season = currentSeason(state);
+  const seed = hashSeed(season.seed, 'lineup-week', season.week);
+  const p = state.persona;
+  const me = { id: p.id, name: p.name, position: p.position, injuryWeeksLeft: p.injuryWeeksLeft, ovr: personaLevel(p) };
+  const of = (id: string) => pickLineup(state.clubs[id], { seed, persona: id === p.clubId ? me : undefined });
+  return { home: of(homeId), away: of(awayId) };
+}
+
+/** The persona's team for this week's match (for the lineup board before kick-off). */
+export function nextLineup(state: GameState): MatchLineup | null {
+  const season = currentSeason(state);
+  const fx = season.fixtures.find((f) => f.week === season.week && (f.homeId === state.persona.clubId || f.awayId === state.persona.clubId));
+  if (!fx) return null;
+  const l = weekLineups(state, fx.homeId, fx.awayId);
+  return fx.homeId === state.persona.clubId ? l.home : l.away;
 }
 
 /** Today's day of the week (older saves have no day: training). */
@@ -167,8 +186,8 @@ export function playMatchDay(state: GameState): MatchDayResult {
   const before = state.persona;
   let persona = before;
   let grownStats = before.stats;
-  const club = state.clubs[persona.clubId];
-  const role = pickRole(persona, club, hashSeed(season.seed, 'selection', season.week));
+  // the persona (like the core characters) always starts, unless injured
+  const role: PersonaRole = persona.injuryWeeksLeft > 0 ? 'injured' : 'start';
   const injuryRiskBonus = state.pendingInjuryRisk ?? 0;
 
   let table = season.table;
@@ -179,15 +198,18 @@ export function playMatchDay(state: GameState): MatchDayResult {
   for (const fx of season.fixtures.filter((f) => f.week === season.week)) {
     const involved = fx.homeId === persona.clubId || fx.awayId === persona.clubId;
     const seed = hashSeed(season.seed, 'match', fx.matchId);
-    const side = fx.homeId === persona.clubId ? 'home' : 'away';
+    const side: Side = fx.homeId === persona.clubId ? 'home' : 'away';
+    // the persona's league is played by the possession-chain engine with both clubs' XIs; other leagues use the quick engine
+    const myLeague = state.clubs[fx.homeId].tier === state.clubs[persona.clubId].tier;
+    const lineups = myLeague ? weekLineups(state, fx.homeId, fx.awayId) : undefined;
+    const simPersona = involved ? { side, position: persona.position, stats: persona.stats, fatigue: persona.fatigue, role, injuryRiskBonus } : null;
     const result = simulateMatch({
       matchId: fx.matchId,
       seed,
       home: { id: fx.homeId, ratings: state.clubs[fx.homeId].ratings },
       away: { id: fx.awayId, ratings: state.clubs[fx.awayId].ratings },
-      persona: involved
-        ? { side, position: persona.position, stats: persona.stats, fatigue: persona.fatigue, role, injuryRiskBonus }
-        : null,
+      persona: simPersona,
+      lineups,
     });
     table = applyResult(table, fx.homeId, fx.awayId, result.score);
     if (involved) {
@@ -203,6 +225,9 @@ export function playMatchDay(state: GameState): MatchDayResult {
         personaSide: side,
         personaStats: result.personaStats,
         events: result.events,
+        lineups,
+        players: result.players,
+        ...(result.engine ? { engine: result.engine, simPersona } : {}),
       };
       matches[match.id] = match;
       const ps = result.personaStats!;

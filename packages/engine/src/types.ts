@@ -33,6 +33,7 @@ export const HAIR_STYLES = [
   'sidepart',
   'spiky',
   'buzz',
+  'undercut',
   'curly',
   'afro',
   'long',
@@ -45,7 +46,7 @@ export const HAIR_STYLES = [
 export type HairStyle = (typeof HAIR_STYLES)[number];
 /** Hairstyles offered for each gender (kept short so the creator stays simple). */
 export const HAIR_STYLES_BY_GENDER: Record<Gender, readonly HairStyle[]> = {
-  male: ['short', 'sidepart', 'spiky', 'buzz', 'curly', 'afro', 'long', 'dreads', 'bald'],
+  male: ['short', 'sidepart', 'undercut', 'spiky', 'buzz', 'curly', 'afro', 'long', 'dreads', 'bald'],
   female: ['ponytail', 'bun', 'braid', 'long', 'short', 'curly'],
 };
 /** Natural hair colours of young players. */
@@ -135,7 +136,13 @@ export type NpcRole = 'regular' | 'good' | 'strong';
 /** A computer-controlled player of a club's squad. */
 export interface NpcPlayer {
   id: string;
+  /** Shown in match events and on the lineup board. */
+  name: string;
   position: Position;
+  /** Wingers and full-backs: the side they prefer. */
+  side?: 'L' | 'R';
+  /** A character from docs/CHARACTERS.md (odil, abu, sardor…). */
+  characterKey?: string;
   role: NpcRole;
   ovr: number;
   captain: boolean;
@@ -225,10 +232,52 @@ export interface MatchEvent {
     /** substitution: true if persona came on, false if persona went off. */
     personaIn?: boolean;
     injuryWeeks?: number;
+    /** Who did it (scorer, shooter, booked player, injured player). */
+    player?: string;
+    /** Who passed for the goal / chance. */
+    assist?: string;
+    /** The goalkeeper who saved. */
+    keeper?: string;
+    /** substitution: who went off and who came on. */
+    out?: string;
+    in?: string;
   };
+  /** Index of the action in the v2 engine log (for the replay). */
+  seq?: number;
   /** Waypoints for the replay. Ball travels along them. */
   path: PitchPoint[];
   highlight: boolean;
+}
+
+/** Positions on the pitch in the 4-3-3 the game uses. */
+export const SLOTS = ['GK', 'LB', 'LCB', 'RCB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'ST', 'RW'] as const;
+export type SlotId = (typeof SLOTS)[number];
+
+export interface LineupPlayer {
+  id: string;
+  name: string;
+  position: Position;
+  ovr: number;
+  /** Starters: their place in the XI. */
+  slot?: SlotId;
+  characterKey?: string;
+  persona?: boolean;
+}
+
+export interface MatchLineup {
+  starters: LineupPlayer[];
+  bench: LineupPlayer[];
+}
+
+/** One player's match (both teams, everyone who played). */
+export interface PlayerMatchLine {
+  id: string;
+  name: string;
+  side: Side;
+  minutes: number;
+  goals: number;
+  assists: number;
+  rating: number;
 }
 
 export interface PersonaMatchStats {
@@ -259,6 +308,25 @@ export interface Match {
   personaSide: Side | null;
   personaStats: PersonaMatchStats | null;
   events: MatchEvent[];
+  /** Starting XIs and benches (matches played since named squads). */
+  lineups?: Record<Side, MatchLineup>;
+  /** Everyone who played, with a rating. */
+  players?: PlayerMatchLine[];
+  /** 2 = possession-chain engine (docs/MATCH_ENGINE.md); the replay rebuilds its action log from seed + lineups + simPersona. */
+  engine?: 2;
+  /** The persona's match input, to rebuild the same action log. */
+  simPersona?: MatchPersonaInput | null;
+}
+
+/** What the match engine needs to know about the persona. */
+export interface MatchPersonaInput {
+  side: Side;
+  position: Position;
+  stats: Stats;
+  fatigue: number;
+  role: PersonaRole;
+  /** Extra injury probability from this week's training. */
+  injuryRiskBonus: number;
 }
 
 export interface TransferOffer {

@@ -5,7 +5,7 @@ import { AccountBadge } from './components/AccountBadge';
 import { tx, useLang } from './i18n';
 import { api } from './state/api';
 import { ADMIN_EVENT, openAdmin, verifiedAdminToken } from './state/admin';
-import { getUserId, getUserName, introSeen, loadGame, markIntroSeen, saveGame } from './state/store';
+import { clearPending, getUserId, getUserName, introSeen, loadGame, loadPending, markIntroSeen, saveGame, savePending } from './state/store';
 import { IntroPlayer } from './intro/IntroPlayer';
 import { LoadingScreen } from './screens/LoadingScreen';
 import { NameScreen } from './screens/NameScreen';
@@ -24,7 +24,7 @@ import { SettingsButton } from './components/Settings';
 
 /**
  * Flow: loading (counter) → name (first visit only) → menu
- *   menu → new career → pay (receipt) → create (persona) → game
+ *   menu → new career → create (persona) → intro (opening film) → pay (paywall at the climax) → game
  *   menu → load game → game
  *   create → intro (opening film, once per persona) → game
  *   menu → info
@@ -35,10 +35,10 @@ type Route =
   | { name: 'menu' }
   | { name: 'info' }
   | { name: 'pay' }
-  | { name: 'create'; entitlementId: string }
+  | { name: 'create' }
   | { name: 'game' }
-  /** The opening film; the game follows. */
-  | { name: 'intro' }
+  /** The opening film; the game follows (or, for a new career, the payment). */
+  | { name: 'intro'; pending?: boolean }
   | { name: 'match'; matchId: string };
 
 /**
@@ -91,6 +91,8 @@ export function App() {
   ) : null;
   const [game, setGame] = useState<GameState | null>(() => loadGame());
   const [userName, setUserNameState] = useState(() => getUserName());
+  /** A new career that is created but not paid yet. */
+  const [pending, setPending] = useState<GameState | null>(() => loadPending());
   const [route, setRoute] = useState<Route>({ name: 'loading' });
   /** The growth animation to show (after a training day, or after a match). */
   const [growth, setGrowth] = useState<GrowthData | null>(null);
@@ -128,14 +130,19 @@ export function App() {
     );
   }
 
-  if (route.name === 'intro' && game) {
+  const introOf = route.name === 'intro' ? (route.pending ? pending : game) : null;
+  if (route.name === 'intro' && introOf) {
     const done = () => {
-      markIntroSeen(game.persona.id);
-      setRoute({ name: 'game' });
+      // a new career: the film stops at its peak and the payment comes next
+      if (route.pending) setRoute({ name: 'pay' });
+      else {
+        markIntroSeen(introOf.persona.id);
+        setRoute({ name: 'game' });
+      }
     };
     return (
       <div className="intro-screen">
-        <IntroPlayer name={game.persona.name} appearance={game.persona.appearance} onDone={done} />
+        <IntroPlayer name={introOf.persona.name} appearance={introOf.persona.appearance} onDone={done} />
         {recorder}
       </div>
     );
@@ -179,7 +186,25 @@ export function App() {
         <PayScreen
           name={userName}
           onBack={() => setRoute({ name: 'menu' })}
-          onPaid={(entitlementId) => setRoute({ name: 'create', entitlementId })}
+          hero={pending}
+          onRestart={() => {
+            clearPending();
+            setPending(null);
+            setRoute({ name: 'create' });
+          }}
+          onPaid={(entitlementId) => {
+            if (!pending) {
+              setRoute({ name: 'create' });
+              return;
+            }
+            // the paid slot belongs to this persona now (best effort: the game starts either way)
+            void api.consume(entitlementId, getUserId(), pending.persona.id).catch(() => undefined);
+            update({ ...pending, account: game?.account ?? pending.account });
+            markIntroSeen(pending.persona.id);
+            clearPending();
+            setPending(null);
+            setRoute({ name: 'game' });
+          }}
         />
       );
       break;
@@ -187,10 +212,11 @@ export function App() {
       body = (
         <CreateScreen
           name={userName}
-          entitlementId={route.entitlementId}
           onCreated={(s) => {
-            update({ ...s, account: game?.account ?? s.account });
-            setRoute({ name: 'intro' });
+            // kept apart from the current save until the payment goes through
+            savePending(s);
+            setPending(s);
+            setRoute({ name: 'intro', pending: true });
           }}
         />
       );
@@ -270,7 +296,7 @@ export function App() {
         <MenuScreen
           name={userName}
           game={game}
-          onNewCareer={() => setRoute({ name: 'pay' })}
+          onNewCareer={() => setRoute(pending ? { name: 'pay' } : { name: 'create' })}
           onLoadGame={() => setRoute(game && !introSeen(game.persona.id) ? { name: 'intro' } : { name: 'game' })}
           onInfo={() => setRoute({ name: 'info' })}
           onChangeName={() => setRoute({ name: 'name' })}

@@ -24,6 +24,7 @@ export function MatchScreen({ state, matchId, onContinue }: Props) {
         clubs={state.clubs}
         personaName={state.persona.name}
         personaPosition={state.persona.position}
+        personaLook={state.persona.appearance}
         onFinished={onFinished}
         sideTop={
           <div className="match-head">

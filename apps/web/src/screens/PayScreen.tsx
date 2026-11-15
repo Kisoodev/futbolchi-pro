@@ -8,6 +8,11 @@
  * an extra button skips the payment (it grants a free slot, recorded as a
  * 0 so'm receipt). Normal players never see it.
  */
+import { personaLevel, type GameState } from '@futbolchi/engine';
+import { Avatar } from '../art/Avatar';
+import { RatingCard } from '../components/RatingCard';
+import { characterLabel } from '../characters';
+import { progressTexts } from '../i18n/progress';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { formatMoney, tx } from '../i18n';
 import { adminApi, api, type AppConfig, type RejectReason } from '../state/api';
@@ -23,13 +28,17 @@ interface Props {
   name: string;
   onPaid: (entitlementId: string) => void;
   onBack: () => void;
+  /** The persona just created (shown as the reason to pay) and a way to make another one. */
+  hero?: GameState | null;
+  onRestart?: () => void;
 }
 
 /** Which of the 3 stepper dots is active. */
 const STAGE: Record<Step, number> = { loading: 0, error: 0, instructions: 1, rejected: 1, review: 3 };
 
-export function PayScreen({ name, onPaid, onBack }: Props) {
+export function PayScreen({ name, onPaid, onBack, hero, onRestart }: Props) {
   const userId = getUserId();
+  const pt = progressTexts();
   const [step, setStep] = useState<Step>('loading');
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [paymentId, setPaymentId] = useState<string | null>(null);
@@ -193,6 +202,24 @@ export function PayScreen({ name, onPaid, onBack }: Props) {
           <button className="link" onClick={onBack}>← {tx.back}</button>
           <p className="eyebrow">{tx.payTitle}</p>
           <h1>{tx.payHello(name)}</h1>
+          {hero && (
+            <div className="pay-hero">
+              <Avatar appearance={hero.persona.appearance} kit={hero.clubs[hero.persona.clubId]?.color ?? '#2f78b7'} scale={1} crop="bust" className="pay-hero-avatar" />
+              <div>
+                <b>
+                  {hero.persona.name} · {hero.persona.position} · <RatingCard level={personaLevel(hero.persona)} size="sm" />
+                </b>
+                <p>
+                  <span className="pay-hero-coach">{characterLabel('coach')}:</span> {pt.paywallCoach}
+                </p>
+                {onRestart && (
+                  <button type="button" className="link pay-hero-restart" onClick={onRestart}>
+                    {pt.paywallRestart}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         <ol className="stepper" aria-label={tx.payTitle}>
           {tx.payStages.map((label, i) => (

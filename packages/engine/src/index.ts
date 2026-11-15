@@ -12,3 +12,7 @@ export * from './account';
 export * from './progression';
 export * from './npc';
 export * from './migrate';
+export * from './roster';
+export * from './lineup';
+export { MAX_SUBS } from './squadplay';
+export * from './sim';

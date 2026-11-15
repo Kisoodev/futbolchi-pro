@@ -11,7 +11,7 @@
  * World coordinates: x = 0 is the centre of the set, y = 0 is the ground,
  * negative y goes up. A standing person is about 100 units tall.
  */
-import type { Appearance, Gender } from '@futbolchi/engine';
+import { rosterLook, type Appearance, type CharacterKey, type Gender } from '@futbolchi/engine';
 import { drawAvatar, type Pose } from '../art/avatarRects';
 import { characterSprite } from '../characters';
 import { paintBag, paintBoots, paintMoney, type Painter } from '../characters/painters';
@@ -88,32 +88,17 @@ function makeCanvas(w: number, h: number, paint: Painter): Canvas {
 
 /** The hero in everyday clothes: a T-shirt, jeans and sneakers (never a football kit in the story). */
 const HOME_KIT = '#b8433a';
-/** The academy kids' kit and a second, rival-looking one. */
-const ACADEMY_KITS = ['#2f78b7', '#1f8a4c', '#2f78b7'];
 
-/** Fixed looks for the academy kids (deterministic). */
-function kidLook(i: number, gender: Gender): Appearance {
-  const male = (['short', 'spiky', 'curly', 'sidepart'] as const)[i % 4];
-  const female = (['ponytail', 'bun', 'braid'] as const)[i % 3];
-  return {
-    gender,
-    headShape: (['oval', 'square', 'round'] as const)[i % 3],
-    skinTone: (['light', 'tan', 'medium', 'dark'] as const)[i % 4],
-    hairStyle: gender === 'female' ? female : male,
-    hairColor: (['black', 'brown', 'black', 'chestnut'] as const)[i % 4],
-    eyeColor: 'brown',
-    brows: 'normal',
-    nose: 'medium',
-    facialHair: 'none',
-    heightCm: 176 + (i % 3) * 6,
-    weightKg: 70 + (i % 3) * 5,
-    foot: 'right',
-    boots: (['black', 'white', 'red'] as const)[i % 3],
-    sleeves: 'short',
-    accessory: i === 1 ? 'headband' : 'none',
-    celebration: 'arms_up',
-  };
-}
+/**
+ * The academy players in the film are the bible's characters (docs/CHARACTERS.md):
+ * 0 = Abu (the friend, in his grey goalkeeper kit), 1 = Odil (the rival who
+ * laughs), 2 = Doniyor (Odil's mate). The game uses the same people.
+ */
+const KIDS: { key: CharacterKey; kit: string }[] = [
+  { key: 'abu', kit: '#7d848c' },
+  { key: 'odil', kit: '#2f78b7' },
+  { key: 'doniyor', kit: '#2f78b7' },
+];
 
 /** Everyone who appears in the film, drawn once and cached. */
 export class Cast {
@@ -137,10 +122,12 @@ export class Cast {
   }
 
   heroSprite(pose: Pose = 'stand', kit = HOME_KIT): Canvas {
-    return this.get(`hero:${pose}:${kit}`, 64, 128, (ctx) => drawAvatar(ctx, this.hero, kit, 0, 0, 1, pose, 'casual'));
+    // people are drawn at double resolution (fine faces); person() scales them to the same size
+    return this.get(`hero:${pose}:${kit}`, 128, 256, (ctx) => drawAvatar(ctx, this.hero, kit, 0, 0, 2, pose, 'casual'));
   }
   kid(i: number, pose: Pose = 'stand'): Canvas {
-    return this.get(`kid:${i}:${pose}`, 64, 128, (ctx) => drawAvatar(ctx, kidLook(i, this.gender), ACADEMY_KITS[i % 3], 0, 0, 1, pose));
+    const kid = KIDS[i % KIDS.length];
+    return this.get(`kid:${i}:${pose}`, 128, 256, (ctx) => drawAvatar(ctx, rosterLook(kid.key), kid.kit, 0, 0, 2, pose));
   }
   // story characters come from the shared registry (characters/)
   dad(): Canvas {
@@ -151,6 +138,10 @@ export class Cast {
   }
   coach(): Canvas {
     return characterSprite('coach');
+  }
+  /** The coach on match day (long black puffer, tablet). */
+  coachMatch(): Canvas {
+    return characterSprite('coachMatch');
   }
   boots(): Canvas {
     return this.get('boots', 18, 8, paintBoots);
@@ -170,6 +161,7 @@ export class Cast {
     this.dad();
     this.mom();
     this.coach();
+    this.coachMatch();
     this.boots();
     this.bag();
     this.money();

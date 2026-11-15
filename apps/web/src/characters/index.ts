@@ -7,9 +7,11 @@
  * row 122), then add an entry below with its names in all three languages.
  */
 import { lang, type Lang } from '../i18n';
-import { paintCoach, paintFather, paintMother, type Painter } from './painters';
+import { paintFather, paintMother, type Painter } from './painters';
+import { paintCoachMatch, paintCoachTraining } from './coach';
 
-export type CharacterId = 'dad' | 'mom' | 'coach';
+/** coach = training tracksuit; coachMatch = match-day puffer (the same man). */
+export type CharacterId = 'dad' | 'mom' | 'coach' | 'coachMatch';
 
 export interface Character {
   id: CharacterId;
@@ -20,7 +22,9 @@ export interface Character {
   /** Accent colour for the speaker label. */
   color: string;
   painter: Painter;
-  /** Face area in the 64×128 sprite, for round portraits. */
+  /** Sprite resolution: 1 = 64×128, 2 = 128×256 (finer detail, same size on screen). */
+  res?: number;
+  /** Face area in sprite pixels (at its resolution), for round portraits. */
   face: { x: number; y: number; size: number };
 }
 
@@ -43,23 +47,34 @@ export const CHARACTERS: Record<CharacterId, Character> = {
   },
   coach: {
     id: 'coach',
-    fullName: { uz: 'Rustam Sobirov', en: 'Rustam Sobirov', ru: 'Рустам Собиров' },
-    label: { uz: 'Murabbiy', en: 'Coach', ru: 'Тренер' },
-    color: '#f2c84b',
-    painter: paintCoach,
-    face: { x: 16, y: 10, size: 32 },
+    fullName: { uz: 'Usmoxan Kapadze', en: 'Usmoxan Kapadze', ru: 'Усмохан Кападзе' },
+    label: { uz: 'Kapadze', en: 'Kapadze', ru: 'Кападзе' },
+    color: '#9cc2ea',
+    painter: paintCoachTraining,
+    res: 2,
+    face: { x: 36, y: 24, size: 56 },
+  },
+  coachMatch: {
+    id: 'coachMatch',
+    fullName: { uz: 'Usmoxan Kapadze', en: 'Usmoxan Kapadze', ru: 'Усмохан Кападзе' },
+    label: { uz: 'Kapadze', en: 'Kapadze', ru: 'Кападзе' },
+    color: '#9cc2ea',
+    painter: paintCoachMatch,
+    res: 2,
+    face: { x: 36, y: 24, size: 56 },
   },
 };
 
 const cache = new Map<CharacterId, HTMLCanvasElement>();
 
-/** The character's 64×128 sprite, drawn once. */
+/** The character's sprite (64×128, or 128×256 for res 2), drawn once. */
 export function characterSprite(id: CharacterId): HTMLCanvasElement {
   let c = cache.get(id);
   if (!c) {
     c = document.createElement('canvas');
-    c.width = 64;
-    c.height = 128;
+    const res = CHARACTERS[id].res ?? 1;
+    c.width = 64 * res;
+    c.height = 128 * res;
     const ctx = c.getContext('2d')!;
     ctx.imageSmoothingEnabled = false;
     CHARACTERS[id].painter(ctx);

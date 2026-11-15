@@ -15,6 +15,7 @@
 import * as C from './constants';
 import { generateWorld } from './league';
 import { generateSquad, ratingsFromSquad } from './npc';
+import { academySquad, hasAcademyRoster, npcName } from './roster';
 import { PROGRESSION_CONFIG as PC } from './progression';
 import { clamp, hashSeed } from './rng';
 import { STAT_KEYS, type Club, type GameState, type Persona, type Position, type Stats } from './types';
@@ -39,8 +40,30 @@ export function migratePersona(p: Persona): Persona {
   };
 }
 
+/**
+ * Saves from before named squads: every NPC gets a name, and the persona's
+ * club gets the academy team of docs/CHARACTERS.md (once).
+ */
+function nameSquads(state: GameState): GameState {
+  const clubs: Record<string, Club> = {};
+  let changed = false;
+  for (const c of Object.values(state.clubs)) {
+    const squad = (c.squad ?? []).map((p) => (p.name ? p : ((changed = true), { ...p, name: npcName(p.id, state.seed) })));
+    clubs[c.id] = { ...c, squad };
+  }
+  if (!Object.values(clubs).some((c) => hasAcademyRoster(c.squad))) {
+    const home = clubs[state.persona.clubId];
+    if (home) {
+      const squad = academySquad(home.id, state.seed, home.squad);
+      clubs[home.id] = { ...home, squad, ratings: ratingsFromSquad(squad) };
+      changed = true;
+    }
+  }
+  return changed ? { ...state, clubs } : state;
+}
+
 export function migrateGame(state: GameState): GameState {
-  if (state.version === 2) return state;
+  if (state.version === 2) return nameSquads(state);
   const clubs: Record<string, Club> = {};
   for (const old of Object.values(state.clubs)) {
     // the game has three leagues now: the old top league joins the 1-liga
@@ -62,5 +85,5 @@ export function migrateGame(state: GameState): GameState {
     }
   }
   const seasons = state.seasons.map((x) => (x.tier < C.TOP_TIER ? { ...x, tier: C.TOP_TIER } : x));
-  return { ...state, version: 2, persona: migratePersona(state.persona), clubs, seasons };
+  return nameSquads({ ...state, version: 2, persona: migratePersona(state.persona), clubs, seasons });
 }

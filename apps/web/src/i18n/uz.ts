@@ -65,7 +65,7 @@ export const uz = {
 
   // Persona creation
   createTitle: 'Futbolchingizni yarating',
-  createPaid: "To'lov tasdiqlandi!",
+  createPaid: "1-qadam: futbolchingni yarat",
   appearanceTitle: "Tashqi ko'rinish",
   headShapeLabel: 'Bosh shakli',
   headShapes: { oval: "Cho'zinchoq", round: 'Dumaloq', square: "Kuchli jag'" } satisfies Record<HeadShape, string>,
@@ -82,6 +82,7 @@ export const uz = {
   hairStyles: {
     short: 'Kalta',
     sidepart: 'Yon farq',
+    undercut: 'Andercut',
     spiky: 'Tikka',
     buzz: 'Juda kalta',
     curly: 'Jingalak',
@@ -345,6 +346,13 @@ export const uz = {
     subIn: (name: string) => `${name} maydonga tushdi!`,
     subOut: (name: string) => `${name} almashtirildi.`,
     subTeam: (club: string) => `${club}: almashtirish.`,
+    goalBy: (player: string, club: string) => `GOL! ${player} (${club}) to'pni darvozaga yo'lladi!`,
+    shotBy: (player: string, saved: boolean, keeper?: string) => `${player} zarba berdi — ${saved ? `${keeper ?? 'darvozabon'} qaytardi` : "to'p yonidan o'tdi"}.`,
+    saveBy: (keeper: string, player?: string) => `${keeper} ${player ? `${player}ning zarbasini ` : ''}qaytardi!`,
+    cardBy: (player: string, club: string, red: boolean) => `${player} (${club}) ${red ? 'qizil' : 'sariq'} kartochka oldi.`,
+    injuryBy: (player: string) => `${player} jarohat oldi.`,
+    subSwap: (club: string, out: string, inName: string) => `${club}: ${out} o'rniga ${inName} maydonga tushdi.`,
+    subOutFor: (name: string, inName: string) => `${name} almashtirildi, o'rniga ${inName}.`,
   },
   eventIcons: {
     goal: '⚽',

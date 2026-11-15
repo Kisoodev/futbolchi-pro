@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   captainOf,
+  nextLineup,
   currentSeason,
   dayOf,
   getTrainingOption,
@@ -20,6 +21,7 @@ import { CoachGuide } from '../coach/CoachGuide';
 import { progressTexts } from '../i18n/progress';
 import { RatingCard } from '../components/RatingCard';
 import { LeaguePath } from '../components/LeaguePath';
+import { LineupBoard } from '../components/LineupBoard';
 
 interface Props {
   state: GameState;
@@ -68,6 +70,7 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
   const season = currentSeason(state);
   const offer = trainingOffer(state);
   const [choice, setChoice] = useState<TrainingId | null>(null);
+  const [board, setBoard] = useState(false);
   const persona = personaView(state.persona);
   const club = state.clubs[persona.clubId];
   const fx = season.fixtures.find((f) => f.week === season.week && (f.homeId === club.id || f.awayId === club.id));
@@ -92,6 +95,8 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
   const level = personaLevel(persona);
   const captain = club.squad?.length ? captainOf(club.squad) : undefined;
   const gap = captain ? captain.ovr - level : null;
+  // the rival from the bible (Odil), when he is in this squad
+  const rival = club.squad?.find((p) => p.characterKey === 'odil');
 
   return (
     <div className={`screen grid week view-${view} day-${day}`}>
@@ -121,6 +126,7 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
         {persona.injuryWeeksLeft > 0 && <p className="warn">{tx.injured(persona.injuryWeeksLeft)}</p>}
         <StatBars persona={persona} />
         {gap !== null && <p className="captain-gap">👑 {gap > 0 ? pt.captainGap(gap) : pt.captainAbove(-gap)}</p>}
+        {rival && <p className="captain-gap rival-line">{pt.rivalLine(rival.name, rival.ovr, level)}</p>}
       </section>
 
       <section className={`card train-card ${view === 'train' ? 'm-on' : ''}`}>
@@ -162,6 +168,9 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
             <h2>{pt.matchDayTitle}</h2>
             <p className="muted">{pt.matchDayText}</p>
             <p className="trained-line">{lastTraining === 'rest' || lastTraining === null ? pt.todayRested : pt.todayTrained(tx.trainingNames[lastTraining as TrainingId])}</p>
+            <button type="button" className="lineup-btn" onClick={() => setBoard(true)}>
+              {pt.lineupButton}
+            </button>
             <button className="primary big play-btn" onClick={onPlayMatch}>
               {pt.playMatch}
             </button>
@@ -190,6 +199,11 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
         <h2>{tx.table}</h2>
         <LeagueTable season={season} clubs={state.clubs} highlightId={club.id} />
       </section>
+
+      {board && (() => {
+        const l = nextLineup(state);
+        return l ? <LineupBoard lineup={l} onClose={() => setBoard(false)} /> : null;
+      })()}
 
       {/* First week: the coach explains the screen (once, skippable) */}
       <CoachGuide key={day} lesson={day === 'training' ? 'week' : 'matchDay'} vars={{ name: persona.name, g: persona.appearance.gender }} onView={setView} hold={coachHold} />

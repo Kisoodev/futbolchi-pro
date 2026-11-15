@@ -42,7 +42,7 @@ export const ru: Messages = {
 
   // Persona creation
   createTitle: 'Создайте своего футболиста',
-  createPaid: 'Оплата подтверждена!',
+  createPaid: "Шаг 1: создай своего игрока",
   appearanceTitle: 'Внешность',
   headShapeLabel: 'Форма головы',
   headShapes: { oval: 'Овальная', round: 'Круглая', square: 'Волевое' },
@@ -54,6 +54,7 @@ export const ru: Messages = {
   hairStyles: {
     short: 'Короткая',
     sidepart: 'Пробор',
+    undercut: 'Андеркат',
     spiky: 'Торчком',
     buzz: 'Ёжик',
     curly: 'Кудри',
@@ -294,6 +295,13 @@ export const ru: Messages = {
     subIn: (name) => `${name} выходит на поле!`,
     subOut: (name) => `${name} уходит на замену.`,
     subTeam: (club) => `«${club}»: замена.`,
+    goalBy: (player: string, club: string) => `ГОЛ! ${player} («${club}») отправляет мяч в ворота!`,
+    shotBy: (player: string, saved: boolean, keeper?: string) => `${player} бьёт — ${saved ? `${keeper ?? 'вратарь'} отбивает` : 'мимо'}.`,
+    saveBy: (keeper: string, player?: string) => `${keeper} отбивает${player ? ` удар ${player}` : ''}!`,
+    cardBy: (player: string, club: string, red: boolean) => `${player} («${club}») получает ${red ? 'красную' : 'жёлтую'} карточку.`,
+    injuryBy: (player: string) => `${player} получил травму.`,
+    subSwap: (club: string, out: string, inName: string) => `«${club}»: ${inName} вместо ${out}.`,
+    subOutFor: (name: string, inName: string) => `${name} уходит с поля, вместо него ${inName}.`,
   },
   eventIcons: {
     goal: '⚽',

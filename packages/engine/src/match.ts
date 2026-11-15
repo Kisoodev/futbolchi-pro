@@ -10,32 +10,29 @@
 import * as C from './constants';
 import { computeOvr, effectiveStats } from './positions';
 import { clamp, createRng, type Rng } from './rng';
+import { TeamPlay, type SubEvent } from './squadplay';
 import type {
   Actor,
   ClubRatings,
   MatchEvent,
+  MatchLineup,
+  PlayerMatchLine,
   PersonaMatchStats,
   PersonaRole,
   PitchPoint,
   Position,
   Side,
   Stats,
+  MatchPersonaInput,
 } from './types';
+import { runMatch, type SimEvent } from './sim/engine';
 
 export interface TeamInput {
   id: string;
   ratings: ClubRatings;
 }
 
-export interface PersonaMatchInput {
-  side: Side;
-  position: Position;
-  stats: Stats;
-  fatigue: number;
-  role: PersonaRole;
-  /** Extra injury probability from this week's training. */
-  injuryRiskBonus: number;
-}
+export type PersonaMatchInput = MatchPersonaInput;
 
 export interface MatchInput {
   matchId: string;
@@ -43,12 +40,20 @@ export interface MatchInput {
   home: TeamInput;
   away: TeamInput;
   persona?: PersonaMatchInput | null;
+  /** Starting XIs and benches; with them events name the players and the coaches make real changes. */
+  lineups?: Partial<Record<Side, MatchLineup>>;
 }
 
 export interface MatchResult {
   score: [number, number];
   events: MatchEvent[];
   personaStats: PersonaMatchStats | null;
+  /** Everyone who played (only when lineups were given). */
+  players?: PlayerMatchLine[];
+  /** 2 when the possession-chain engine played the match (both lineups given). */
+  engine?: 2;
+  /** The detailed action log of the v2 engine. */
+  log?: SimEvent[];
 }
 
 type Step = 'pass' | 'dribble' | 'shot';
@@ -81,6 +86,13 @@ export function stepProbability(base: number, a: number, d: number, lo: number, 
 }
 
 export function simulateMatch(input: MatchInput): MatchResult {
+  // with both lineups the possession-chain engine plays the match (docs/MATCH_ENGINE.md)
+  const lh = input.lineups?.home;
+  const la = input.lineups?.away;
+  if (lh?.starters.length && la?.starters.length) {
+    const r = runMatch({ matchId: input.matchId, seed: input.seed, lineups: { home: lh, away: la }, persona: input.persona ?? null });
+    return { score: r.score, events: r.events, personaStats: r.personaStats, players: r.players, engine: 2, log: r.log };
+  }
   const rng = createRng(input.seed);
   const { home, away } = input;
   const persona = input.persona ?? null;
@@ -95,6 +107,26 @@ export function simulateMatch(input: MatchInput): MatchResult {
     if (!persona) return side === 'home' ? 'teammate' : 'opponent';
     return side === persona.side ? 'teammate' : 'opponent';
   };
+
+  // ---- Named squads (when lineups are given) ----
+  const play: Partial<Record<Side, TeamPlay>> = {};
+  for (const side of ['home', 'away'] as Side[]) {
+    const lineup = input.lineups?.[side];
+    if (lineup?.starters.length) play[side] = new TeamPlay(side, lineup, rng);
+  }
+  const ratingsOf = (side: Side): ClubRatings => play[side]?.ratings(teams[side].ratings) ?? teams[side].ratings;
+  const windowsDone: Record<Side, Set<number>> = { home: new Set(), away: new Set() };
+  const pushSub = (sub: SubEvent) =>
+    drafts.push({
+      minute: sub.minute,
+      type: 'substitution',
+      team: sub.side,
+      actor: sub.personaOut ? 'persona' : actorFor(sub.side, false),
+      detail: { out: sub.out, in: sub.in, ...(sub.personaOut ? { personaIn: false } : {}) },
+      path: [{ x: 50, y: 100 }],
+    });
+  const personaEntry = (): ReturnType<TeamPlay['keeper']> => (persona ? play[persona.side]?.pitch.find((x) => x.persona) ?? null : null);
+  let personaSwapped = false;
 
   // ---- Persona on-pitch window ----
   let onFrom = Number.POSITIVE_INFINITY;
@@ -148,16 +180,39 @@ export function simulateMatch(input: MatchInput): MatchResult {
       ? (computeOvr(eff, persona.position) - avgRating(teams[persona.side].ratings)) * C.PERSONA_TEAM_INFLUENCE
       : 0;
 
+  /** The coaches' changes (and the persona leaving tired or hurt) up to `minute`. */
+  const coachUpTo = (minute: number) => {
+    if (persona && !personaSwapped && (offReason === 'fatigue' || offReason === 'injury') && onTo <= minute && onTo < 90) {
+      const me = personaEntry();
+      if (me) {
+        personaSwapped = true;
+        const sub = play[persona.side]!.swap(me, onTo);
+        if (sub) pushSub(sub);
+      }
+    }
+    for (const side of ['home', 'away'] as Side[]) {
+      const team = play[side];
+      if (!team) continue;
+      const diff = side === 'home' ? score[0] - score[1] : score[1] - score[0];
+      for (const sub of team.coach(minute, windowsDone[side], diff)) {
+        pushSub(sub);
+        if (sub.injured) drafts.push({ minute: sub.minute, type: 'injury', team: side, actor: actorFor(side, false), detail: { player: sub.out }, path: [{ x: rng.int(25, 75), y: rng.int(20, 80) }] });
+      }
+    }
+  };
+
   // ---- Attack phases ----
   const minutes = Array.from({ length: C.PHASES_PER_MATCH }, () => rng.int(1, 90)).sort((a, b) => a - b);
-  const pHome = (home.ratings.mid + C.HOME_ADVANTAGE) / (home.ratings.mid + C.HOME_ADVANTAGE + away.ratings.mid);
 
   for (const minute of minutes) {
+    coachUpTo(minute);
+    const hm = ratingsOf('home').mid + C.HOME_ADVANTAGE;
+    const pHome = hm / (hm + ratingsOf('away').mid);
     const att: Side = rng.chance(pHome) ? 'home' : 'away';
     const def = other(att);
     const on = personaOnAt(minute);
-    const A = on && persona!.side === att ? shift(teams[att].ratings, personaShift) : teams[att].ratings;
-    const D = on && persona!.side === def ? shift(teams[def].ratings, personaShift) : teams[def].ratings;
+    const A = on && persona!.side === att ? shift(ratingsOf(att), personaShift) : ratingsOf(att);
+    const D = on && persona!.side === def ? shift(ratingsOf(def), personaShift) : ratingsOf(def);
     const pAttacking = on && persona!.side === att;
     const pDefending = on && persona!.side === def;
     const toX = (x: number) => (att === 'home' ? x : 100 - x);
@@ -195,19 +250,29 @@ export function simulateMatch(input: MatchInput): MatchResult {
       const gkR = pIsGk ? eff!.defending * 0.6 + eff!.physical * 0.25 + eff!.passing * 0.15 : D.gk;
       const pGoal = stepProbability(C.GOAL_BASE, shotA, gkR, C.GOAL_LO, C.GOAL_HI, C.GOAL_SLOPE);
       const shooterIsPersona = pStep === 'shot';
+      // named squads: the shooter, the passer and the goalkeeper
+      const aTeam = play[att];
+      const dTeam = play[def];
+      const me = personaEntry();
+      const shooter = aTeam ? (shooterIsPersona ? me : aTeam.scorer()) : null;
+      const passer = aTeam ? (pStep === 'pass' ? me : rng.chance(0.75) ? aTeam.assister(shooter?.id) : null) : null;
+      const keeper = dTeam?.keeper() ?? null;
       if (rng.chance(pGoal)) {
         score[att === 'home' ? 0 : 1]++;
         const assist = pStep === 'pass';
         if (shooterIsPersona) ps!.goals++;
         if (assist) ps!.assists++;
         if (pIsGk) ps!.conceded++;
+        if (shooter) aTeam!.stat(shooter.id).goals++;
+        if (passer) aTeam!.stat(passer.id).assists++;
+        if (keeper) dTeam!.stat(keeper.id).conceded++;
         path.push({ x: toX(100), y: rng.int(46, 54) });
         drafts.push({
           minute,
           type: 'goal',
           team: att,
           actor: actorFor(att, shooterIsPersona),
-          detail: assist ? { assistByPersona: true } : undefined,
+          detail: assist || shooter ? { ...(assist ? { assistByPersona: true } : {}), ...(shooter ? { player: shooter.name } : {}), ...(passer ? { assist: passer.name } : {}) } : undefined,
           path: path.slice(),
         });
         return;
@@ -215,16 +280,22 @@ export function simulateMatch(input: MatchInput): MatchResult {
       const saved = rng.chance(C.SAVE_SHARE);
       if (shooterIsPersona || pStep === 'pass') ps!.keyChances++;
       path.push(saved ? { x: toX(97), y: rng.int(44, 56) } : { x: toX(100), y: rng.chance(0.5) ? rng.int(30, 40) : rng.int(60, 70) });
+      if (saved && keeper) dTeam!.stat(keeper.id).saves++;
       if (saved && pIsGk) {
         ps!.saves++;
-        drafts.push({ minute, type: 'save', team: def, actor: 'persona', detail: { saved: true }, path: path.slice() });
+        drafts.push({ minute, type: 'save', team: def, actor: 'persona', detail: { saved: true, ...(shooter ? { player: shooter.name } : {}) }, path: path.slice() });
       } else {
         drafts.push({
           minute,
           type: 'keyChance',
           team: att,
           actor: actorFor(att, shooterIsPersona),
-          detail: { saved, ...(pStep === 'pass' ? { assistByPersona: true } : {}) },
+          detail: {
+            saved,
+            ...(pStep === 'pass' ? { assistByPersona: true } : {}),
+            ...(shooter ? { player: shooter.name } : {}),
+            ...(saved && keeper ? { keeper: keeper.name } : {}),
+          },
           path: path.slice(),
         });
       }
@@ -237,6 +308,8 @@ export function simulateMatch(input: MatchInput): MatchResult {
       const personaFouls =
         pDefending && rng.chance(C.CARD_PERSONA_SHARE * (1.5 - persona!.stats.defending / 100));
       let card: 'yellow' | 'red' = 'yellow';
+      const dTeam = play[def];
+      const booked = dTeam ? (personaFouls ? personaEntry() : dTeam.fouler()) : null;
       if (personaFouls) {
         if (ps!.yellow >= 1 || rng.chance(C.RED_STRAIGHT_SHARE)) {
           card = 'red';
@@ -247,13 +320,23 @@ export function simulateMatch(input: MatchInput): MatchResult {
         } else {
           ps!.yellow++;
         }
+      } else if (booked) {
+        const line = dTeam!.stat(booked.id);
+        if (line.yellow >= 1 || rng.chance(C.RED_STRAIGHT_SHARE)) card = 'red';
+      }
+      if (booked) {
+        const line = dTeam!.stat(booked.id);
+        if (card === 'red') {
+          line.red++;
+          dTeam!.sendOff(booked, minute);
+        } else line.yellow++;
       }
       drafts.push({
         minute,
         type: 'card',
         team: def,
         actor: actorFor(def, personaFouls),
-        detail: { card },
+        detail: { card, ...(booked ? { player: booked.name } : {}) },
         path: [{ x: last.x, y: last.y }],
       });
     }
@@ -269,7 +352,8 @@ export function simulateMatch(input: MatchInput): MatchResult {
   }
 
   // ---- Substitutions ----
-  if (persona && (offReason === 'fatigue' || offReason === 'injury') && onTo < 90) {
+  coachUpTo(90);
+  if (persona && !play[persona.side] && (offReason === 'fatigue' || offReason === 'injury') && onTo < 90) {
     personaSubsOnSide++;
     drafts.push({
       minute: onTo,
@@ -281,6 +365,7 @@ export function simulateMatch(input: MatchInput): MatchResult {
     });
   }
   for (const side of ['home', 'away'] as Side[]) {
+    if (play[side]) continue;
     const used = persona && persona.side === side ? personaSubsOnSide : 0;
     for (let i = 0; i < Math.max(0, C.TEAM_SUBS - used); i++) {
       drafts.push({
@@ -306,7 +391,20 @@ export function simulateMatch(input: MatchInput): MatchResult {
     .sort((a, b) => a.d.minute - b.d.minute || a.i - b.i)
     .map(({ d }, idx) => ({ ...d, id: `${input.matchId}-e${idx}`, highlight: false }));
 
-  return { score, events, personaStats: ps };
+  // ---- Player ratings (named squads) ----
+  let players: PlayerMatchLine[] | undefined;
+  for (const side of ['home', 'away'] as Side[]) {
+    const team = play[side];
+    if (!team) continue;
+    const [own, opp] = side === 'home' ? score : [score[1], score[0]];
+    const lines = team.finish(own, opp).map((l) =>
+      // the persona's own line follows their match stats
+      ps && team.lines.get(l.id)?.persona ? { ...l, minutes: ps.minutes, goals: ps.goals, assists: ps.assists, rating: ps.rating ?? l.rating } : l,
+    );
+    players = [...(players ?? []), ...lines];
+  }
+
+  return { score, events, personaStats: ps, ...(players ? { players } : {}) };
 }
 
 export function personaRating(ps: PersonaMatchStats, position: Position, teamGoals: number, oppGoals: number): number {

@@ -40,7 +40,6 @@ interface Props {
   /** Registered on the main menu. */
   name: string;
   /** Paid (or admin-granted) persona slot that this creation will use. */
-  entitlementId: string;
   onCreated: (state: GameState) => void;
 }
 
@@ -184,7 +183,7 @@ function Slider({ label, value, min, max, text, onChange }: {
   );
 }
 
-export function CreateScreen({ name, entitlementId, onCreated }: Props) {
+export function CreateScreen({ name, onCreated }: Props) {
   const [look, setLook] = useState<Appearance>({ ...C.DEFAULT_APPEARANCE });
   const [tab, setTab] = useState<LookTab>('face');
   /** Tabs the player has opened; unopened ones are flagged so none is missed. */
@@ -230,25 +229,19 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
     setBonus({ ...bonus, [k]: v });
   };
 
-  const create = async () => {
+  /** The persona is made here; the payment comes after the intro (see App). */
+  const create = () => {
     if (validation || busy) return;
     setBusy(true);
     setError(null);
-    try {
-      const personaId = crypto.randomUUID();
-      const state = newGame({ seed: randomSeed(), persona: { id: personaId, name, position, bonus, appearance: look } });
-      await api.consume(entitlementId, getUserId(), personaId);
-      onCreated(state);
-    } catch {
-      setError(tx.serverDown);
-      setBusy(false);
-    }
+    const personaId = crypto.randomUUID();
+    onCreated(newGame({ seed: randomSeed(), persona: { id: personaId, name, position, bonus, appearance: look } }));
   };
 
   return (
     <div className="screen panel create">
       <header className="panel-head create-head">
-        <p className="success">{tx.createPaid}</p>
+        <p className="eyebrow">{tx.createPaid}</p>
         <h1>{tx.createTitle}</h1>
       </header>
 
