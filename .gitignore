@@ -4,3 +4,6 @@ apps/server/data
 *.log
 apps/server/.env
 apps/server/public
+
+# third-party player references (fan art) used only to study body proportions — not ours to publish
+art-ref/players/

@@ -25,11 +25,10 @@ export type IntroLineKey =
   | 'momGift'
   | 'momFather'
   | 'academy'
-  | 'kidLaugh'
+  | 'kidPraise'
   | 'promise'
-  | 'coachStop'
-  | 'coachAsk'
-  | 'heroAnswer'
+  | 'coachPresent'
+  | 'silence'
   | 'coachIntro'
   | 'coachVerdict'
   | 'tagline';
@@ -64,18 +63,17 @@ const uz: IntroScript = {
     momGift: () => "Mana, yo'l puli. O'zingni ehtiyot qil, bolam.",
     momFather: () => "Otang kuzatgani chiqmadi... hali ham xafa. Lekin men senga ishonaman.",
     academy: () => 'Saralash kuni.',
-    kidLaugh: ({ g }) => `Bu ${g === 'female' ? 'qiz' : 'bola'} qayerdan keldi? Ha-ha!`,
+    kidPraise: () => "Odil, bunisi zo'r-ku! Agentlar bekorga kelmayapti!",
     promise: () => "Endi bu faqat orzu emas. Bu — va'da.",
-    coachStop: () => 'Kulishni bas qiling. Maydonda gapni oyoq gapiradi.',
-    coachAsk: () => 'Isming nima?',
-    heroAnswer: ({ name }) => `${name}.`,
+    coachPresent: ({ name }) => `Diqqat. Bu — ${name}. Bugundan biz bilan.`,
+    silence: () => "Hech kim hech narsa demadi. Hamma Odilga qarab turardi.",
     coachIntro: () => "Men Kapadze, akademiya murabbiyi. Orzu qilish bepul. Bu yerdagi joy esa qimmat. Ko'rsat.",
     coachVerdict: () => "Yomon emas. Yetarli ham emas. Ertadan men bilan ishlaysan. Maydon yolg'on gapirmaydi.",
     tagline: () => 'Karyerang shu yerdan boshlanadi.',
   },
-  phone: ['FUTBOL', 'AKADEMIYASI', 'Saralash:', 'shanba 9:00'],
-  academySign: 'FUTBOL AKADEMIYASI',
-  who: { hero: ({ name }) => name, kid: 'Odil' },
+  phone: ['ETIQOD', 'AKADEMIYASI', 'Saralash:', 'shanba 9:00'],
+  academySign: 'ETIQOD AKADEMIYASI',
+  who: { hero: ({ name }) => name, kid: 'Doniyor' },
   skip: "O'tkazib yuborish ⏭",
   loading: 'Sahna tayyorlanmoqda...',
   playNow: "Hoziroq o'yna",
@@ -96,18 +94,17 @@ const en: IntroScript = {
     momGift: () => 'Here, money for the road. Take care of yourself, dear.',
     momFather: () => "Your father didn't come out... he's still upset. But I believe in you.",
     academy: () => 'Trial day.',
-    kidLaugh: ({ g }) => `Where did ${g === 'female' ? 'she' : 'he'} come from? Ha-ha!`,
+    kidPraise: () => "Odil, that was unreal! No wonder the agents keep coming!",
     promise: () => "It's not just a dream anymore. It's a promise.",
-    coachStop: () => 'Stop laughing. On the pitch, feet do the talking.',
-    coachAsk: () => "What's your name?",
-    heroAnswer: ({ name }) => `${name}.`,
+    coachPresent: ({ name }) => `Listen up. This is ${name}. With us from today.`,
+    silence: () => 'Nobody said a word. Everyone kept watching Odil.',
     coachIntro: () => "I'm Kapadze, the academy coach. Dreaming is free. A place here is not. Show me.",
     coachVerdict: () => "Not bad. Not enough, either. From tomorrow you work with me. The pitch doesn't lie.",
     tagline: () => 'Your career starts here.',
   },
-  phone: ['FOOTBALL', 'ACADEMY', 'Trials:', 'Sat 9:00'],
-  academySign: 'FOOTBALL ACADEMY',
-  who: { hero: ({ name }) => name, kid: 'Odil' },
+  phone: ['ETIQOD', 'ACADEMY', 'Trials:', 'Sat 9:00'],
+  academySign: 'ETIQOD FOOTBALL ACADEMY',
+  who: { hero: ({ name }) => name, kid: 'Doniyor' },
   skip: 'Skip ⏭',
   loading: 'Setting the scene...',
   playNow: 'Play now',
@@ -128,18 +125,17 @@ const ru: IntroScript = {
     momGift: () => 'Вот, деньги на дорогу. Береги себя, родной.',
     momFather: () => 'Отец не вышел проводить... он всё ещё обижен. Но я в тебя верю.',
     academy: () => 'День отбора.',
-    kidLaugh: ({ g }) => `${g === 'female' ? 'Откуда она взялась' : 'Откуда он взялся'}? Ха-ха!`,
+    kidPraise: () => 'Одил, это было нечто! Не зря агенты приезжают!',
     promise: () => 'Это уже не просто мечта. Это обещание.',
-    coachStop: () => 'Хватит смеяться. На поле говорят ноги.',
-    coachAsk: () => 'Как тебя зовут?',
-    heroAnswer: ({ name }) => `${name}.`,
+    coachPresent: ({ name }) => `Внимание. Это ${name}. С сегодняшнего дня с нами.`,
+    silence: () => 'Никто ничего не сказал. Все смотрели на Одила.',
     coachIntro: () => 'Я Кападзе, тренер академии. Мечтать — бесплатно. А место здесь стоит дорого. Покажи.',
     coachVerdict: () => 'Неплохо. Но и недостаточно. С завтрашнего дня работаешь со мной. Поле не врёт.',
     tagline: () => 'Твоя карьера начинается здесь.',
   },
-  phone: ['ФУТБОЛЬНАЯ', 'АКАДЕМИЯ', 'Отбор:', 'сб 9:00'],
-  academySign: 'ФУТБОЛЬНАЯ АКАДЕМИЯ',
-  who: { hero: ({ name }) => name, kid: 'Одил' },
+  phone: ['АКАДЕМИЯ', '«ЭТИКОД»', 'Отбор:', 'сб 9:00'],
+  academySign: 'АКАДЕМИЯ «ЭТИКОД»',
+  who: { hero: ({ name }) => name, kid: 'Дониёр' },
   skip: 'Пропустить ⏭',
   loading: 'Готовим сцену...',
   playNow: 'Играй сейчас',

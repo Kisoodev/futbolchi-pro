@@ -682,3 +682,10 @@ a.link { color: var(--ink-muted); font-weight: 600; text-decoration: none; displ
 .lineup-bench li.rival { box-shadow: inset 0 0 0 2px #e35b5b; }
 .lineup-bench li.friend { box-shadow: inset 0 0 0 2px #6fd64a; }
 .rival-line { color: #9a3b3b; }
+
+/* club crests (components/Crest.tsx) */
+.crest { display: inline-block; flex: none; vertical-align: middle; }
+.league .club .crest { margin-right: 6px; }
+.scoreboard .team .crest { margin-right: 4px; vertical-align: -3px; }
+.fixture-style { margin: 4px 0 0; font-size: 0.8rem; opacity: 0.85; }
+.fixture-style b { font-weight: 700; }

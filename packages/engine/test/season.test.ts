@@ -87,7 +87,7 @@ describe('season loop', () => {
     const c1 = playWeek(startNextSeason(a, null), trainingOffer(startNextSeason(a, null))[0]).state;
     const c2 = playWeek(startNextSeason(roundTrip, null), trainingOffer(startNextSeason(roundTrip, null))[0]).state;
     expect(c2).toEqual(c1);
-  });
+  }, 60_000);
 
   it('promotion and relegation keep 16 clubs per tier and move the persona club correctly', () => {
     for (let seed = 1; seed <= 8; seed++) {

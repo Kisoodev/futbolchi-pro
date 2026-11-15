@@ -1,3 +1,4 @@
+import { clubKit, type Club, type Kit } from '@futbolchi/engine';
 /**
  * Kit colours for the 2D pitch. Club colours are kept as-is everywhere else,
  * but on the bright grass a green/teal kit disappears, and two similar kits
@@ -44,4 +45,70 @@ export function kitColors(homeColor: string, awayColor: string): { home: string;
 export function kitStroke(kit: string): string {
   const [r, g, b] = rgb(kit);
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 170 ? DARK_KIT : '#ffffff';
+}
+
+// ---------------------------------------------------------------- full kits (docs/LEAGUE.md)
+
+/** The away side's change kits: white or dark, in the club's own trim colour. */
+const changeKit = (k: Kit, light: boolean): Kit =>
+  light
+    ? { shirt: LIGHT_KIT, secondary: k.shirt, shorts: LIGHT_KIT, socks: LIGHT_KIT, pattern: 'trim' }
+    : { shirt: DARK_KIT, secondary: k.shirt, shorts: DARK_KIT, socks: DARK_KIT, pattern: 'trim' };
+
+/**
+ * A green shirt vanishes on the grass: a striped / hooped / halved kit still
+ * reads (its other colour), a plain one is worn in its secondary colour with
+ * the green as trim — still the club's own colours.
+ */
+function onGrass(k: Kit): Kit {
+  if (!isGrassLike(k.shirt)) return k;
+  if (['stripes', 'hoops', 'halves'].includes(k.pattern) && !isGrassLike(k.secondary)) return k;
+  return isGrassLike(k.secondary) ? changeKit(k, true) : { ...k, shirt: k.secondary, secondary: k.shirt, pattern: 'trim' };
+}
+
+/** Both teams' kits for a match: the away side changes when the shirts clash (or vanish on the grass). */
+export function matchKits(home: Club, away: Club): { home: Kit; away: Kit } {
+  let h = clubKit(home);
+  let a = clubKit(away);
+  h = onGrass(h);
+  a = onGrass(a);
+  if (distance(h.shirt, a.shirt) < MIN_KIT_DISTANCE) {
+    const white = changeKit(a, true);
+    a = distance(h.shirt, white.shirt) >= MIN_KIT_DISTANCE ? white : changeKit(a, false);
+  }
+  return { home: h, away: a };
+}
+
+/** Paints a small shirt (x, y, w, h) with the kit's pattern. */
+export function paintShirt(ctx: CanvasRenderingContext2D, k: Kit, x: number, y: number, w: number, h: number) {
+  ctx.fillStyle = k.shirt;
+  ctx.fillRect(x, y, w, h);
+  ctx.fillStyle = k.secondary;
+  const u = Math.max(1, w / 7);
+  switch (k.pattern) {
+    case 'stripes':
+      for (let sx = x + u; sx < x + w - u / 2; sx += u * 2) ctx.fillRect(sx, y, u, h);
+      break;
+    case 'hoops':
+      for (let sy = y + h / 5; sy < y + h; sy += (h / 5) * 2) ctx.fillRect(x, sy, w, h / 5);
+      break;
+    case 'band':
+      ctx.fillRect(x, y + h * 0.3, w, h * 0.22);
+      break;
+    case 'shoulders':
+      ctx.fillRect(x, y, w, h * 0.25);
+      break;
+    case 'halves':
+      ctx.fillRect(x + w / 2, y, w / 2, h);
+      break;
+    case 'collar':
+      ctx.fillRect(x + w * 0.3, y, w * 0.4, Math.max(1, h * 0.12));
+      break;
+    case 'trim':
+      ctx.fillRect(x, y + h - Math.max(1, h * 0.1), w, Math.max(1, h * 0.1));
+      ctx.fillRect(x + w * 0.3, y, w * 0.4, Math.max(1, h * 0.1));
+      break;
+    default:
+      break;
+  }
 }

@@ -15,7 +15,7 @@ import * as C from '../constants';
 import { effectiveStats } from '../positions';
 import { clamp, createRng, hashSeed, type Rng } from '../rng';
 import { REPLACE } from '../squadplay';
-import type { MatchEvent, MatchLineup, MatchPersonaInput, PersonaMatchStats, PlayerMatchLine, Position, Side, SlotId } from '../types';
+import type { ClubStyle, MatchEvent, MatchLineup, MatchPersonaInput, PersonaMatchStats, PlayerMatchLine, Position, Side, SlotId } from '../types';
 import { MATCH_CONFIG as MC } from './config';
 import { toSimPlayer, type Attrs, type SimPlayer } from './players';
 import { dist, shapeSpot, toAttack, type Point } from './shape';
@@ -207,6 +207,8 @@ export interface Situation {
   shotRef?: number;
   /** Late-game risk multiplier (leading < 1 < trailing). */
   riskMul: number;
+  /** The club style leans the choices (MATCH_CONFIG.styles). */
+  style?: ClubStyle;
 }
 
 export interface Option {
@@ -247,7 +249,8 @@ export function evaluateOptions(s: Situation): Option[] {
     return Math.pow(MC.riskByRow[row - 1], e) * (e > 0 ? Math.pow(s.riskMul, e) : 1);
   };
   const add = (o: Omit<Option, 'utility'>, fit: number, reward: number) => {
-    const u = rw[o.type] * fit * o.p * reward * risk(o.type) * MC.UTILITY_SCALE;
+    const lean = s.style ? (MC.styles[s.style].lean as Partial<Record<ActionType, number>>)[o.type] ?? 1 : 1;
+    const u = rw[o.type] * fit * o.p * reward * risk(o.type) * lean * MC.UTILITY_SCALE;
     if (u > 0) out.push({ ...o, utility: u });
   };
   const pd = MC.passDetail;
@@ -1032,7 +1035,7 @@ export function runMatch(input: SimInput): SimResult {
     supportNext = false;
     if (counter > 0) counter--;
     return {
-      sit: { holder: holder.p, attrs: a, ball: axBall, pressure, pressers: pressers.map((d) => ({ id: d.e.p.id, attrs: eff(d.e) })), mates, lastLine, spaceBehind, gk: gkE ? eff(gkE) : NO_GK, riskMul, shotRef },
+      sit: { holder: holder.p, attrs: a, ball: axBall, pressure, pressers: pressers.map((d) => ({ id: d.e.p.id, attrs: eff(d.e) })), mates, lastLine, spaceBehind, gk: gkE ? eff(gkE) : NO_GK, riskMul, shotRef, style: input.lineups[side].style },
       opps: pressers.map((d) => d.e),
     };
   };
@@ -1050,7 +1053,8 @@ export function runMatch(input: SimInput): SimResult {
 
     // the defender may go in first (§5.5)
     if (pressure >= 1 && opps[0]) {
-      const chance = pressure >= 2 ? MC.tackle.chanceP2 : MC.tackle.chanceP1;
+      const oppStyle = input.lineups[opp].style;
+      const chance = (pressure >= 2 ? MC.tackle.chanceP2 : MC.tackle.chanceP1) * (oppStyle ? MC.styles[oppStyle].tackle : 1);
       if (rng.chance(chance)) {
         const tackler = opps[0];
         const p = tackleProbability(eff(tackler), sit.attrs);

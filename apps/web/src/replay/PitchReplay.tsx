@@ -6,6 +6,7 @@ import { buildTimeline, frameAt, personaWindow, type Frame } from './timeline';
 import { kitColors, kitStroke } from './kits';
 import { LiveReplay } from './LiveReplay';
 import { replayTexts } from '../i18n/replay';
+import { Crest } from '../components/Crest';
 
 /** Home formation (home attacks towards x = 100). Away is mirrored. */
 const FORMATION: { pos: Position; x: number; y: number }[] = [
@@ -122,11 +123,11 @@ function ClassicReplay({ match, clubs, personaName, personaPosition, onFinished,
         <div ref={areaRef} className="pitch-area">
           <div className="pitch-frame" style={frameW ? { width: frameW } : undefined}>
             <div ref={boardRef} className="scoreboard">
-              <span className="team" style={{ borderColor: home.color }}>{home.name}</span>
+              <span className="team" style={{ borderColor: home.color }}><Crest club={home} size={18} /> {home.name}</span>
               <span className="score">
                 {shownScore[0]} : {shownScore[1]}
               </span>
-              <span className="team" style={{ borderColor: away.color }}>{away.name}</span>
+              <span className="team" style={{ borderColor: away.color }}><Crest club={away} size={18} /> {away.name}</span>
               <span className="minute">{done ? tx.fullTime : `${minute}'`}</span>
             </div>
             <div ref={wrapRef} className="pitch-wrap">

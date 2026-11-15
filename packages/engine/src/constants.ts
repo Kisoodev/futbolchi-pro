@@ -181,6 +181,8 @@ export const CLUBS_PER_TIER = 16;
  * Tier 1 (Elit) is reserved for a later stage of the game.
  */
 export const TIERS: Tier[] = [2, 3, 4];
+/** The league every career starts in (the academy league, docs/LEAGUE.md). */
+export const START_TIER: Tier = 4;
 /** The highest league in play. */
 export const TOP_TIER: Tier = 2;
 /** Only the champion goes up (and only the last club goes down, so every league keeps 16 clubs). */

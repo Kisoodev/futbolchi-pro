@@ -16,15 +16,17 @@ import {
   type Club,
   type Match,
   type Point,
+  type Kit,
   type Side,
 } from '@futbolchi/engine';
 import { tx } from '../i18n';
 import { eventText } from '../i18n/events';
 import { replayTexts } from '../i18n/replay';
 import { drawAvatar, headBox, SKIN_HEX } from '../art/avatarRects';
-import { kitColors, kitStroke } from './kits';
+import { kitStroke, matchKits, paintShirt } from './kits';
 import { buildScenes, liveFrameAt, livePlayers, pitchAt, rebuildLog, type LivePlayer, type PitchState, type Scene } from './liveScenes';
 import { COLORS, drawPitchBase, PIXEL_FONT, SPEEDS, useFitPitch, type ReplayProps } from './PitchReplay';
+import { Crest } from '../components/Crest';
 
 const GK_KITS = ['#ffd23f', '#ff7a1a'];
 
@@ -161,11 +163,11 @@ export function LiveReplay({ match, clubs, personaName, personaLook, onFinished,
         <div ref={areaRef} className="pitch-area">
           <div className="pitch-frame" style={frameW ? { width: frameW } : undefined}>
             <div ref={boardRef} className="scoreboard">
-              <span className="team" style={{ borderColor: home.color }}>{home.name}</span>
+              <span className="team" style={{ borderColor: home.color }}><Crest club={home} size={18} /> {home.name}</span>
               <span className="score">
                 {shownScore[0]} : {shownScore[1]}
               </span>
-              <span className="team" style={{ borderColor: away.color }}>{away.name}</span>
+              <span className="team" style={{ borderColor: away.color }}><Crest club={away} size={18} /> {away.name}</span>
               <span className="minute">{done ? tx.fullTime : `${minute}'`}</span>
             </div>
             <div ref={wrapRef} className="pitch-wrap">
@@ -236,8 +238,12 @@ function drawLive(
   const X = (x: number) => (x / 100) * w;
   const Y = (y: number) => (y / 100) * h;
   const u = w / 105; // pixels per metre
-  const kits = kitColors(clubs[match.homeId].color, clubs[match.awayId].color);
-  const kitOf = (side: Side, gk: boolean) => (gk ? (side === 'home' ? GK_KITS[0] : GK_KITS[1]) : kits[side]);
+  const kits = matchKits(clubs[match.homeId], clubs[match.awayId]);
+  const kitOf = (side: Side, gk: boolean): Kit => {
+    if (!gk) return kits[side];
+    const c = side === 'home' ? GK_KITS[0] : GK_KITS[1];
+    return { shirt: c, secondary: '#111111', shorts: '#111111', socks: c, pattern: 'plain' };
+  };
   const wide = w >= 480;
   const involved = new Set([actorId, targetId, state.holder, ...(scene.actions.flatMap((a) => a.opponentIds) ?? [])].filter(Boolean) as string[]);
 
@@ -252,7 +258,8 @@ function drawLive(
     const r = scene.roster.get(id);
     if (!info || !r) continue;
     const gk = r.slot === 'GK';
-    const kit = kitOf(r.side, gk);
+    const k = kitOf(r.side, gk);
+    const kit = k.shirt;
     const cx = X(p.x);
     const cy = Y(p.y);
     const look = looks.get(id);
@@ -274,20 +281,20 @@ function drawLive(
       ctx.stroke();
     }
     // a little footballer: legs and socks, shorts, shirt with sleeves, hands
-    const shorts = kitStroke(kit) === '#ffffff' ? shadeHex(kit, -40) : '#1d3557';
+    const shorts = k.shorts;
     const leg = s * 0.15;
     for (const dx of [-0.2, 0.06]) {
       ctx.fillStyle = skin;
       ctx.fillRect(cx + dx * s, neck + s * 0.74, leg, s * 0.16);
-      ctx.fillStyle = kit;
+      ctx.fillStyle = k.socks;
       ctx.fillRect(cx + dx * s, neck + s * 0.88, leg, s * 0.2);
       ctx.fillStyle = '#20232a';
       ctx.fillRect(cx + dx * s - s * 0.02, neck + s * 1.06, leg + s * 0.04, s * 0.07);
     }
     ctx.fillStyle = shorts;
     ctx.fillRect(cx - s * 0.32, neck + s * 0.56, s * 0.64, s * 0.22);
-    ctx.fillStyle = kit;
-    ctx.fillRect(cx - s * 0.36, neck, s * 0.72, s * 0.58);
+    paintShirt(ctx, k, cx - s * 0.36, neck, s * 0.72, s * 0.58);
+    ctx.fillStyle = k.pattern === 'sleeves' ? k.secondary : k.shirt;
     ctx.fillRect(cx - s * 0.52, neck + s * 0.02, s * 0.18, s * 0.24);
     ctx.fillRect(cx + s * 0.34, neck + s * 0.02, s * 0.18, s * 0.24);
     ctx.fillStyle = skin;

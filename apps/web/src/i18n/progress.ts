@@ -2,11 +2,14 @@
  * Texts for the training/match days, the growth animation, the account level
  * and missions — in Uzbek, English and Russian.
  */
-import type { MissionKind } from '@futbolchi/engine';
+import type { ClubStyle, MissionKind } from '@futbolchi/engine';
 import { lang, type Lang } from './index';
 
 export interface ProgressTexts {
   dayTraining: string;
+  /** Club playing styles (docs/LEAGUE.md). */
+  clubStyles: Record<ClubStyle, string>;
+  opponentStyle: string;
   dayMatch: string;
   dayChip: (day: 1 | 2) => string;
   trainButton: string;
@@ -69,10 +72,14 @@ export interface ProgressTexts {
   lineupRival: string;
   lineupFriend: string;
   rivalLine: (name: string, theirs: number, mine: number) => string;
+  /** The squad's strength now and its growth since the season started. */
+  teamLine: (now: string, delta: string) => string;
 }
 
 const uz: ProgressTexts = {
   dayTraining: "Mashg'ulot kuni",
+  clubStyles: { disciplined: "Tartibli, sabrli o'yin", possession: "Qisqa paslar, to'pni ushlab turish", stars: "Yulduzlar akademiyasi, o'ziga ishongan", technical: "Texnikali, yosh iste'dodlar", press: "Yuqori bosim, tez hujum", physical: "Jismoniy kuchli, tartibli himoya", intense: "Shiddatli, juda tez o'yin", athletic: "Atletik va tez o'yinchilar", stubborn: "O'jar, hech qachon taslim bo'lmaydi", wings: "Qanot hujumchilari kuchli", combination: "Chiroyli kombinatsion o'yin", modern: "Zamonaviy, ilmiy yondashuv", traditional: "An'anaviy, mahalliy faxr", chaotic: "Yosh, betartib, kutilmagan", raw: "Tez, jismoniy, texnikasi xom", underdog: "Kichik, lekin hech qachon yengilmagan" },
+  opponentStyle: 'Raqib uslubi',
   dayMatch: "O'yin kuni",
   dayChip: (d) => (d === 1 ? "1-kun · Mashg'ulot" : "2-kun · O'yin"),
   trainButton: "Mashg'ulotni boshlash",
@@ -139,10 +146,13 @@ const uz: ProgressTexts = {
   lineupRival: 'Odil — raqib',
   lineupFriend: "Abu — do'st",
   rivalLine: (n, a, b) => (a > b ? `😏 ${n} ${a} · Sen ${b} — ${a - b} ochko oldinda` : `🔥 ${n} ${a} · Sen ${b} — ${n}ni quvib o'tding!`),
+  teamLine: (now, d) => `💪 Jamoa kuchi ${now} (${d}) — har mashg'ulot jamoani ham kuchaytiradi`,
 };
 
 const en: ProgressTexts = {
   dayTraining: 'Training day',
+  clubStyles: { disciplined: "Disciplined, patient play", possession: "Short passes, keeps the ball", stars: "Academy of stars, full of confidence", technical: "Technical, a factory of young talent", press: "High press, fast attacks", physical: "Physically strong, organised defence", intense: "Fierce, very fast game", athletic: "Athletic, quick players", stubborn: "Stubborn, never gives up", wings: "Dangerous wingers", combination: "Beautiful combination play", modern: "Modern, science-based", traditional: "Traditional, local pride", chaotic: "Young, chaotic, unpredictable", raw: "Fast and physical, raw technique", underdog: "Small, but never beaten in spirit" },
+  opponentStyle: 'Opponent style',
   dayMatch: 'Match day',
   dayChip: (d) => (d === 1 ? 'Day 1 · Training' : 'Day 2 · Match'),
   trainButton: 'Start training',
@@ -209,10 +219,13 @@ const en: ProgressTexts = {
   lineupRival: 'Odil — rival',
   lineupFriend: 'Abu — friend',
   rivalLine: (n, a, b) => (a > b ? `😏 ${n} ${a} · You ${b} — ${a - b} ahead` : `🔥 ${n} ${a} · You ${b} — you passed ${n}!`),
+  teamLine: (now, d) => `💪 Team strength ${now} (${d}) — every training session lifts the squad too`,
 };
 
 const ru: ProgressTexts = {
   dayTraining: 'День тренировки',
+  clubStyles: { disciplined: "Дисциплина и терпение", possession: "Короткий пас, контроль мяча", stars: "Академия звёзд, уверенная в себе", technical: "Техничные, фабрика талантов", press: "Высокий прессинг, быстрые атаки", physical: "Физически сильные, надёжная защита", intense: "Яростная, очень быстрая игра", athletic: "Атлетичные и быстрые игроки", stubborn: "Упорные, никогда не сдаются", wings: "Сильные фланговые игроки", combination: "Красивая комбинационная игра", modern: "Современный, научный подход", traditional: "Традиции и местная гордость", chaotic: "Молодые, хаотичные, непредсказуемые", raw: "Быстрые, мощные, сырая техника", underdog: "Маленькие, но не сломленные" },
+  opponentStyle: 'Стиль соперника',
   dayMatch: 'День матча',
   dayChip: (d) => (d === 1 ? 'День 1 · Тренировка' : 'День 2 · Матч'),
   trainButton: 'Начать тренировку',
@@ -279,6 +292,7 @@ const ru: ProgressTexts = {
   lineupRival: 'Одил — соперник',
   lineupFriend: 'Абу — друг',
   rivalLine: (n, a, b) => (a > b ? `😏 ${n} ${a} · Ты ${b} — впереди на ${a - b}` : `🔥 ${n} ${a} · Ты ${b} — ты обошёл ${n}!`),
+  teamLine: (now, d) => `💪 Сила команды ${now} (${d}) — каждая тренировка усиливает и состав`,
 };
 
 const TEXTS: Record<Lang, ProgressTexts> = { uz, en, ru };

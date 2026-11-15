@@ -1,0 +1,16 @@
+# Decodes a picture to raw RGBA (header: width,height as two little-endian int32), for scripts/pixelate.mjs.
+param([string]$In, [string]$Out)
+Add-Type -AssemblyName System.Drawing
+$bmp = [System.Drawing.Bitmap]::new($In)
+$rect = [System.Drawing.Rectangle]::new(0, 0, $bmp.Width, $bmp.Height)
+$data = $bmp.LockBits($rect, [System.Drawing.Imaging.ImageLockMode]::ReadOnly, [System.Drawing.Imaging.PixelFormat]::Format32bppArgb)
+$bytes = New-Object byte[] ($data.Stride * $bmp.Height)
+[System.Runtime.InteropServices.Marshal]::Copy($data.Scan0, $bytes, 0, $bytes.Length)
+$bmp.UnlockBits($data)
+$fs = [System.IO.File]::Create($Out)
+$fs.Write([BitConverter]::GetBytes([int]$bmp.Width), 0, 4)
+$fs.Write([BitConverter]::GetBytes([int]$bmp.Height), 0, 4)
+$fs.Write([BitConverter]::GetBytes([int]$data.Stride), 0, 4)
+$fs.Write($bytes, 0, $bytes.Length)
+$fs.Close()
+$bmp.Dispose()

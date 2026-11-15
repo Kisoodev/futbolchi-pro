@@ -3,6 +3,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  ACADEMY_CLUBS,
+  ETIQOD,
+  squadAvg,
   dayOf,
   MAX_SUBS,
   migrateGame,
@@ -156,4 +159,59 @@ describe('the bible stays true', () => {
       for (const p of squad.filter((x) => !x.characterKey)) expect(p.ovr).toBeLessThanOrEqual(57);
     }
   });
+});
+
+describe('the academy league (docs/LEAGUE.md)', () => {
+  it('every career starts at Etiqod, in the same 16-club academy league', () => {
+    for (const seed of [1, 2, 33]) {
+      const s = start('ST', seed);
+      expect(s.persona.clubId).toBe(ETIQOD);
+      const club = myClub(s);
+      expect(club.name).toBe('Etiqod Akademiyasi');
+      expect(club.kit?.shirt).toBe('#6CABDD');
+      const league = Object.values(s.clubs).filter((c) => c.tier === club.tier).map((c) => c.id).sort();
+      expect(league).toEqual(ACADEMY_CLUBS.map((p) => p.key).sort());
+    }
+  });
+
+  it('each academy club has its kit, its style and about its strength', () => {
+    const s = start('CM', 5);
+    for (const p of ACADEMY_CLUBS) {
+      const c = s.clubs[p.key];
+      expect(c.kit).toEqual(p.kit);
+      expect(c.style).toBe(p.style);
+      if (p.key !== ETIQOD) expect(Math.abs(squadAvg(c.squad) - p.ovr)).toBeLessThan(1.2);
+      expect(Math.max(...c.squad.map((x) => x.ovr))).toBeLessThanOrEqual(62);
+    }
+    // the style travels with the lineup into the match engine
+    expect(pickLineup(s.clubs.masiya, { seed: 1 }).style).toBe('possession');
+  });
+});
+
+describe('the title race (docs/LEAGUE.md)', () => {
+  it('Clairmont is the strongest academy', () => {
+    const s = start('ST', 8);
+    const avgOf = (k: string) => squadAvg(s.clubs[k].squad);
+    for (const p of ACADEMY_CLUBS) if (p.key !== 'clairmont') expect(avgOf('clairmont')).toBeGreaterThan(avgOf(p.key));
+  });
+
+  it('the squad grows week by week, faster when the persona trains; Odil may pass 62', () => {
+    const season = (trained: boolean) => {
+      let s = start('W', 21);
+      for (let w = 0; w < 30 && s.phase === 'training'; w++) {
+        const offer = trainingOffer(s);
+        const pickId = trained ? offer.find((o) => o !== 'rest') ?? offer[0] : offer.includes('rest') ? 'rest' : offer[0];
+        s = trainDay(s, pickId).state;
+        if (!trained) s = { ...s, seasons: [...s.seasons.slice(0, -1), { ...s.seasons[s.seasons.length - 1], trainingLog: s.seasons[s.seasons.length - 1].trainingLog.map((l) => ({ ...l, optionId: 'rest' as const })) }] };
+        s = playMatchDay(s).state;
+      }
+      return s;
+    };
+    const hard = season(true);
+    const lazy = season(false);
+    const start0 = squadAvg(start('W', 21).clubs[ETIQOD].squad);
+    expect(squadAvg(hard.clubs[ETIQOD].squad)).toBeGreaterThan(start0 + 1.5);
+    expect(squadAvg(hard.clubs[ETIQOD].squad)).toBeGreaterThan(squadAvg(lazy.clubs[ETIQOD].squad));
+    expect(hard.clubs[ETIQOD].squad.find((p) => p.characterKey === 'odil')!.ovr).toBeGreaterThan(62);
+  }, 60_000);
 });

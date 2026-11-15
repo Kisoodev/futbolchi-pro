@@ -44,7 +44,8 @@ interface Props {
 }
 
 /** Kit shown in the preview; the real club colour is only known after creation. */
-const PREVIEW_KIT = '#2f78b7';
+// the persona will play for Etiqod: its sky-blue kit (docs/LEAGUE.md)
+const PREVIEW_KIT = '#6CABDD';
 const randomSeed = (): number => crypto.getRandomValues(new Uint32Array(1))[0];
 const pick = <T,>(list: readonly T[]): T => list[Math.floor(Math.random() * list.length)];
 

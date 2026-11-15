@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   captainOf,
+  squadAvg,
   nextLineup,
   currentSeason,
   dayOf,
@@ -22,6 +23,7 @@ import { progressTexts } from '../i18n/progress';
 import { RatingCard } from '../components/RatingCard';
 import { LeaguePath } from '../components/LeaguePath';
 import { LineupBoard } from '../components/LineupBoard';
+import { Crest } from '../components/Crest';
 
 interface Props {
   state: GameState;
@@ -97,6 +99,9 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
   const gap = captain ? captain.ovr - level : null;
   // the rival from the bible (Odil), when he is in this squad
   const rival = club.squad?.find((p) => p.characterKey === 'odil');
+  // how much the squad has grown this season (teamGrowth: faster when the persona trains)
+  const teamNow = club.squad?.length ? squadAvg(club.squad) : null;
+  const teamDelta = teamNow !== null ? teamNow - (season.teamStartOvr ?? teamNow) : 0;
 
   return (
     <div className={`screen grid week view-${view} day-${day}`}>
@@ -127,6 +132,11 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
         <StatBars persona={persona} />
         {gap !== null && <p className="captain-gap">👑 {gap > 0 ? pt.captainGap(gap) : pt.captainAbove(-gap)}</p>}
         {rival && <p className="captain-gap rival-line">{pt.rivalLine(rival.name, rival.ovr, level)}</p>}
+        {teamNow !== null && (
+          <p className="captain-gap team-line">
+            {pt.teamLine(teamNow.toFixed(1), `${teamDelta >= 0 ? '▲' : '▼'}${Math.abs(teamDelta).toFixed(1)}`)}
+          </p>
+        )}
       </section>
 
       <section className={`card train-card ${view === 'train' ? 'm-on' : ''}`}>
@@ -139,12 +149,20 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
             <div className="fixture-teams">
               {[fx.homeId, fx.awayId].map((id, i) => (
                 <span key={id} className={`fixture-team ${id === club.id ? 'me' : ''} ${i ? 'away' : 'home'}`}>
-                  <i style={{ background: state.clubs[id].color }} />
+                  <Crest club={state.clubs[id]} size={22} />
                   <span className="fixture-name">{state.clubs[id].name}</span>
                   <small>#{placeOf(id)}</small>
                 </span>
               ))}
             </div>
+            {(() => {
+              const opp = state.clubs[atHome ? fx.awayId : fx.homeId];
+              return opp.style ? (
+                <p className="fixture-style">
+                  {pt.opponentStyle}: <b>{pt.clubStyles[opp.style]}</b>
+                </p>
+              ) : null;
+            })()}
             <div className="fixture-foot">
               <span className="venue">{atHome ? `🏠 ${tx.homeLabel}` : `✈️ ${tx.awayLabel}`}</span>
               <span className="form" aria-label={tx.formLabel}>

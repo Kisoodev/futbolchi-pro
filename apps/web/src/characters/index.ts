@@ -52,7 +52,7 @@ export const CHARACTERS: Record<CharacterId, Character> = {
     color: '#9cc2ea',
     painter: paintCoachTraining,
     res: 2,
-    face: { x: 36, y: 24, size: 56 },
+    face: { x: 38, y: 24, size: 52 },
   },
   coachMatch: {
     id: 'coachMatch',
@@ -61,7 +61,7 @@ export const CHARACTERS: Record<CharacterId, Character> = {
     color: '#9cc2ea',
     painter: paintCoachMatch,
     res: 2,
-    face: { x: 36, y: 24, size: 56 },
+    face: { x: 40, y: 24, size: 52 },
   },
 };
 

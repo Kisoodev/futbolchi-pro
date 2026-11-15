@@ -96,8 +96,9 @@ const HOME_KIT = '#b8433a';
  */
 const KIDS: { key: CharacterKey; kit: string }[] = [
   { key: 'abu', kit: '#7d848c' },
-  { key: 'odil', kit: '#2f78b7' },
-  { key: 'doniyor', kit: '#2f78b7' },
+  // the academy's sky-blue kit (Etiqod, docs/LEAGUE.md)
+  { key: 'odil', kit: '#6CABDD' },
+  { key: 'doniyor', kit: '#6CABDD' },
 ];
 
 /** Everyone who appears in the film, drawn once and cached. */

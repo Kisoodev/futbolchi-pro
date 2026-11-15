@@ -113,6 +113,29 @@ export const MATCH_CONFIG = {
   penaltySpread: 24,
   /** Keepers of weaker leagues let in more: p(goal | on target) += (ref − GK_eff) / scale. */
   keeperAbs: { ref: 77, scale: 150 },
+  /**
+   * Club styles (docs/LEAGUE.md): `lean` multiplies the utility of actions,
+   * `tackle` the chance that a pressing defender goes in. Kept small so
+   * strength still decides (calibration).
+   */
+  styles: {
+    disciplined: { lean: { SHORT_PASS: 1.05, BACK_PASS: 1.05, DRIBBLE: 0.95 }, tackle: 1 },
+    possession: { lean: { SHORT_PASS: 1.15, BACK_PASS: 1.1, LONG_PASS: 0.85, DRIBBLE: 0.92 }, tackle: 1 },
+    stars: { lean: { DRIBBLE: 1.15, SHOOT: 1.1, THROUGH_BALL: 1.05 }, tackle: 0.95 },
+    technical: { lean: { DRIBBLE: 1.1, THROUGH_BALL: 1.15, SHORT_PASS: 1.05 }, tackle: 1 },
+    press: { lean: { THROUGH_BALL: 1.05, CARRY: 1.05 }, tackle: 1.2 },
+    physical: { lean: { HOLD_UP: 1.2, LONG_PASS: 1.1, CROSS: 1.05 }, tackle: 1.1 },
+    intense: { lean: { CARRY: 1.1, KNOCK_AND_RUN: 1.15, THROUGH_BALL: 1.1 }, tackle: 1.1 },
+    athletic: { lean: { KNOCK_AND_RUN: 1.2, CARRY: 1.1 }, tackle: 1.05 },
+    stubborn: { lean: { CLEAR: 1.15, BACK_PASS: 1.05 }, tackle: 1.1 },
+    wings: { lean: { CROSS: 1.25, DRIBBLE: 1.05 }, tackle: 1 },
+    combination: { lean: { SHORT_PASS: 1.1, THROUGH_BALL: 1.15 }, tackle: 1 },
+    modern: { lean: { SHORT_PASS: 1.05, THROUGH_BALL: 1.05 }, tackle: 1.05 },
+    traditional: { lean: { LONG_PASS: 1.1, CROSS: 1.1 }, tackle: 1 },
+    chaotic: { lean: { SHOOT: 1.15, DRIBBLE: 1.1, BACK_PASS: 0.8 }, tackle: 1.05 },
+    raw: { lean: { KNOCK_AND_RUN: 1.15, LONG_PASS: 1.1, SHORT_PASS: 0.95 }, tackle: 1.05 },
+    underdog: { lean: { CLEAR: 1.1, LONG_PASS: 1.1 }, tackle: 1.05 },
+  },
   /** The main character takes fewer knocks and cards than other players (less luck-based setbacks). */
   persona: { injuryMul: 0.5, cardMul: 0.5 },
   /** Player match rating (all players). */

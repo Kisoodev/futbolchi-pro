@@ -11,6 +11,8 @@ import { getTrainingOption } from './training';
 import { statDeltas } from './persona';
 import { driftSquad, ratingsFromSquad, squadAvg } from './npc';
 import { academySquad } from './roster';
+import { ETIQOD } from './academyLeague';
+import { teamGrowth } from './teamGrowth';
 import { pickLineup } from './lineup';
 import { applyAccountEvents, normalizeAccount, type AccountEvent, type AccountReward } from './account';
 import { createRng, hashSeed } from './rng';
@@ -25,9 +27,8 @@ export interface NewGameInput {
 
 export function newGame(input: NewGameInput): GameState {
   const clubs = generateWorld(input.seed);
-  const rng = createRng(hashSeed(input.seed, 'startClub'));
-  const academyClubs = Object.values(clubs).filter((c) => c.tier === 4);
-  const picked = rng.pick(academyClubs);
+  // every career starts at Etiqod Akademiyasi (docs/LEAGUE.md)
+  const picked = clubs[ETIQOD];
   // the persona's first club plays with the academy team of docs/CHARACTERS.md
   const squad = academySquad(picked.id, input.seed, picked.squad);
   const club = { ...picked, squad, ratings: ratingsFromSquad(squad) };
@@ -67,6 +68,7 @@ export function createSeason(state: GameState, index: number): Season {
     matchIds: [],
     finished: false,
     startOvr: personaLevel(state.persona),
+    teamStartOvr: Math.round(squadAvg(state.clubs[state.persona.clubId].squad) * 10) / 10,
   };
 }
 
@@ -278,6 +280,8 @@ export function playMatchDay(state: GameState): MatchDayResult {
   };
   let next: GameState = {
     ...state,
+    // the squad grows week by week (faster when the persona trained), Odil too
+    clubs: teamGrowth(state, season),
     persona,
     matches,
     day: 'training',

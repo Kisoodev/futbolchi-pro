@@ -89,7 +89,8 @@ export function driftSquad(squad: NpcPlayer[], tier: Tier, seed: number): NpcPla
   const rng = createRng(seed);
   const [lo, hi] = tierOvrRange(tier);
   const [dmin, dmax] = P.SQUAD.seasonDrift;
-  return squad.map((p) => ({ ...p, ovr: clamp(p.ovr + rng.int(dmin, dmax), lo, hi) }));
+  // Odil may stay above the tier's usual top (teamGrowth.ts)
+  return squad.map((p) => ({ ...p, ovr: clamp(p.ovr + rng.int(dmin, dmax), lo, p.characterKey === 'odil' ? Math.max(hi, p.ovr) : hi) }));
 }
 
 export { ROLES as NPC_ROLES };

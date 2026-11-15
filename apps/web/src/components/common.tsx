@@ -9,6 +9,7 @@ import {
 } from '@futbolchi/engine';
 import { tx } from '../i18n';
 import { Avatar } from '../art/Avatar';
+import { Crest } from './Crest';
 
 export function StatBars({ persona }: { persona: PersonaView }) {
   const w = C.POSITION_WEIGHTS[persona.position];
@@ -81,7 +82,7 @@ export function LeagueTable({ season, clubs, highlightId }: { season: Season; cl
             <tr key={r.clubId} className={`${zone} ${r.clubId === highlightId ? 'me' : ''}`}>
               <td>{i + 1}</td>
               <td className="club">
-                <span className="dot" style={{ background: clubs[r.clubId].color }} />
+                <Crest club={clubs[r.clubId]} size={16} />
                 {clubs[r.clubId].name}
               </td>
               <td>{r.played}</td>

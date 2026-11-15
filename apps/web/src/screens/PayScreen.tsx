@@ -204,7 +204,7 @@ export function PayScreen({ name, onPaid, onBack, hero, onRestart }: Props) {
           <h1>{tx.payHello(name)}</h1>
           {hero && (
             <div className="pay-hero">
-              <Avatar appearance={hero.persona.appearance} kit={hero.clubs[hero.persona.clubId]?.color ?? '#2f78b7'} scale={1} crop="bust" className="pay-hero-avatar" />
+              <Avatar appearance={hero.persona.appearance} kit={hero.clubs[hero.persona.clubId]?.color ?? '#6CABDD'} scale={1} crop="bust" className="pay-hero-avatar" />
               <div>
                 <b>
                   {hero.persona.name} · {hero.persona.position} · <RatingCard level={personaLevel(hero.persona)} size="sm" />

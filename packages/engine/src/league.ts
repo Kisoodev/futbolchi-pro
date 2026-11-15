@@ -3,9 +3,10 @@
  * leagues, players or towns that host a real professional club.
  */
 import * as C from './constants';
-import { generateSquad, ratingsFromSquad, squadAvg } from './npc';
-import { createRng, hashSeed } from './rng';
-import type { Club, Fixture, TableRow, Tier } from './types';
+import { ACADEMY_CLUBS, plainKit } from './academyLeague';
+import { generateSquad, ratingsFromSquad, squadAvg, tierOvrRange } from './npc';
+import { clamp, createRng, hashSeed } from './rng';
+import { CLUB_STYLES, type Club, type Fixture, type NpcPlayer, type TableRow, type Tier } from './types';
 
 /** League names (Uzbek, proper nouns). */
 export const TIER_NAMES: Record<Tier, string> = {
@@ -43,7 +44,22 @@ const COLORS = [
 /** Average OVR of the club's squad (falls back to its line ratings). */
 export const clubAvg = (c: Club): number => (c.squad?.length ? squadAvg(c.squad) : (c.ratings.att + c.ratings.mid + c.ratings.def + c.ratings.gk) / 4);
 
-/** Generates the whole pyramid: CLUBS_PER_TIER clubs in each of the tiers. */
+/** Shifts a squad so its average OVR is about `target`, inside the tier's range (the academy tops out at 62). */
+export function tuneSquad(squad: NpcPlayer[], target: number, tier: Tier): NpcPlayer[] {
+  const [lo, hi] = tierOvrRange(tier);
+  const shift = target - squadAvg(squad);
+  return squad.map((p) => ({ ...p, ovr: clamp(Math.round(p.ovr + shift), lo, hi) }));
+}
+
+const isLight = (hex: string) => {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 170;
+};
+
+/**
+ * Generates the whole pyramid: the academy league is always the same 16 clubs
+ * (docs/LEAGUE.md, ACADEMY_CLUBS), the leagues above are invented from town names.
+ */
 export function generateWorld(seed: number): Record<string, Club> {
   const rng = createRng(hashSeed(seed, 'world'));
   const towns = rng.shuffle(TOWNS);
@@ -51,16 +67,26 @@ export function generateWorld(seed: number): Record<string, Club> {
   const clubs: Record<string, Club> = {};
   let i = 0;
   for (const tier of C.TIERS) {
+    if (tier === C.START_TIER) {
+      for (const p of ACADEMY_CLUBS) {
+        const squad = tuneSquad(generateSquad(p.key, tier, seed), p.ovr, tier);
+        clubs[p.key] = { id: p.key, name: p.name, tier, ratings: ratingsFromSquad(squad), squad, color: p.kit.shirt, kit: p.kit, style: p.style };
+      }
+      continue;
+    }
     for (let k = 0; k < C.CLUBS_PER_TIER; k++, i++) {
       const id = `c${String(i + 1).padStart(2, '0')}`;
       const squad = generateSquad(id, tier, seed);
+      const color = colors[i % colors.length];
       clubs[id] = {
         id,
         name: rng.pick(NAME_PATTERNS)(towns[i % towns.length]),
         tier,
         ratings: ratingsFromSquad(squad),
         squad,
-        color: colors[i % colors.length],
+        color,
+        kit: plainKit(color, isLight(color)),
+        style: rng.pick(CLUB_STYLES),
       };
     }
   }

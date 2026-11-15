@@ -115,7 +115,7 @@ export function pickLineup(club: Club, opts: LineupOptions): MatchLineup {
     bench.push(p);
   }
   const starters = (['GK', 'LB', 'LCB', 'RCB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'ST', 'RW'] as SlotId[]).map((s) => taken.get(s)).filter((x): x is LineupPlayer => !!x);
-  return { starters, bench: bench.map((p) => toLineup(p)) };
+  return { starters, bench: bench.map((p) => toLineup(p)), ...(club.style ? { style: club.style } : {}) };
 }
 
 export { isCore };

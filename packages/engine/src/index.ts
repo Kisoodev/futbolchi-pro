@@ -16,3 +16,5 @@ export * from './roster';
 export * from './lineup';
 export { MAX_SUBS } from './squadplay';
 export * from './sim';
+export * from './academyLeague';
+export * from './teamGrowth';

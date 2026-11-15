@@ -379,8 +379,16 @@ const gift: Scene = {
   },
 };
 
+/** Odil keeps the ball up in front of him (a bounce every 600 ms). */
+function odilJuggle(p: Parameters<Scene['paint']>[0], x: number, t: number) {
+  const u = (t % 600) / 600;
+  ball(p, x + 9, -8 - 40 * 4 * u * (1 - u), t / 80);
+}
+
 // ------------------------------------------------------------------ 6. the academy gate
-const LAUGH = 4000;
+// The boys crowd around Odil juggling the ball; Doniyor praises him. The hero walks in
+// with the bag and nobody even turns round.
+const PRAISE = 4000;
 const LOOK = 6500;
 const gate: Scene = {
   id: 'gate',
@@ -392,47 +400,35 @@ const gate: Scene = {
     { at: 900, sfx: 'step' },
     { at: 1500, sfx: 'step' },
     { at: 2100, sfx: 'step' },
-    { at: LAUGH + 100, sfx: 'laugh' },
+    ...Array.from({ length: 6 }, (_, k) => ({ at: 2400 + k * 600, sfx: 'bounce' as Sfx })),
     { at: LOOK + 100, sfx: 'heart' },
     { at: LOOK + 600, sfx: 'hit' },
   ],
   lines: [
     { at: 500, end: 3400, who: 'narrator', key: 'academy' },
-    { at: LAUGH, end: LOOK - 100, who: 'kid', key: 'kidLaugh' },
+    { at: PRAISE, end: LOOK - 100, who: 'kid', key: 'kidPraise' },
     { at: LOOK + 600, end: 10700, who: 'thought', key: 'promise' },
   ],
   camera: camKeys(
-    [[0, -120], [3500, -40], [LAUGH, 150], [LOOK - 200, 150], [LOOK, -30], [11000, -30]],
-    [[0, -70], [3500, WIDE_Y], [LAUGH, -66], [LOOK - 200, -66], [LOOK, HERO_FACE], [11000, HERO_FACE]],
-    [[0, 1.1], [3500, 1.3], [LAUGH, 1.9], [LOOK - 200, 2.1], [LOOK, 3.3], [11000, 3.8]],
+    [[0, -120], [3500, -40], [PRAISE, 170], [LOOK - 200, 170], [LOOK, -30], [11000, -30]],
+    [[0, -70], [3500, WIDE_Y], [PRAISE, -66], [LOOK - 200, -66], [LOOK, HERO_FACE], [11000, HERO_FACE]],
+    [[0, 1.1], [3500, 1.3], [PRAISE, 1.9], [LOOK - 200, 2.1], [LOOK, 3.3], [11000, 3.8]],
   ),
   paint(p, s) {
     const { t, cast } = p;
     sky(p, '#7ec3f0', '#d8f0ff');
     academy(p, s.academySign);
-    // academy kids warming up behind the gate line
+    // the academy boys around Odil, who juggles the ball; they only have eyes for him
     person(p.ctx, cast.kid(0), 120, 0, { bob: breathe(t, 100) });
-    person(p.ctx, cast.kid(1, 'arms_crossed'), 170, 0, { bob: t > LAUGH && t < LOOK ? walkBob(t * 1.6) : breathe(t, 600) });
-    person(p.ctx, cast.kid(2), 220, 0, { bob: breathe(t, 900) });
-    const kb = Math.abs(Math.sin(t / 300)) * 26;
-    ball(p, 132, -8 - kb, t / 80);
+    person(p.ctx, cast.kid(1), 170, 0, { bob: breathe(t, 600) });
+    person(p.ctx, cast.kid(2), 220, 0, { bob: t > PRAISE && t < LOOK ? walkBob(t * 1.4) : breathe(t, 900) });
+    odilJuggle(p, 170, t);
     // the hero walks in with a bag on the shoulder
     const hx = lerp(-260, -30, clamp01(t / 3500));
     shadow(p, hx, 16);
     person(p.ctx, cast.heroSprite('stand'), hx, 0, { bob: t < 3500 ? walkBob(t) : breathe(t) });
     p.world(1);
     p.ctx.drawImage(cast.bag(), hx + 6, -66 - (t < 3500 ? walkBob(t) : 0), 22, 16);
-    if (t > LAUGH && t < LOOK) {
-      const a = Math.sin(((t - LAUGH) / (LOOK - LAUGH)) * Math.PI);
-      for (let k = 0; k < 2; k++) {
-        const ly = -112 - k * 10 - ((t / 20) % 10);
-        p.ctx.globalAlpha = a;
-        p.ctx.font = '700 7px "Pixelify Sans", sans-serif';
-        p.ctx.fillStyle = '#1b1620';
-        p.ctx.fillText('ha', 182 + k * 8, ly);
-        p.ctx.globalAlpha = 1;
-      }
-    }
     glow(p, -300, -300, 400, '#fff2c8', 0.25);
     vignette(p, 0.35);
   },
@@ -457,25 +453,25 @@ const coach: Scene = {
     { at: JUGGLE_END + 200, sfx: 'hit' },
   ],
   lines: [
-    { at: COACH_IN, end: 4800, who: 'coach', key: 'coachStop' },
-    { at: 4900, end: 6300, who: 'coach', key: 'coachAsk' },
-    { at: 6400, end: 7600, who: 'hero', key: 'heroAnswer' },
+    { at: COACH_IN, end: 4900, who: 'coach', key: 'coachPresent' },
+    { at: 5000, end: 7600, who: 'thought', key: 'silence' },
     { at: 7700, end: 10800, who: 'coach', key: 'coachIntro' },
     { at: JUGGLE_END, end: 16400, who: 'coach', key: 'coachVerdict' },
   ],
   camera: camKeys(
-    [[0, 140], [COACH_IN, COACH_X], [6300, COACH_X], [6500, -30], [7600, -30], [7800, COACH_X], [10600, COACH_X], [JUGGLE_AT, 16], [JUGGLE_END, 16], [12800, COACH_X], [16600, COACH_X]],
-    [[0, WIDE_Y], [COACH_IN, COACH_FACE], [6300, COACH_FACE], [6500, HERO_FACE], [7600, HERO_FACE], [7800, COACH_FACE], [10600, COACH_FACE], [JUGGLE_AT, -54], [JUGGLE_END, -54], [12800, COACH_FACE], [16600, COACH_FACE]],
-    [[0, 1.1], [COACH_IN, 2.6], [6300, 2.7], [6500, 2.9], [7600, 3], [7800, 2.7], [10600, 2.9], [JUGGLE_AT, 1.35], [JUGGLE_END, 1.35], [12800, 2.7], [16600, 3]],
+    [[0, 140], [COACH_IN, COACH_X], [4900, COACH_X], [5200, 195], [6600, 195], [6900, -30], [7600, -30], [7800, COACH_X], [10600, COACH_X], [JUGGLE_AT, 16], [JUGGLE_END, 16], [12800, COACH_X], [16600, COACH_X]],
+    [[0, WIDE_Y], [COACH_IN, COACH_FACE], [4900, COACH_FACE], [5200, -66], [6600, -66], [6900, HERO_FACE], [7600, HERO_FACE], [7800, COACH_FACE], [10600, COACH_FACE], [JUGGLE_AT, -54], [JUGGLE_END, -54], [12800, COACH_FACE], [16600, COACH_FACE]],
+    [[0, 1.1], [COACH_IN, 2.6], [4900, 2.7], [5200, 1.9], [6600, 2], [6900, 2.9], [7600, 3], [7800, 2.7], [10600, 2.9], [JUGGLE_AT, 1.35], [JUGGLE_END, 1.35], [12800, 2.7], [16600, 3]],
   ),
   paint(p, s) {
     const { t, cast } = p;
     sky(p, '#7ec3f0', '#d8f0ff');
     academy(p, s.academySign);
-    // the kids go quiet when the coach arrives
+    // the boys don't even look up: they keep watching Odil juggle
     person(p.ctx, cast.kid(0), 150, 0, { bob: breathe(t, 100) });
-    person(p.ctx, cast.kid(1, 'arms_crossed'), 195, 0, { bob: t < COACH_IN ? walkBob(t * 1.6) : breathe(t, 600) });
+    person(p.ctx, cast.kid(1), 195, 0, { bob: breathe(t, 600) });
     person(p.ctx, cast.kid(2), 240, 0, { bob: breathe(t, 900) });
+    odilJuggle(p, 195, t);
     // the coach walks in from the right
     const cx = lerp(300, COACH_X, clamp01(t / COACH_IN));
     shadow(p, cx, 16);

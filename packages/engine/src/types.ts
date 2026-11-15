@@ -148,6 +148,25 @@ export interface NpcPlayer {
   captain: boolean;
 }
 
+/** How a kit is cut (drawn on the pitch, the crest and the shirts). */
+export const KIT_PATTERNS = ['plain', 'stripes', 'hoops', 'band', 'sleeves', 'shoulders', 'trim', 'collar', 'halves'] as const;
+export type KitPattern = (typeof KIT_PATTERNS)[number];
+
+export interface Kit {
+  shirt: string;
+  secondary: string;
+  shorts: string;
+  socks: string;
+  pattern: KitPattern;
+}
+
+/** A club's way of playing; the match engine leans its decisions on it (MATCH_CONFIG.styles). */
+export const CLUB_STYLES = [
+  'disciplined', 'possession', 'stars', 'technical', 'press', 'physical', 'intense', 'athletic',
+  'stubborn', 'wings', 'combination', 'modern', 'traditional', 'chaotic', 'raw', 'underdog',
+] as const;
+export type ClubStyle = (typeof CLUB_STYLES)[number];
+
 export interface Club {
   id: string;
   name: string;
@@ -155,8 +174,11 @@ export interface Club {
   /** Derived from the squad (averages of its lines). */
   ratings: ClubRatings;
   squad: NpcPlayer[];
-  /** Hex colour used by the replay and share card. */
+  /** Hex colour used by the replay and share card (the shirt colour). */
   color: string;
+  /** Home kit (older saves: derived from the colour). */
+  kit?: Kit;
+  style?: ClubStyle;
 }
 
 export interface Fixture {
@@ -203,6 +225,8 @@ export interface Season {
   storyUz?: string;
   /** Persona OVR when the season started (for the season report). */
   startOvr?: number;
+  /** Average OVR of the persona's squad when the season started (the team grows through it). */
+  teamStartOvr?: number;
 }
 
 export type PersonaRole = 'start' | 'sub' | 'bench' | 'injured';
@@ -267,6 +291,8 @@ export interface LineupPlayer {
 export interface MatchLineup {
   starters: LineupPlayer[];
   bench: LineupPlayer[];
+  /** The club's style (the match engine leans on it). */
+  style?: ClubStyle;
 }
 
 /** One player's match (both teams, everyone who played). */
