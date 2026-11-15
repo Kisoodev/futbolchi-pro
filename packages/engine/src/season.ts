@@ -5,11 +5,15 @@
 import * as C from './constants';
 import { applyResult, clubAvg, doubleRoundRobin, emptyTable, generateWorld, sortTable } from './league';
 import { simulateMatch } from './match';
-import { addFatigue, applyMatchXp, createPersona, personaOvr, statDeltas, type CreatePersonaInput } from './persona';
+import { addFatigue, createPersona, personaOvr, type CreatePersonaInput } from './persona';
+import { applyMatchGrowth, applyXp, matchXp, milestonesBetween, personaLevel, PROGRESSION_CONFIG as PC, tierConfig, trainingXp, upgradeAttribute } from './progression';
+import { getTrainingOption } from './training';
+import { statDeltas } from './persona';
+import { driftSquad, ratingsFromSquad, squadAvg } from './npc';
 import { applyAccountEvents, normalizeAccount, type AccountEvent, type AccountReward } from './account';
 import { createRng, hashSeed } from './rng';
 import { seasonFacts, seasonStoryUz } from './story';
-import { applyTraining, offerTraining, weeklyRecovery, type TrainingId } from './training';
+import { applyTrainingDay, offerTraining, weeklyRecovery, type TrainingId } from './training';
 import type { Club, GameState, Match, Persona, PersonaRole, Season, SeasonOutcome, StatKey, Tier, WeekDay } from './types';
 
 export interface NewGameInput {
@@ -24,7 +28,7 @@ export function newGame(input: NewGameInput): GameState {
   const club = rng.pick(academyClubs);
   const persona = createPersona({ ...input.persona, clubId: club.id, seed: input.seed });
   const state: GameState = {
-    version: 1,
+    version: 2,
     seed: input.seed,
     persona,
     clubs,
@@ -56,6 +60,7 @@ export function createSeason(state: GameState, index: number): Season {
     trainingLog: [],
     matchIds: [],
     finished: false,
+    startOvr: personaLevel(state.persona),
   };
 }
 
@@ -86,22 +91,26 @@ export interface WeekResult {
   matchId: string;
 }
 
-/** The player's only weekly decision: one training option. Everything else is simulated. */
 /** Today's day of the week (older saves have no day: training). */
 export const dayOf = (state: GameState): WeekDay => state.day ?? 'training';
 
 export interface TrainingDayResult {
   state: GameState;
-  /** Stat changes from the session (for the growth animation). */
+  /** XP the day was worth (it went straight into the trained attributes). */
+  xp: number;
+  /** Attribute changes, for the growth animation. */
   deltas: Partial<Record<StatKey, number>>;
-  ovrBefore: number;
-  ovrAfter: number;
+  levelBefore: number;
+  levelAfter: number;
+  milestones: number[];
   reward: AccountReward;
 }
 
 /**
- * Day 1 of a week: the training session. Stats grow (or the persona rests);
- * the match is played on the next day with playMatchDay().
+ * Day 1 of a week: the player picks ONE of the day's offered trainings. Its XP
+ * (§4.2: sessionsPerDay × xpPerSession × league multiplier) goes straight into
+ * the attributes that training works on, at the §5 prices. Rest grows nothing
+ * but brings fatigue down. The match is on the next day (playMatchDay).
  */
 export function trainDay(state: GameState, optionId: TrainingId): TrainingDayResult {
   if (state.phase !== 'training') throw new Error('season is over; start the next season');
@@ -110,45 +119,54 @@ export function trainDay(state: GameState, optionId: TrainingId): TrainingDayRes
   if (!offer.includes(optionId)) throw new Error(`option ${optionId} not offered this week`);
   const season = currentSeason(state);
   const before = state.persona;
-  const trained = applyTraining(before, optionId);
-  const ovrBefore = personaOvr(before);
-  const ovrAfter = personaOvr(trained.persona);
+  const day = applyTrainingDay(before, optionId);
+  const focus = getTrainingOption(optionId).focus;
+  const injured = before.injuryWeeksLeft > 0;
+  const xp = focus.length && !injured ? trainingXp(PC.TRAINING.sessionsPerDay, season.tier) : 0;
+  const persona = applyXp(day.persona, focus, xp);
+  const levelBefore = personaLevel(before);
+  const levelAfter = personaLevel(persona);
   const { account, reward } = applyAccountEvents(normalizeAccount(state.account), [
     { type: 'training' },
-    { type: 'ovr', delta: ovrAfter - ovrBefore },
+    { type: 'ovr', delta: levelAfter - levelBefore },
   ]);
   const nextSeason: Season = { ...season, trainingLog: [...season.trainingLog, { week: season.week, optionId }] };
   return {
     state: {
       ...state,
-      persona: trained.persona,
+      persona,
       day: 'match',
-      pendingInjuryRisk: trained.injuryRiskBonus,
+      pendingInjuryRisk: day.injuryRiskBonus,
       account,
       seasons: [...state.seasons.slice(0, -1), nextSeason],
     },
-    deltas: trained.deltas,
-    ovrBefore,
-    ovrAfter,
+    xp,
+    deltas: statDeltas(before, persona),
+    levelBefore,
+    levelAfter,
+    milestones: milestonesBetween(levelBefore, levelAfter),
     reward,
   };
 }
 
 export interface MatchDayResult extends WeekResult {
-  /** Stat growth earned by the performance. */
+  /** XP earned in the match (0 when the persona did not play); it grew the main attributes. */
+  xp: number;
   deltas: Partial<Record<StatKey, number>>;
-  ovrBefore: number;
-  ovrAfter: number;
+  levelBefore: number;
+  levelAfter: number;
+  milestones: number[];
   reward: AccountReward;
 }
 
-/** Day 2 of a week: the match. The performance grows the persona; then the week ends. */
+/** Day 2 of a week: the match. The performance earns XP; then the week ends. */
 export function playMatchDay(state: GameState): MatchDayResult {
   if (state.phase !== 'training') throw new Error('season is over; start the next season');
   if (dayOf(state) !== 'match') throw new Error('train first: today is training day');
   const season = currentSeason(state);
   const before = state.persona;
   let persona = before;
+  let grownStats = before.stats;
   const club = state.clubs[persona.clubId];
   const role = pickRole(persona, club, hashSeed(season.seed, 'selection', season.week));
   const injuryRiskBonus = state.pendingInjuryRisk ?? 0;
@@ -156,7 +174,7 @@ export function playMatchDay(state: GameState): MatchDayResult {
   let table = season.table;
   const matches = { ...state.matches };
   let personaMatchId = '';
-  let grown = persona;
+  let xp = 0;
   const events: AccountEvent[] = [];
   for (const fx of season.fixtures.filter((f) => f.week === season.week)) {
     const involved = fx.homeId === persona.clubId || fx.awayId === persona.clubId;
@@ -190,9 +208,22 @@ export function playMatchDay(state: GameState): MatchDayResult {
       const ps = result.personaStats!;
       const [mine, theirs] = side === 'home' ? result.score : [result.score[1], result.score[0]];
       if (ps.minutes > 0) {
+        const opponent = state.clubs[side === 'home' ? fx.awayId : fx.homeId];
+        xp = matchXp({
+          rating: ps.rating ?? PC.MATCH_XP.ratingPivot,
+          minutes: ps.minutes,
+          goals: ps.goals,
+          assists: ps.assists,
+          cleanSheet: theirs === 0,
+          position: persona.position,
+          result: mine > theirs ? 'win' : mine === theirs ? 'draw' : 'loss',
+          tier: season.tier,
+          opponentOvr: clubAvg(opponent),
+          personaOvr: personaLevel(persona),
+        });
         persona = addFatigue(persona, (C.FATIGUE_PER_FULL_MATCH * ps.minutes) / 90);
-        persona = applyMatchXp(persona, ps.rating);
-        grown = persona;
+        persona = applyMatchGrowth(persona, xp);
+        grownStats = persona.stats;
         persona = {
           ...persona,
           career: {
@@ -210,11 +241,10 @@ export function playMatchDay(state: GameState): MatchDayResult {
     }
   }
 
-  const ovrBefore = personaOvr(before);
-  const ovrAfter = personaOvr(persona);
-  events.push({ type: 'ovr', delta: ovrAfter - ovrBefore });
+  const levelBefore = personaLevel(before);
+  const levelAfter = personaLevel(persona);
+  events.push({ type: 'ovr', delta: levelAfter - levelBefore });
   const { account, reward } = applyAccountEvents(normalizeAccount(state.account), events);
-
   const nextSeason: Season = {
     ...season,
     week: season.week + 1,
@@ -243,7 +273,35 @@ export function playMatchDay(state: GameState): MatchDayResult {
       missionsDone: [...reward.missionsDone, ...done.reward.missionsDone],
     };
   }
-  return { state: next, matchId: personaMatchId, deltas: statDeltas(before, grown), ovrBefore, ovrAfter, reward: seasonReward };
+  return {
+    state: next,
+    matchId: personaMatchId,
+    xp,
+    deltas: statDeltas(before, { ...before, stats: grownStats }),
+    levelBefore,
+    levelAfter,
+    milestones: milestonesBetween(levelBefore, levelAfter),
+    reward: seasonReward,
+  };
+}
+
+export interface UpgradeResult {
+  state: GameState;
+  /** OVR (as shown) before and after. */
+  levelBefore: number;
+  levelAfter: number;
+  /** Milestones (60, 65, …) reached by this upgrade. */
+  milestones: number[];
+  reward: AccountReward;
+}
+
+/** Spends XP on +1 of an attribute (docs/PROGRESSION_SYSTEM.md §5). */
+export function upgradeInGame(state: GameState, key: StatKey): UpgradeResult {
+  const levelBefore = personaLevel(state.persona);
+  const persona = upgradeAttribute(state.persona, key);
+  const levelAfter = personaLevel(persona);
+  const { account, reward } = applyAccountEvents(normalizeAccount(state.account), [{ type: 'ovr', delta: levelAfter - levelBefore }]);
+  return { state: { ...state, persona, account }, levelBefore, levelAfter, milestones: milestonesBetween(levelBefore, levelAfter), reward };
 }
 
 /** A whole week at once (training day + match day). Kept for tests and tools. */
@@ -266,10 +324,17 @@ function rankTier(state: GameState, season: Season, tier: Tier): string[] {
     .map((x) => x.id);
 }
 
-function driftClub(c: Club, tier: Tier): Club {
-  const base = C.TIER_BASE_RATING[tier];
-  const d = (v: number) => Math.round(v + (base - v) * C.TIER_DRIFT);
-  return { ...c, tier, ratings: { att: d(c.ratings.att), mid: d(c.ratings.mid), def: d(c.ratings.def), gk: d(c.ratings.gk) } };
+/** A club in its (possibly new) tier after a season: every NPC changes −2…+3 and stays in the tier's range. */
+function driftClub(c: Club, tier: Tier, seed: number): Club {
+  const squad = driftSquad(c.squad, tier, hashSeed(seed, 'drift', c.id));
+  return { ...c, tier, squad, ratings: ratingsFromSquad(squad) };
+}
+
+/** Average of the persona's last `n` match ratings. */
+export function recentAvgRating(state: GameState, n = 10): { avg: number; count: number } {
+  const all = state.seasons.flatMap((s) => personaSeasonRatings(state, s));
+  const last = all.slice(-n);
+  return { avg: last.length ? last.reduce((a, b) => a + b, 0) / last.length : 0, count: last.length };
 }
 
 export function personaSeasonRatings(state: GameState, season: Season): number[] {
@@ -284,32 +349,38 @@ export function finalizeSeason(state: GameState): GameState {
   const position = ranking.indexOf(state.persona.clubId) + 1;
   const n = ranking.length;
 
-  // Move clubs across every tier boundary.
-  const clubs = { ...state.clubs };
-  for (const upper of [1, 2, 3] as Tier[]) {
+  // Move clubs across every tier boundary, then every squad changes a little.
+  const newTier: Record<string, Tier> = {};
+  for (const c of Object.values(state.clubs)) newTier[c.id] = c.tier;
+  for (const upper of C.TIERS.slice(0, -1)) {
     const lower = (upper + 1) as Tier;
-    const down = rankTier(state, season, upper).slice(-C.RELEGATION_SPOTS);
-    const up = rankTier(state, season, lower).slice(0, C.PROMOTION_SPOTS);
-    for (const id of down) clubs[id] = driftClub(clubs[id], lower);
-    for (const id of up) clubs[id] = driftClub(clubs[id], upper);
+    for (const id of rankTier(state, season, upper).slice(-C.RELEGATION_SPOTS)) newTier[id] = lower;
+    for (const id of rankTier(state, season, lower).slice(0, C.PROMOTION_SPOTS)) newTier[id] = upper;
   }
+  const clubs: Record<string, Club> = {};
+  for (const c of Object.values(state.clubs)) clubs[c.id] = driftClub(c, newTier[c.id], season.seed);
 
   let outcome: SeasonOutcome = 'stayed';
-  if (season.tier > 1 && position <= C.PROMOTION_SPOTS) outcome = 'promoted';
-  else if (season.tier < 4 && position > n - C.RELEGATION_SPOTS) outcome = 'relegated';
+  const bottomTier = C.TIERS[C.TIERS.length - 1];
+  if (season.tier > C.TOP_TIER && position <= C.PROMOTION_SPOTS) outcome = 'promoted';
+  else if (season.tier < bottomTier && position > n - C.RELEGATION_SPOTS) outcome = 'relegated';
 
-  // Transfer offers for a standout season.
-  const ratings = personaSeasonRatings(state, season);
-  const avg = ratings.length ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
-  const newTier = clubs[state.persona.clubId].tier;
+  // Offers from the next tier (§7.3): OVR ≥ that tier's regular minimum + 2 and a good recent form.
+  const clubTier = clubs[state.persona.clubId].tier;
   let transferOffers: GameState['transferOffers'] = [];
-  if (newTier > 1 && ratings.length >= 5 && avg >= C.TRANSFER_MIN_AVG_RATING[state.persona.position]) {
-    const target = (newTier - 1) as Tier;
-    if (personaOvr(state.persona) >= C.TIER_BASE_RATING[target] - C.TRANSFER_OVR_MARGIN) {
+  if (clubTier > C.TOP_TIER) {
+    const target = (clubTier - 1) as Tier;
+    const form = recentAvgRating(state, 10);
+    const enoughGames = form.count >= Math.min(10, season.matchIds.length);
+    if (
+      enoughGames &&
+      personaLevel(state.persona) >= tierConfig(target).regular[0] + PC.PROMOTION.ovrAboveNextRegularMin &&
+      form.avg >= PC.PROMOTION.minAvgRatingLast10
+    ) {
       const rng = createRng(hashSeed(season.seed, 'transfers'));
       transferOffers = rng
         .shuffle(Object.values(clubs).filter((c) => c.tier === target).map((c) => c.id).sort())
-        .slice(0, C.TRANSFER_OFFERS)
+        .slice(0, PC.OFFERS)
         .map((clubId) => ({ clubId }));
     }
   }

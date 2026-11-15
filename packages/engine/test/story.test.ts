@@ -3,7 +3,7 @@ import { LANGS, ruPlural, seasonStory, tierName, type SeasonFacts } from '../src
 
 const base: SeasonFacts = {
   personaName: 'Aziz', position: 'ST', seasonIndex: 1, clubName: 'Qumtepa FK', tier: 4, tierName: 'Akademiya Ligasi',
-  nextTier: 3, nextTierName: 'Bronza Liga', matches: 14, apps: 8, starts: 6, goals: 4, assists: 2, saves: 0,
+  nextTier: 3, nextTierName: '2-liga', matches: 14, apps: 8, starts: 6, goals: 4, assists: 2, saves: 0,
   avgRating: 7.1, best: { rating: 8.4, opponentName: 'Oqsoy Sport', goals: 2 }, injuries: 0, injuryWeeks: 0,
   outcome: 'promoted', finalPosition: 2, transferOffered: false,
 };
@@ -34,12 +34,13 @@ describe('season story in every language', () => {
   }
 
   it('each language names the leagues in its own words', () => {
-    expect(seasonStory(base, 'uz')).toContain("Bronza Ligaga ko'tarildi");
-    expect(seasonStory(base, 'en')).toContain('promoted to the Bronze League');
-    expect(seasonStory(base, 'ru')).toContain('поднялась в Бронзовую лигу');
+    expect(seasonStory(base, 'uz')).toContain("2-ligaga ko'tarildi");
+    expect(seasonStory(base, 'en')).toContain('promoted to the Second League');
+    expect(seasonStory(base, 'ru')).toContain('поднялась во Вторую лигу');
     expect(seasonStory({ ...base, ...cases.champion }, 'ru')).toContain('чемпионом в Лиге академий');
-    expect(tierName(1, 'ru')).toBe('Золотая лига');
-    expect(tierName(2, 'en')).toBe('Silver League');
+    expect(tierName(2, 'ru')).toBe('Первая лига');
+    expect(tierName(4, 'uz')).toBe('Akademiya ligasi');
+    expect(tierName(2, 'en')).toBe('First League');
   });
 
   it('uses correct plurals', () => {

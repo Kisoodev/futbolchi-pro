@@ -62,6 +62,12 @@ export const BOOT_HEX: Record<BootColor, string> = {
 
 const OUTLINE = '#1a2230';
 const SHORTS = '#f2f2ee';
+/** Everyday clothes: jeans and white sneakers. */
+const JEANS = '#3e5f8f';
+const SNEAKER = '#eeeee8';
+
+/** 'kit' = football kit (shirt, shorts, socks, boots); 'casual' = T-shirt, jeans, sneakers. */
+export type Outfit = 'kit' | 'casual';
 const WHITE = '#fbfbf8';
 const MOUTH = '#8c3b2f';
 const MOUTH_OPEN = '#4f1716';
@@ -224,13 +230,14 @@ export function headBox(a: Appearance): { x: number; y: number; w: number; h: nu
 }
 
 // ---------- the painter ----------
-export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): Pixels {
+export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand', outfit: Outfit = 'kit'): Pixels {
+  const casual = outfit === 'casual';
   const L = avatarLayout(a);
   const { cx, headTop, headRows } = L;
   const out: Pixels = new Array(AVATAR_W * AVATAR_H).fill(null);
   const skin = SKIN_HEX[a.skinTone];
   const hair = HAIR_HEX[a.hairColor];
-  const boot = BOOT_HEX[a.boots];
+  const boot = casual ? SNEAKER : BOOT_HEX[a.boots];
   const trim = luminance(kit) < 0.62 ? WHITE : '#1d3a5c';
   const celebrating = (CELEBRATIONS as readonly string[]).includes(pose) && pose !== 'shush';
   const headH = headRows.length;
@@ -268,8 +275,8 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   back.paint(out);
 
   // ---- legs: thighs, knees, calves (in socks), boots ----
-  const legSkin = new Layer(skin);
-  const socks = new Layer(kit);
+  const legSkin = new Layer(casual ? JEANS : skin);
+  const socks = new Layer(casual ? JEANS : kit);
   const boots = new Layer(boot, 0.7);
   const shortsBottom = L.legTop + L.shortsLen;
   const sockTop = L.ground - 2 - L.sockLen;
@@ -290,13 +297,13 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   };
   legXs.forEach((lx, i) => {
     const side = i === 0 ? -1 : 1;
-    for (let y = shortsBottom - 1; y < sockTop; y++) legRow(y, lx, side, legSkin);
+    for (let y = casual ? L.legTop : shortsBottom - 1; y < sockTop; y++) legRow(y, lx, side, legSkin);
     for (let y = sockTop; y < L.ground - 2; y++) legRow(y, lx, side, socks);
   });
   legSkin.paint(out);
   socks.paint(out);
-  // Knee highlight and sock bands
-  legXs.forEach((lx) => {
+  // Knee highlight and sock bands (football kit only)
+  if (!casual) legXs.forEach((lx) => {
     put(out, lx + Math.floor(L.legW / 2), sockTop - 3, shade(skin, 0.18));
     for (let x = lx; x < lx + L.legW; x++) {
       put(out, x, sockTop + 1, trim);
@@ -309,26 +316,38 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   boots.rect(legXs[1] + 1, L.ground - 3, L.legW + 1, 2);
   boots.rect(legXs[1] + 1, L.ground - 1, L.legW + 2, 2);
   boots.paint(out);
-  const stud = a.boots === 'white' ? '#3a4150' : WHITE;
-  put(out, legXs[0] - 1, L.ground, stud);
-  put(out, legXs[0] + L.legW - 3, L.ground, stud);
-  put(out, legXs[1] + 2, L.ground, stud);
-  put(out, legXs[1] + L.legW, L.ground, stud);
-  // A plain stripe on each boot (no brand marks)
-  for (const x0 of [legXs[0] - 1, legXs[1] + 2]) for (let x = x0; x < x0 + 3; x++) put(out, x, L.ground - 2, shade(boot, a.boots === 'white' ? -0.25 : 0.35));
+  if (casual) {
+    // sneakers: a grey sole, no studs
+    for (const [x0, w] of [[legXs[0] - 3, L.legW + 2], [legXs[1] + 1, L.legW + 2]] as const) for (let x = x0; x < x0 + w; x++) put(out, x, L.ground, '#8d939b');
+  } else {
+    const stud = a.boots === 'white' ? '#3a4150' : WHITE;
+    put(out, legXs[0] - 1, L.ground, stud);
+    put(out, legXs[0] + L.legW - 3, L.ground, stud);
+    put(out, legXs[1] + 2, L.ground, stud);
+    put(out, legXs[1] + L.legW, L.ground, stud);
+    // A plain stripe on each boot (no brand marks)
+    for (const x0 of [legXs[0] - 1, legXs[1] + 2]) for (let x = x0; x < x0 + 3; x++) put(out, x, L.ground - 2, shade(boot, a.boots === 'white' ? -0.25 : 0.35));
+  }
 
   // ---- shorts ----
-  const shorts = new Layer(SHORTS);
+  const shorts = new Layer(casual ? JEANS : SHORTS);
   const tl = cx - L.torsoW / 2;
-  shorts.rect(tl, L.legTop, L.torsoW, L.shortsLen);
-  for (let y = shortsBottom - 3; y < shortsBottom; y++) {
-    shorts.unset(cx - 1, y);
-    shorts.unset(cx, y);
-  }
-  shorts.paint(out);
-  for (let y = L.legTop + 1; y < shortsBottom - 1; y++) {
-    put(out, tl + 1, y, kit);
-    put(out, tl + L.torsoW - 2, y, kit);
+  if (casual) {
+    // the top of the jeans (hips), the legs continue below
+    shorts.rect(tl, L.legTop, L.torsoW, 5);
+    shorts.paint(out);
+    for (let x = tl; x < tl + L.torsoW; x++) put(out, x, L.legTop, shade(JEANS, -0.3)); // waistband
+  } else {
+    shorts.rect(tl, L.legTop, L.torsoW, L.shortsLen);
+    for (let y = shortsBottom - 3; y < shortsBottom; y++) {
+      shorts.unset(cx - 1, y);
+      shorts.unset(cx, y);
+    }
+    shorts.paint(out);
+    for (let y = L.legTop + 1; y < shortsBottom - 1; y++) {
+      put(out, tl + 1, y, kit);
+      put(out, tl + L.torsoW - 2, y, kit);
+    }
   }
 
   // ---- shirt ----
@@ -349,19 +368,24 @@ export function avatarPixels(a: Appearance, kit: string, pose: Pose = 'stand'): 
   const chestShade = shade(kit, -0.12);
   for (let x = cx - 5; x <= cx + 4; x++) if (x !== cx - 1 && x !== cx) put(out, x, L.torsoTop + 9, chestShade);
   for (let y = L.torsoTop + 12; y < L.torsoTop + L.torsoLen - 2; y += 3) put(out, cx - 1, y, chestShade);
-  // V-neck collar
-  for (let x = cx - 3; x <= cx + 2; x++) put(out, x, L.torsoTop, trim);
-  put(out, cx - 2, L.torsoTop + 1, trim);
-  put(out, cx + 1, L.torsoTop + 1, trim);
-  put(out, cx - 1, L.torsoTop + 1, shade(skin, -0.15));
-  put(out, cx, L.torsoTop + 1, shade(skin, -0.15));
-  put(out, cx - 1, L.torsoTop + 2, trim);
-  put(out, cx, L.torsoTop + 2, trim);
-  // Fictional crest: small shield on the left chest
-  const crestX = tl + 3;
-  const crestY = L.torsoTop + 6;
-  for (const [dx, dy] of [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [1, 2]]) put(out, crestX + dx, crestY + dy, '#f2c94c');
-  put(out, crestX + 1, crestY, shade('#f2c94c', -0.35));
+  if (casual) {
+    // round neck, same colour as the shirt
+    for (let x = cx - 3; x <= cx + 2; x++) put(out, x, L.torsoTop, shade(kit, -0.25));
+  } else {
+    // V-neck collar
+    for (let x = cx - 3; x <= cx + 2; x++) put(out, x, L.torsoTop, trim);
+    put(out, cx - 2, L.torsoTop + 1, trim);
+    put(out, cx + 1, L.torsoTop + 1, trim);
+    put(out, cx - 1, L.torsoTop + 1, shade(skin, -0.15));
+    put(out, cx, L.torsoTop + 1, shade(skin, -0.15));
+    put(out, cx - 1, L.torsoTop + 2, trim);
+    put(out, cx, L.torsoTop + 2, trim);
+    // Fictional crest: small shield on the left chest
+    const crestX = tl + 3;
+    const crestY = L.torsoTop + 6;
+    for (const [dx, dy] of [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [1, 2]]) put(out, crestX + dx, crestY + dy, '#f2c94c');
+    put(out, crestX + 1, crestY, shade('#f2c94c', -0.35));
+  }
   // Fabric folds and hem
   const fold = shade(kit, -0.16);
   put(out, cx + 4, L.torsoTop + L.torsoLen - 8, fold);
@@ -844,8 +868,8 @@ export interface AvatarRect {
 }
 
 /** Same picture as horizontal runs of one colour (few hundred rects). */
-export function avatarRects(a: Appearance, kit: string, pose: Pose = 'stand'): AvatarRect[] {
-  const px = avatarPixels(a, kit, pose);
+export function avatarRects(a: Appearance, kit: string, pose: Pose = 'stand', outfit: Outfit = 'kit'): AvatarRect[] {
+  const px = avatarPixels(a, kit, pose, outfit);
   const rects: AvatarRect[] = [];
   for (let y = 0; y < AVATAR_H; y++) {
     let x = 0;
@@ -864,8 +888,8 @@ export function avatarRects(a: Appearance, kit: string, pose: Pose = 'stand'): A
   return rects;
 }
 
-export function drawAvatar(ctx: CanvasRenderingContext2D, a: Appearance, kit: string, x: number, y: number, scale: number, pose: Pose = 'stand'): void {
-  for (const r of avatarRects(a, kit, pose)) {
+export function drawAvatar(ctx: CanvasRenderingContext2D, a: Appearance, kit: string, x: number, y: number, scale: number, pose: Pose = 'stand', outfit: Outfit = 'kit'): void {
+  for (const r of avatarRects(a, kit, pose, outfit)) {
     ctx.fillStyle = r.color;
     ctx.fillRect(x + r.x * scale, y + r.y * scale, r.w * scale, r.h * scale);
   }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createRng, hashSeed, simulateMatch, type MatchInput, type PersonaMatchInput } from '../src';
-import { STAT_TEMPLATES } from '../src/constants';
+import { startStats } from '../src';
+const STAT_TEMPLATES = { ST: startStats('ST'), CB: startStats('CB'), GK: startStats('GK') };
 
 const team = (id: string, r: number) => ({ id, ratings: { att: r, mid: r, def: r, gk: r } });
 

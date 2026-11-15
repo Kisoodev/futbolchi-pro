@@ -5,7 +5,7 @@
  * Every path starts with /api, as the game expects.
  */
 import { Hono, type Context } from 'hono';
-import { personaOvr, type GameState, type MatchEvent } from '@futbolchi/engine';
+import { migratePersona, personaLevel, type GameState, type MatchEvent } from '@futbolchi/engine';
 import type { Db } from './db';
 import { REJECT_REASONS, type ProductId, type RejectReason } from './domain';
 import { parseProofDataUrl, sha256Hex } from './images';
@@ -281,7 +281,7 @@ export function buildApp(opts: AppOptions): { app: Hono; payments: PaymentServic
   // ---------- Save sync (lets the admin see match events) ----------
   app.put('/api/saves/:userId', async (c) => {
     const state = (await body<GameState>(c)) as GameState;
-    if (!state || state.version !== 1 || typeof state.matches !== 'object') return c.json({ error: 'bad_save' }, 400);
+    if (!state || (state.version !== 1 && state.version !== 2) || typeof state.matches !== 'object') return c.json({ error: 'bad_save' }, 400);
     await db.putSave(c.req.param('userId'), state, now());
     return c.json({ ok: true });
   });
@@ -364,7 +364,7 @@ export function buildApp(opts: AppOptions): { app: Hono; payments: PaymentServic
       const save = saveOf.get(u.id);
       const s = save?.state;
       const season = s?.seasons[s.seasons.length - 1];
-      const persona = s?.persona;
+      const persona = s?.persona ? migratePersona(s.persona) : undefined;
       return {
         userId: u.id,
         name: u.name,
@@ -377,7 +377,7 @@ export function buildApp(opts: AppOptions): { app: Hono; payments: PaymentServic
                 persona: persona.name,
                 position: persona.position,
                 age: persona.age,
-                ovr: Math.round(personaOvr(persona)),
+                ovr: personaLevel(persona),
                 club: s.clubs[persona.clubId]?.name ?? persona.clubId,
                 tier: season.tier,
                 season: season.index,

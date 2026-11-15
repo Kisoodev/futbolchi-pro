@@ -18,14 +18,17 @@ interface RuForms {
 
 export const TIER_NAMES_I18N: { uz: Record<Tier, string>; en: Record<Tier, string>; ru: Record<Tier, RuForms> } = {
   uz: TIER_NAMES,
-  en: { 1: 'Gold League', 2: 'Silver League', 3: 'Bronze League', 4: 'Academy League' },
+  en: { 1: 'Elite League', 2: 'First League', 3: 'Second League', 4: 'Academy League' },
   ru: {
-    1: { nom: 'Золотая лига', acc: 'Золотую лигу', prep: 'Золотой лиге' },
-    2: { nom: 'Серебряная лига', acc: 'Серебряную лигу', prep: 'Серебряной лиге' },
-    3: { nom: 'Бронзовая лига', acc: 'Бронзовую лигу', prep: 'Бронзовой лиге' },
+    1: { nom: 'Элитная лига', acc: 'Элитную лигу', prep: 'Элитной лиге' },
+    2: { nom: 'Первая лига', acc: 'Первую лигу', prep: 'Первой лиге' },
+    3: { nom: 'Вторая лига', acc: 'Вторую лигу', prep: 'Второй лиге' },
     4: { nom: 'Лига академий', acc: 'Лигу академий', prep: 'Лиге академий' },
   },
 };
+
+/** Russian "в" / "во" before a word ("во Вторую лигу", "в Первую лигу"). */
+const ruIn = (w: string) => (/^[ВвФф][^аеёиоуыэюяАЕЁИОУЫЭЮЯ]/.test(w) ? `во ${w}` : `в ${w}`);
 
 /** Display name of a league in the given language. */
 export function tierName(tier: Tier, lang: Lang): string {
@@ -127,12 +130,12 @@ export function seasonStoryRu(f: SeasonFacts): string {
   if (f.injuries > 0)
     parts.push(`Травма вывела вас из строя на ${f.injuryWeeks} ${ruPlural(f.injuryWeeks, 'неделю', 'недели', 'недель')}, но вы вернулись.`);
 
-  if (f.finalPosition === 1 && f.outcome === 'promoted') parts.push(`«${f.clubName}» стал чемпионом в ${tier.prep} и поднялся в ${next.acc}!`);
-  else if (f.finalPosition === 1) parts.push(`«${f.clubName}» стал чемпионом в ${tier.prep}!`);
-  else if (f.outcome === 'promoted') parts.push(`Ваша команда заняла ${f.finalPosition}-е место и поднялась в ${next.acc}!`);
+  if (f.finalPosition === 1 && f.outcome === 'promoted') parts.push(`«${f.clubName}» стал чемпионом ${ruIn(tier.prep)} и поднялся ${ruIn(next.acc)}!`);
+  else if (f.finalPosition === 1) parts.push(`«${f.clubName}» стал чемпионом ${ruIn(tier.prep)}!`);
+  else if (f.outcome === 'promoted') parts.push(`Ваша команда заняла ${f.finalPosition}-е место и поднялась ${ruIn(next.acc)}!`);
   else if (f.outcome === 'relegated')
-    parts.push(`Команда заняла ${f.finalPosition}-е место и опустилась в ${next.acc}. Но настоящий футболист всегда поднимается снова.`);
-  else parts.push(`Команда заняла ${f.finalPosition}-е место в ${tier.prep}.`);
+    parts.push(`Команда заняла ${f.finalPosition}-е место и опустилась ${ruIn(next.acc)}. Но настоящий футболист всегда поднимается снова.`);
+  else parts.push(`Команда заняла ${f.finalPosition}-е место ${ruIn(tier.prep)}.`);
 
   if (f.transferOffered) parts.push('Вами интересуются клубы посильнее!');
   parts.push(

@@ -3,6 +3,7 @@ import {
   applyAccountEvents,
   currentSeason,
   dayOf,
+  getTrainingOption,
   missionAt,
   missionProgress,
   newAccount,
@@ -37,13 +38,15 @@ describe('training day and match day', () => {
     expect(m.matchId).not.toBe('');
   });
 
-  it('training grows stats and reports the deltas for the animation', () => {
+  it('one training grows the attributes it works on, and only those', () => {
     const s0 = start();
-    const t = trainDay(s0, nonRest(s0));
-    const grown = Object.values(t.deltas).filter((d) => (d ?? 0) > 0);
+    const opt = nonRest(s0);
+    const t = trainDay(s0, opt);
+    expect(t.xp).toBeGreaterThan(0);
+    const grown = Object.keys(t.deltas);
     expect(grown.length).toBeGreaterThan(0);
-    expect(t.ovrAfter).toBeCloseTo(personaOvr(t.state.persona));
-    expect(t.reward.xp).toBeGreaterThanOrEqual(10);
+    for (const k of grown) expect(getTrainingOption(opt).focus).toContain(k);
+    expect(personaOvr(t.state.persona)).toBeGreaterThan(personaOvr(s0.persona));
   });
 
   it('a whole week is the same as the two days played separately', () => {
@@ -55,13 +58,15 @@ describe('training day and match day', () => {
     expect(currentSeason(split).table).toEqual(currentSeason(whole).table);
   });
 
-  it('a better performance grows the persona more', () => {
-    // same week, same persona: only the rating differs inside applyMatchXp
+  it('a match played earns XP that grows the main attributes', () => {
     const s0 = start(5);
     const day2 = trainDay(s0, nonRest(s0)).state;
     const m = playMatchDay(day2);
     const ps = m.state.matches[m.matchId].personaStats!;
-    if (ps.minutes > 0) expect(Object.keys(m.deltas).length).toBeGreaterThan(0);
+    if (ps.minutes > 0) {
+      expect(m.xp).toBeGreaterThanOrEqual(15);
+      expect(Object.keys(m.deltas).length).toBeGreaterThan(0);
+    } else expect(m.xp).toBe(0);
   });
 });
 

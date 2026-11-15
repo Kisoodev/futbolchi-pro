@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
-import { currentSeason, seasonFacts, seasonStory, type GameState } from '@futbolchi/engine';
+import { currentSeason, personaLevel, seasonFacts, seasonStory, type GameState } from '@futbolchi/engine';
+import { progressTexts } from '../i18n/progress';
+import { RatingCard } from '../components/RatingCard';
 import { lang, tx } from '../i18n';
 import { LeagueTable } from '../components/common';
 import { CoachGuide } from '../coach/CoachGuide';
@@ -33,6 +35,11 @@ export function SummaryScreen({ state, onNextSeason }: Props) {
           </h1>
         </header>
         <div className="panel-body">
+          {typeof season.startOvr === 'number' && (
+            <p className="season-growth">
+              <RatingCard level={personaLevel(state.persona)} size="sm" /> {progressTexts().seasonGrowth(season.startOvr, personaLevel(state.persona))}
+            </p>
+          )}
           <p className="story">{story}</p>
           <div className="tiles">
             <div><strong>{facts.apps}</strong><span>{tx.sumApps}</span></div>

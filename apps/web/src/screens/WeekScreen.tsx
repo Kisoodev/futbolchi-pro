@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import {
+  captainOf,
   currentSeason,
   dayOf,
   getTrainingOption,
-  personaOvr,
+  personaLevel,
   personaView,
   sortTable,
   tierName,
   seasonWeeks,
   trainingOffer,
   type GameState,
-  type StatKey,
   type TrainingId,
 } from '@futbolchi/engine';
 import { lang, tx } from '../i18n';
@@ -18,10 +18,12 @@ import { FatigueMeter, LeagueTable, PersonaHeader, StatBars } from '../component
 import { Avatar } from '../art/Avatar';
 import { CoachGuide } from '../coach/CoachGuide';
 import { progressTexts } from '../i18n/progress';
+import { RatingCard } from '../components/RatingCard';
+import { LeaguePath } from '../components/LeaguePath';
 
 interface Props {
   state: GameState;
-  /** Day 1: run the chosen training session. */
+  /** Day 1: the chosen training (one of the three offered). */
   onTrain: (option: TrainingId) => void;
   /** Day 2: play the match. */
   onPlayMatch: () => void;
@@ -29,15 +31,23 @@ interface Props {
   coachHold?: boolean;
 }
 
+/** What a training strengthens, how tiring it is and whether it risks an injury — in words. */
 function Effects({ id }: { id: TrainingId }) {
   const opt = getTrainingOption(id);
-  const chips: { text: string; tone: 'good' | 'bad' }[] = [];
-  for (const [k, v] of Object.entries(opt.gains) as [StatKey, number][]) {
-    chips.push({ text: `${tx.stats[k]} ${v > 0 ? (v >= 0.5 ? '++' : '+') : '−'}`, tone: v > 0 ? 'good' : 'bad' });
-  }
-  if (Object.keys(opt.gains).length === 0) chips.push({ text: tx.effNoGrowth, tone: 'bad' });
-  if (opt.fatigue !== 0) chips.push({ text: tx.effFatigue(opt.fatigue), tone: opt.fatigue < 0 ? 'good' : 'bad' });
-  if (opt.injuryRisk > 0) chips.push({ text: tx.effInjury(Math.round(opt.injuryRisk * 100)), tone: 'bad' });
+  const pt = progressTexts();
+  const chips: { text: string; tone: 'good' | 'bad' | 'mid' }[] = [];
+  for (const k of opt.focus) chips.push({ text: `▲ ${tx.stats[k]}`, tone: 'good' });
+  const f = opt.fatigue;
+  chips.push(
+    f < 0
+      ? { text: pt.fatigue.down, tone: 'good' }
+      : f <= 5
+        ? { text: pt.fatigue.low, tone: 'mid' }
+        : f <= 10
+          ? { text: pt.fatigue.mid, tone: 'mid' }
+          : { text: pt.fatigue.high, tone: 'bad' },
+  );
+  if (opt.injuryRisk > 0) chips.push({ text: pt.injuryRisk, tone: 'bad' });
   return (
     <span className="effects">
       {chips.map((c) => (
@@ -78,7 +88,10 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
   const atHome = fx ? fx.homeId === club.id : false;
   const pt = progressTexts();
   const day = dayOf(state);
-  const lastTraining = season.trainingLog.find((l) => l.week === season.week)?.optionId ?? null;
+  const lastTraining = (season.trainingLog.find((l) => l.week === season.week)?.optionId as TrainingId | undefined) ?? null;
+  const level = personaLevel(persona);
+  const captain = club.squad?.length ? captainOf(club.squad) : undefined;
+  const gap = captain ? captain.ovr - level : null;
 
   return (
     <div className={`screen grid week view-${view} day-${day}`}>
@@ -93,10 +106,7 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
           <span>{weekLine}</span>
         </div>
         <div className="m-status-side">
-          <span className="m-ovr" title={tx.ovr}>
-            <b>{Math.round(personaOvr(persona))}</b>
-            <small>{tx.ovrShort}</small>
-          </span>
+          <RatingCard level={level} size="sm" />
           <span className="m-place">🏆 {tx.tablePlace(placeOf(club.id), rows.length)}</span>
           <span className={`m-fatigue ${fatigueLevel}`} title={tx.fatigue} aria-label={`${tx.fatigue}: ${fatigue}`}>
             <i style={{ width: `${fatigue}%` }} />
@@ -110,6 +120,7 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
         <FatigueMeter value={persona.fatigue} />
         {persona.injuryWeeksLeft > 0 && <p className="warn">{tx.injured(persona.injuryWeeksLeft)}</p>}
         <StatBars persona={persona} />
+        {gap !== null && <p className="captain-gap">👑 {gap > 0 ? pt.captainGap(gap) : pt.captainAbove(-gap)}</p>}
       </section>
 
       <section className={`card train-card ${view === 'train' ? 'm-on' : ''}`}>
@@ -144,6 +155,7 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
             </div>
           </div>
         )}
+        <LeaguePath tier={season.tier} />
         <span className={`day-chip ${day}`}>{pt.dayChip(day === 'training' ? 1 : 2)}</span>
         {day === 'match' ? (
           <div className="match-day">
@@ -157,23 +169,16 @@ export function WeekScreen({ state, onTrain, onPlayMatch, coachHold }: Props) {
         ) : (
           <>
         <h2>{tx.trainingTitle}</h2>
-        <p className="muted">{tx.trainingHint}</p>
+        <p className="muted">{pt.trainHint}</p>
         <div className="options" role="radiogroup" aria-label={tx.trainingTitle}>
           {offer.map((id) => (
-            <button
-              key={id}
-              role="radio"
-              aria-checked={choice === id}
-              className={`option ${choice === id ? 'on' : ''}`}
-              onClick={() => setChoice(id)}
-            >
+            <button key={id} type="button" role="radio" aria-checked={choice === id} className={`option ${choice === id ? 'on' : ''}`} onClick={() => setChoice(id)}>
               <span className="radio" aria-hidden />
               <strong>{tx.trainingNames[id]}</strong>
               <Effects id={id} />
             </button>
           ))}
         </div>
-        {fx && <p className="next-match">{tx.nextMatch(state.clubs[fx.homeId].name, state.clubs[fx.awayId].name)}</p>}
         <button className="primary big play-btn" disabled={!choice} onClick={() => choice && onTrain(choice)}>
           {pt.trainButton} →
         </button>

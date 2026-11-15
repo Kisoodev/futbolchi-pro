@@ -28,7 +28,9 @@ export const en: Messages = {
     GK: 'Goalkeeper',
     CB: 'Centre-back',
     FB: 'Full-back',
+    CDM: "Defensive midfielder",
     CM: 'Midfielder',
+    CAM: "Attacking midfielder",
     W: 'Winger',
     ST: 'Striker',
   },
@@ -40,7 +42,6 @@ export const en: Messages = {
     dribbling: 'Dribbling',
     defending: 'Defending',
     physical: 'Physical',
-    mentality: 'Mentality',
   },
 
   // Persona creation
@@ -122,6 +123,7 @@ export const en: Messages = {
     bonus_negative: 'Points cannot be negative.',
     bonus_per_stat: 'You can add at most 5 points to one skill.',
     bonus_total: 'Not enough points.',
+    ovr_cap: "Overall rating may not go above 55: spread the points over other attributes.",
   },
 
   // Loading

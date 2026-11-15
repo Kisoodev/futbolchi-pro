@@ -1,13 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  applyMatchXp,
-  applyTraining,
-  computeOvr,
+  applyTrainingDay,
   createPersona,
-  growthRoom,
   offerTraining,
-  personaOvr,
+  personaLevel,
   personaView,
+  startStats,
   normalizeAppearance,
   validatePersonaInput,
   weeklyRecovery,
@@ -20,12 +18,8 @@ const make = (over: Partial<Parameters<typeof createPersona>[0]> = {}): Persona 
   createPersona({ id: 'p1', name: 'Aziz', position: 'ST', bonus: {}, seed: 7, clubId: 'c1', ...over });
 
 describe('persona creation', () => {
-  it('every position template starts near OVR 40', () => {
-    for (const pos of POSITIONS) {
-      const ovr = computeOvr(C.STAT_TEMPLATES[pos], pos);
-      expect(ovr).toBeGreaterThan(38);
-      expect(ovr).toBeLessThan(42);
-    }
+  it('every position starts at OVR 52 (rounded down)', () => {
+    for (const pos of POSITIONS) expect(personaLevel({ stats: startStats(pos), position: pos })).toBe(52);
   });
 
   it('position weights sum to 1', () => {
@@ -37,9 +31,9 @@ describe('persona creation', () => {
 
   it('applies bonus points and validates limits', () => {
     const p = make({ bonus: { shooting: 5, pace: 5 } });
-    expect(p.stats.shooting).toBe(C.STAT_TEMPLATES.ST.shooting + 5);
+    expect(p.stats.shooting).toBe(startStats('ST').shooting + 5);
     expect(validatePersonaInput({ name: 'Aziz', position: 'ST', bonus: { shooting: 6 } })).toBe('bonus_per_stat');
-    expect(validatePersonaInput({ name: 'Aziz', position: 'ST', bonus: { shooting: 5, pace: 5, passing: 1 } })).toBe('bonus_total');
+    expect(validatePersonaInput({ name: 'Aziz', position: 'ST', bonus: { passing: 5, defending: 5, physical: 3 } })).toBe('bonus_total');
     expect(validatePersonaInput({ name: 'A', position: 'ST', bonus: {} })).toBe('name_length');
     expect(validatePersonaInput({ name: 'Aziz', position: 'ST', bonus: { pace: -1 } })).toBe('bonus_negative');
     expect(() => make({ name: ' ' })).toThrow();
@@ -83,21 +77,14 @@ describe('persona creation', () => {
     expect(normalizeAppearance({ hairStyle: 'nope', heightCm: 999 } as never)).toEqual(C.DEFAULT_APPEARANCE);
   });
 
-  it('appearance does not change stats or potential', () => {
+  it('appearance does not change stats', () => {
     const a = make();
     const b = make({ appearance: { ...C.DEFAULT_APPEARANCE, heightCm: 200, weightKg: 100 } });
     expect(b.stats).toEqual(a.stats);
-    expect(b.potential).toBe(a.potential);
   });
 
-  it('potential is deterministic, hidden in the view, and within range', () => {
-    expect(make().potential).toBe(make().potential);
-    const pots = Array.from({ length: 500 }, (_, i) => make({ seed: i }).potential);
-    expect(Math.min(...pots)).toBeGreaterThanOrEqual(C.POTENTIAL_MIN);
-    expect(Math.max(...pots)).toBeLessThanOrEqual(C.POTENTIAL_MAX);
-    const avg = pots.reduce((a, b) => a + b, 0) / pots.length;
-    expect(avg).toBeGreaterThan(72);
-    expect(avg).toBeLessThan(79);
+  it('a new persona has an empty XP bank and no hidden potential', () => {
+    expect(make().xp).toBe(0);
     expect('potential' in personaView(make())).toBe(false);
   });
 });
@@ -106,8 +93,8 @@ describe('training', () => {
   it('offers 3 distinct options deterministically', () => {
     const p = make();
     const a = offerTraining(p, 99);
-    expect(a).toHaveLength(3);
-    expect(new Set(a).size).toBe(3);
+    expect(a).toHaveLength(C.TRAINING_OFFER_SIZE);
+    expect(new Set(a).size).toBe(C.TRAINING_OFFER_SIZE);
     expect(offerTraining(p, 99)).toEqual(a);
   });
 
@@ -118,47 +105,17 @@ describe('training', () => {
     }
   });
 
-  it('shooting training raises shooting and adds fatigue', () => {
+  it('the training day itself only changes fatigue and the injury risk (growth comes from XP)', () => {
     const p = make();
-    const r = applyTraining(p, 'shooting');
-    expect(r.persona.stats.shooting).toBeGreaterThan(p.stats.shooting);
-    expect(r.persona.fatigue).toBe(15);
-    expect(r.injuryRiskBonus).toBe(0);
-  });
-
-  it('gym raises physical and injury risk; tactical lowers pace', () => {
-    const p = make();
-    const gym = applyTraining(p, 'gym');
-    expect(gym.persona.stats.physical).toBeGreaterThan(p.stats.physical);
-    expect(gym.injuryRiskBonus).toBeGreaterThan(0);
-    const tac = applyTraining(p, 'tactical');
-    expect(tac.persona.stats.mentality).toBeGreaterThan(p.stats.mentality);
-    expect(tac.persona.stats.pace).toBeCloseTo(p.stats.pace - 0.2, 6);
+    const r = applyTrainingDay(p, 'gym');
+    expect(r.persona.stats).toEqual(p.stats);
+    expect(r.persona.fatigue).toBeGreaterThan(0);
+    expect(r.injuryRiskBonus).toBeGreaterThan(0);
   });
 
   it('rest reduces fatigue, never below zero', () => {
-    const r = applyTraining({ ...make(), fatigue: 20 }, 'rest');
+    const r = applyTrainingDay({ ...make(), fatigue: 20 }, 'rest');
     expect(r.persona.fatigue).toBe(0);
-  });
-
-  it('position-relevant stats grow faster', () => {
-    const st = make();
-    const stShoot = applyTraining(st, 'shooting').deltas.shooting!;
-    const cb = make({ position: 'CB' });
-    const cbShoot = applyTraining(cb, 'shooting').deltas.shooting!;
-    expect(stShoot).toBeGreaterThan(cbShoot);
-  });
-
-  it('injured persona gets no gains from training', () => {
-    const p = { ...make(), injuryWeeksLeft: 2 };
-    expect(applyTraining(p, 'shooting').persona.stats).toEqual(p.stats);
-  });
-
-  it('growth stops at hidden potential', () => {
-    let p: Persona = { ...make(), potential: 45 };
-    for (let i = 0; i < 2000; i++) p = applyMatchXp(applyTraining(p, i % 2 ? 'shooting' : 'speed').persona);
-    expect(growthRoom(p)).toBeLessThan(0.05);
-    expect(personaOvr(p)).toBeLessThanOrEqual(45.01);
   });
 
   it('weekly recovery lowers fatigue and heals injuries', () => {

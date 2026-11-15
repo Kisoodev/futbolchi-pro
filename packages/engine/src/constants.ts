@@ -1,34 +1,17 @@
 /**
  * Every tunable number lives here. Keep BALANCE.md in sync when changing anything.
  */
-import type { Appearance, Position, StatKey, Stats, Tier } from './types';
+import type { Appearance, Position, StatKey, Tier } from './types';
+import { PROGRESSION_CONFIG } from './progression';
 
 // ---------- Stats ----------
 export const STAT_MIN = 1;
-export const STAT_MAX = 99;
+export const STAT_MAX = PROGRESSION_CONFIG.MAX_ATTR;
 
-/** Importance of each stat per position. Each row sums to 1. */
-export const POSITION_WEIGHTS: Record<Position, Stats> = {
-  GK: { pace: 0.05, shooting: 0, passing: 0.15, dribbling: 0, defending: 0.35, physical: 0.15, mentality: 0.3 },
-  CB: { pace: 0.1, shooting: 0, passing: 0.1, dribbling: 0.05, defending: 0.35, physical: 0.25, mentality: 0.15 },
-  FB: { pace: 0.25, shooting: 0, passing: 0.15, dribbling: 0.1, defending: 0.25, physical: 0.15, mentality: 0.1 },
-  CM: { pace: 0.05, shooting: 0.1, passing: 0.3, dribbling: 0.15, defending: 0.1, physical: 0.1, mentality: 0.2 },
-  W: { pace: 0.3, shooting: 0.15, passing: 0.15, dribbling: 0.3, defending: 0, physical: 0.05, mentality: 0.05 },
-  ST: { pace: 0.2, shooting: 0.35, passing: 0.05, dribbling: 0.15, defending: 0, physical: 0.15, mentality: 0.1 },
-};
+/** Importance of each attribute per position (from PROGRESSION_CONFIG). */
+export const POSITION_WEIGHTS = PROGRESSION_CONFIG.WEIGHTS;
 
-// ---------- Persona creation ----------
-/** Starting stats per position, tuned so OVR ≈ 40. */
-export const STAT_TEMPLATES: Record<Position, Stats> = {
-  GK: { pace: 30, shooting: 20, passing: 36, dribbling: 25, defending: 42, physical: 40, mentality: 42 },
-  CB: { pace: 36, shooting: 25, passing: 36, dribbling: 30, defending: 43, physical: 43, mentality: 38 },
-  FB: { pace: 43, shooting: 28, passing: 38, dribbling: 36, defending: 41, physical: 38, mentality: 36 },
-  CM: { pace: 36, shooting: 36, passing: 43, dribbling: 40, defending: 36, physical: 37, mentality: 41 },
-  W: { pace: 44, shooting: 38, passing: 37, dribbling: 43, defending: 25, physical: 34, mentality: 35 },
-  ST: { pace: 42, shooting: 42, passing: 35, dribbling: 40, defending: 25, physical: 40, mentality: 38 },
-};
-export const BONUS_POINTS_TOTAL = 10;
-export const BONUS_POINTS_PER_STAT_MAX = 5;
+// ---------- Persona creation (see progression.ts) ----------
 export const START_AGE = 17;
 
 // ---------- Appearance (cosmetic only) ----------
@@ -55,20 +38,6 @@ export const DEFAULT_APPEARANCE: Appearance = {
   celebration: 'arms_up',
 };
 
-/** Hidden potential: triangular(min, mode, max). */
-export const POTENTIAL_MIN = 60;
-export const POTENTIAL_MODE = 75;
-export const POTENTIAL_MAX = 92;
-
-// ---------- Growth ----------
-/** room = clamp((potential − OVR) / GROWTH_ROOM_SPAN, 0, 1) */
-export const GROWTH_ROOM_SPAN = 15;
-/** gain = base × (GROWTH_POS_BASE + GROWTH_POS_FACTOR × weight) × room */
-export const GROWTH_POS_BASE = 0.5;
-export const GROWTH_POS_FACTOR = 2;
-/** After each match played, top-N position stats get this base gain. */
-export const MATCH_XP_BASE = 0.3;
-export const MATCH_XP_TOP_STATS = 2;
 
 // ---------- Training ----------
 export type TrainingId =
@@ -83,8 +52,8 @@ export type TrainingId =
 
 export interface TrainingOption {
   id: TrainingId;
-  /** Positive values go through the growth formula; negative values apply directly. */
-  gains: Partial<Stats>;
+  /** Attributes the session focuses on (training gives XP; these are suggested for spending). */
+  focus: StatKey[];
   /** Fatigue added this week (negative = recovery). */
   fatigue: number;
   /** Extra injury probability for this week's match. */
@@ -92,18 +61,17 @@ export interface TrainingOption {
 }
 
 export const TRAINING_OPTIONS: TrainingOption[] = [
-  { id: 'shooting', gains: { shooting: 1.0 }, fatigue: 15, injuryRisk: 0 },
-  { id: 'gym', gains: { physical: 1.0 }, fatigue: 10, injuryRisk: 0.03 },
-  { id: 'tactical', gains: { mentality: 1.0, pace: -0.2 }, fatigue: 5, injuryRisk: 0 },
-  { id: 'speed', gains: { pace: 0.8 }, fatigue: 10, injuryRisk: 0.02 },
-  { id: 'passing', gains: { passing: 0.8, dribbling: 0.2 }, fatigue: 5, injuryRisk: 0 },
-  { id: 'dribbling', gains: { dribbling: 1.0 }, fatigue: 10, injuryRisk: 0 },
-  { id: 'defending', gains: { defending: 1.0, mentality: 0.2 }, fatigue: 10, injuryRisk: 0 },
-  { id: 'rest', gains: {}, fatigue: -30, injuryRisk: 0 },
+  { id: 'shooting', focus: ['shooting'], fatigue: 15, injuryRisk: 0 },
+  { id: 'gym', focus: ['physical'], fatigue: 10, injuryRisk: 0.03 },
+  { id: 'tactical', focus: ['passing', 'defending'], fatigue: 5, injuryRisk: 0 },
+  { id: 'speed', focus: ['pace'], fatigue: 10, injuryRisk: 0.02 },
+  { id: 'passing', focus: ['passing', 'dribbling'], fatigue: 5, injuryRisk: 0 },
+  { id: 'dribbling', focus: ['dribbling'], fatigue: 10, injuryRisk: 0 },
+  { id: 'defending', focus: ['defending'], fatigue: 10, injuryRisk: 0 },
+  { id: 'rest', focus: [], fatigue: -30, injuryRisk: 0 },
 ];
+/** Options offered on a training day; the player picks one. */
 export const TRAINING_OFFER_SIZE = 3;
-/** Multiplier on positive training gains (before the growth formula). */
-export const TRAINING_GAIN_MULT = 1.6;
 
 // ---------- Fatigue / injury ----------
 export const FATIGUE_MAX = 100;
@@ -145,7 +113,9 @@ export const ATTACK_INVOLVEMENT: Record<Position, { pass: number; dribble: numbe
   GK: { pass: 0, dribble: 0, shot: 0 },
   CB: { pass: 0.08, dribble: 0, shot: 0.03 },
   FB: { pass: 0.1, dribble: 0.15, shot: 0.02 },
+  CDM: { pass: 0.25, dribble: 0.03, shot: 0.03 },
   CM: { pass: 0.35, dribble: 0.08, shot: 0.08 },
+  CAM: { pass: 0.3, dribble: 0.15, shot: 0.15 },
   W: { pass: 0.1, dribble: 0.35, shot: 0.2 },
   ST: { pass: 0.05, dribble: 0.1, shot: 0.45 },
 };
@@ -154,14 +124,16 @@ export const DEFENCE_INVOLVEMENT: Record<Position, number> = {
   GK: 0,
   CB: 0.3,
   FB: 0.2,
+  CDM: 0.25,
   CM: 0.1,
+  CAM: 0.05,
   W: 0.03,
   ST: 0,
 };
 
 /** Per phase, chance the defending side commits a bookable foul. */
 export const CARD_PER_PHASE = 0.04;
-/** Share of a team's cards attributed to the persona = CARD_PERSONA_SHARE × (1.5 − mentality/100). */
+/** Share of a team's cards attributed to the persona = CARD_PERSONA_SHARE × (1.5 − defending/100). */
 export const CARD_PERSONA_SHARE = 0.12;
 export const RED_STRAIGHT_SHARE = 0.08;
 
@@ -187,7 +159,7 @@ export const RATING_CONCEDED = -0.4;
 export const RATING_WIN = 0.3;
 export const RATING_LOSS = -0.3;
 /** Clean-sheet bonus by position (persona played and team conceded 0). */
-export const RATING_CLEAN_SHEET: Record<Position, number> = { GK: 0.8, CB: 0.5, FB: 0.4, CM: 0.2, W: 0, ST: 0 };
+export const RATING_CLEAN_SHEET: Record<Position, number> = { GK: 0.8, CB: 0.5, FB: 0.4, CDM: 0.3, CM: 0.2, CAM: 0, W: 0, ST: 0 };
 export const RATING_MIN = 3;
 export const RATING_MAX = 10;
 
@@ -200,25 +172,24 @@ export const SELECTION_HI = 0.98;
 export const SUB_APPEARANCE_CHANCE = 0.3;
 
 // ---------- League ----------
-export const CLUBS_PER_TIER = 8;
-export const TIERS: Tier[] = [1, 2, 3, 4];
-export const TIER_BASE_RATING: Record<Tier, number> = { 1: 75, 2: 65, 3: 55, 4: 45 };
-export const CLUB_RATING_SPREAD = 5;
-export const PROMOTION_SPOTS = 2;
-export const RELEGATION_SPOTS = 2;
-/** After moving tier, each club rating moves this share of the way to the new tier base. */
-export const TIER_DRIFT = 0.4;
+/** 16 clubs → 30 matches a season (the spec is balanced for ~30). */
+export const CLUBS_PER_TIER = 16;
+/**
+ * The leagues in play, top first: 1-liga (2), 2-liga (3), Akademiya (4).
+ * Tier 1 (Elit) is reserved for a later stage of the game.
+ */
+export const TIERS: Tier[] = [2, 3, 4];
+/** The highest league in play. */
+export const TOP_TIER: Tier = 2;
+/** Only the champion goes up (and only the last club goes down, so every league keeps 16 clubs). */
+export const PROMOTION_SPOTS = 1;
+export const RELEGATION_SPOTS = 1;
 /** Noise used to rank clubs in tiers that are not simulated. */
 export const UNSIMULATED_TIER_NOISE = 6;
 export const POINTS_WIN = 3;
 export const POINTS_DRAW = 1;
 
 // ---------- Transfers ----------
-/** Min season average rating for a transfer offer. Per position: defenders' ratings run lower. */
-export const TRANSFER_MIN_AVG_RATING: Record<Position, number> = { GK: 6.6, CB: 6.3, FB: 6.2, CM: 6.8, W: 6.8, ST: 7.0 };
-/** OVR must be ≥ target tier base − this. */
-export const TRANSFER_OVR_MARGIN = 5;
-export const TRANSFER_OFFERS = 2;
 
 export const STAT_KEYS_LIST: StatKey[] = [
   'pace',
@@ -227,5 +198,4 @@ export const STAT_KEYS_LIST: StatKey[] = [
   'dribbling',
   'defending',
   'physical',
-  'mentality',
 ];

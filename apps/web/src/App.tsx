@@ -221,18 +221,42 @@ export function App() {
               onTrain={(opt: TrainingId) => {
                 const r = trainDay(game, opt);
                 update(r.state);
-                setGrowth({ kind: 'training', before: game.persona.stats, after: r.state.persona.stats, ovrBefore: r.ovrBefore, ovrAfter: r.ovrAfter, reward: r.reward, account: r.state.account, rested: opt === 'rest' });
+                setGrowth({
+                  kind: 'training',
+                  name: game.persona.name,
+                  before: game.persona.stats,
+                  after: r.state.persona.stats,
+                  levelBefore: r.levelBefore,
+                  levelAfter: r.levelAfter,
+                  milestones: r.milestones,
+                  reward: r.reward,
+                  account: r.state.account,
+                  rested: opt === 'rest',
+                });
               }}
               coachHold={!!growth}
               onPlayMatch={() => {
                 const r = playMatchDay(game);
                 update(r.state);
-                const before = game.persona.stats;
+                const ps = r.state.matches[r.matchId]?.personaStats;
+                const played = (ps?.minutes ?? 0) > 0;
                 // growth from the performance only (fatigue and recovery are not "growth")
+                const before = game.persona.stats;
                 const after = { ...before };
                 for (const [k, d] of Object.entries(r.deltas)) after[k as keyof typeof after] = before[k as keyof typeof before] + (d ?? 0);
-                const played = (r.state.matches[r.matchId]?.personaStats?.minutes ?? 0) > 0;
-                setAfterMatch({ kind: 'match', before, after, ovrBefore: r.ovrBefore, ovrAfter: r.ovrAfter, reward: r.reward, account: r.state.account, benched: !played });
+                setAfterMatch({
+                  kind: 'match',
+                  name: game.persona.name,
+                  before,
+                  after,
+                  levelBefore: r.levelBefore,
+                  levelAfter: r.levelAfter,
+                  milestones: r.milestones,
+                  rating: ps?.rating ?? null,
+                  reward: r.reward,
+                  account: r.state.account,
+                  benched: !played,
+                });
                 setRoute({ name: 'match', matchId: r.matchId });
               }}
             />

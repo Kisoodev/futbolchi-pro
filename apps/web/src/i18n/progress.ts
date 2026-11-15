@@ -39,6 +39,27 @@ export interface ProgressTexts {
   missionNames: Record<MissionKind, (target: number) => string>;
   totals: (missions: number, totalXp: number) => string;
   close: string;
+  // progression (docs/PROGRESSION_SYSTEM.md)
+  ratingUp: (level: number) => string;
+  cardTiers: Record<string, string>;
+  milestone: (level: number) => string;
+  milestoneShare: (name: string, level: number) => string;
+  share: string;
+  seasonGrowth: (from: number, to: number) => string;
+  captainGap: (gap: number) => string;
+  captainAbove: (gap: number) => string;
+  matchXpLine: (rating: string) => string;
+  pointUp: (n: number) => string;
+  almost: string;
+  ratingSame: string;
+  growHint: string;
+  trainHint: string;
+  trainFocus: string;
+  fatigue: { down: string; low: string; mid: string; high: string };
+  injuryRisk: string;
+  stage: (n: number, of: number) => string;
+  goalUp: (league: string, next: string) => string;
+  goalTop: string;
 }
 
 const uz: ProgressTexts = {
@@ -58,18 +79,18 @@ const uz: ProgressTexts = {
   restGrowth: 'Dam olding: charchoq kamaydi, kuch tiklandi.',
   benched: "Bu safar zaxirada qolding. Mashg'ulotda kuchayib, asosiy tarkibdan joy ol!",
   ovr: 'Umumiy reyting',
-  xpGained: (x) => `+${x} XP`,
+  xpGained: (x) => `+${x} ⭐`,
   levelUp: (l) => `Yangi daraja: ${l}!`,
   missionDone: 'Missiya bajarildi',
   continue: 'Davom etish →',
   toMatchDay: "Ertaga — o'yin kuni →",
   level: (n) => `${n}-daraja`,
   levelShort: 'Daraja',
-  xpOf: (x, n) => `${x} / ${n} XP`,
+  xpOf: (x, n) => `${x} / ${n} ⭐`,
   accountTitle: 'Akkaunt darajasi',
-  accountText: "Mashg'ulot, o'yin, g'alaba, yaxshi reyting, futbolchingni kuchaytirish va missiyalar uchun XP olasan.",
+  accountText: "Mashg'ulot, o'yin, g'alaba, yaxshi reyting, futbolchingni kuchaytirish va missiyalar uchun ⭐ ochko olasan.",
   missionsTitle: 'Missiyalar',
-  missionReward: (x) => `+${x} XP`,
+  missionReward: (x) => `+${x} ⭐`,
   missionNames: {
     train: (t) => `${t} ta mashg'ulot o'tkaz`,
     play: (t) => `${t} ta o'yinda maydonga tush`,
@@ -78,8 +99,28 @@ const uz: ProgressTexts = {
     contribute: (t) => `${t} ta gol yoki golli pas ber`,
     ovr: (t) => `Umumiy reytingni ${t} ochkoga oshir`,
   },
-  totals: (m, x) => `Bajarilgan missiyalar: ${m} · Jami: ${x} XP`,
+  totals: (m, x) => `Bajarilgan missiyalar: ${m} · Jami: ${x} ⭐`,
   close: 'Yopish',
+  ratingUp: (l) => `Reyting ${l}!`,
+  cardTiers: { Bronza: 'Bronza', Kumush: 'Kumush', Oltin: 'Oltin', Elit: 'Elit', Afsona: 'Afsona', Ikona: 'Ikona' },
+  milestone: (l) => `🏅 ${l} reytingga yetding!`,
+  milestoneShare: (n, l) => `${n} Futbolchi Pro'da ${l} reytingga yetdi! ⚽`,
+  share: '📤 Ulashish',
+  seasonGrowth: (a, b) => `Mavsum boshida ${a} eding → endi ${b} (+${b - a})`,
+  captainGap: (g) => `Kapitandan ${g} reyting pastdasan`,
+  captainAbove: (g) => `Kapitandan ${g} reyting yuqorisan!`,
+  matchXpLine: (r) => `Reyting ${r}`,
+  pointUp: (n) => `+${n}`,
+  almost: "o'smoqda",
+  ratingSame: "Reyting o'z joyida — o'sish to'planmoqda",
+  growHint: "Yashil qism — bugun qo'shilgan kuch. Chiziq to'lganda ko'rsatkich bittaga oshadi.",
+  trainHint: "Uchtasidan bittasini tanla: o'sha mashg'ulot o'z ko'rsatkichlarini kuchaytiradi.",
+  trainFocus: 'Kuchaytiradi',
+  fatigue: { down: 'Charchoq kamayadi', low: 'Charchoq: kam', mid: "Charchoq: o'rtacha", high: "Charchoq: ko'p" },
+  injuryRisk: 'Jarohat xavfi bor',
+  stage: (n, of) => `${n}/${of}-bosqich`,
+  goalUp: (l, n) => `Maqsad: ${l}ni yutib, ${n}ga chiqish`,
+  goalTop: "Maqsad: 1-liga chempioni bo'lish",
 };
 
 const en: ProgressTexts = {
@@ -99,18 +140,18 @@ const en: ProgressTexts = {
   restGrowth: 'You rested: fatigue down, energy back.',
   benched: 'You stayed on the bench this time. Get stronger in training and win a starting place!',
   ovr: 'Overall rating',
-  xpGained: (x) => `+${x} XP`,
+  xpGained: (x) => `+${x} ⭐`,
   levelUp: (l) => `New level: ${l}!`,
   missionDone: 'Mission complete',
   continue: 'Continue →',
   toMatchDay: 'Tomorrow — match day →',
   level: (n) => `Level ${n}`,
   levelShort: 'Level',
-  xpOf: (x, n) => `${x} / ${n} XP`,
+  xpOf: (x, n) => `${x} / ${n} ⭐`,
   accountTitle: 'Account level',
-  accountText: 'Earn XP for training, matches, wins, good ratings, making your player stronger and missions.',
+  accountText: 'Earn ⭐ points for training, matches, wins, good ratings, making your player stronger and missions.',
   missionsTitle: 'Missions',
-  missionReward: (x) => `+${x} XP`,
+  missionReward: (x) => `+${x} ⭐`,
   missionNames: {
     train: (t) => `Complete ${t} training sessions`,
     play: (t) => `Play in ${t} matches`,
@@ -119,8 +160,28 @@ const en: ProgressTexts = {
     contribute: (t) => `Make ${t} goals or assists`,
     ovr: (t) => `Raise your overall rating by ${t}`,
   },
-  totals: (m, x) => `Missions done: ${m} · Total: ${x} XP`,
+  totals: (m, x) => `Missions done: ${m} · Total: ${x} ⭐`,
   close: 'Close',
+  ratingUp: (l) => `Rating ${l}!`,
+  cardTiers: { Bronza: 'Bronze', Kumush: 'Silver', Oltin: 'Gold', Elit: 'Elite', Afsona: 'Legend', Ikona: 'Icon' },
+  milestone: (l) => `🏅 You reached a ${l} rating!`,
+  milestoneShare: (n, l) => `${n} reached a ${l} rating in Futbolchi Pro! ⚽`,
+  share: '📤 Share',
+  seasonGrowth: (a, b) => `You started the season at ${a} → now ${b} (+${b - a})`,
+  captainGap: (g) => `${g} below your captain`,
+  captainAbove: (g) => `${g} above your captain!`,
+  matchXpLine: (r) => `Rating ${r}`,
+  pointUp: (n) => `+${n}`,
+  almost: 'growing',
+  ratingSame: 'Rating holds — growth is building up',
+  growHint: 'The green part is what you gained today. When a bar fills, the attribute goes up by one.',
+  trainHint: 'Pick one of the three: that training strengthens its own attributes.',
+  trainFocus: 'Strengthens',
+  fatigue: { down: 'Less tired', low: 'Tiredness: low', mid: 'Tiredness: medium', high: 'Tiredness: high' },
+  injuryRisk: 'Injury risk',
+  stage: (n, of) => `Stage ${n} of ${of}`,
+  goalUp: (l, n) => `Goal: win the ${l} and go up to the ${n}`,
+  goalTop: 'Goal: become champions of the First League',
 };
 
 const ru: ProgressTexts = {
@@ -140,18 +201,18 @@ const ru: ProgressTexts = {
   restGrowth: 'Отдых: усталость ниже, силы вернулись.',
   benched: 'В этот раз — скамейка запасных. Становись сильнее на тренировках и завоюй место в старте!',
   ovr: 'Общий рейтинг',
-  xpGained: (x) => `+${x} XP`,
+  xpGained: (x) => `+${x} ⭐`,
   levelUp: (l) => `Новый уровень: ${l}!`,
   missionDone: 'Миссия выполнена',
   continue: 'Дальше →',
   toMatchDay: 'Завтра — день матча →',
   level: (n) => `Уровень ${n}`,
   levelShort: 'Уровень',
-  xpOf: (x, n) => `${x} / ${n} XP`,
+  xpOf: (x, n) => `${x} / ${n} ⭐`,
   accountTitle: 'Уровень аккаунта',
-  accountText: 'XP дают за тренировки, матчи, победы, хорошие оценки, рост игрока и миссии.',
+  accountText: '⭐ очки дают за тренировки, матчи, победы, хорошие оценки, рост игрока и миссии.',
   missionsTitle: 'Миссии',
-  missionReward: (x) => `+${x} XP`,
+  missionReward: (x) => `+${x} ⭐`,
   missionNames: {
     train: (t) => `Проведи тренировок: ${t}`,
     play: (t) => `Сыграй матчей: ${t}`,
@@ -160,8 +221,28 @@ const ru: ProgressTexts = {
     contribute: (t) => `Голы или передачи: ${t}`,
     ovr: (t) => `Подними общий рейтинг на ${t}`,
   },
-  totals: (m, x) => `Выполнено миссий: ${m} · Всего: ${x} XP`,
+  totals: (m, x) => `Выполнено миссий: ${m} · Всего: ${x} ⭐`,
   close: 'Закрыть',
+  ratingUp: (l) => `Рейтинг ${l}!`,
+  cardTiers: { Bronza: 'Бронза', Kumush: 'Серебро', Oltin: 'Золото', Elit: 'Элита', Afsona: 'Легенда', Ikona: 'Икона' },
+  milestone: (l) => `🏅 Ты достиг рейтинга ${l}!`,
+  milestoneShare: (n, l) => `${n} достиг рейтинга ${l} в Futbolchi Pro! ⚽`,
+  share: '📤 Поделиться',
+  seasonGrowth: (a, b) => `В начале сезона было ${a} → теперь ${b} (+${b - a})`,
+  captainGap: (g) => `На ${g} ниже капитана`,
+  captainAbove: (g) => `На ${g} выше капитана!`,
+  matchXpLine: (r) => `Оценка ${r}`,
+  pointUp: (n) => `+${n}`,
+  almost: 'растёт',
+  ratingSame: 'Рейтинг на месте — рост копится',
+  growHint: 'Зелёная часть — то, что прибавилось сегодня. Когда полоска заполнится, показатель вырастет на единицу.',
+  trainHint: 'Выбери одну из трёх: эта тренировка усиливает свои показатели.',
+  trainFocus: 'Усиливает',
+  fatigue: { down: 'Усталость снизится', low: 'Усталость: низкая', mid: 'Усталость: средняя', high: 'Усталость: высокая' },
+  injuryRisk: 'Есть риск травмы',
+  stage: (n, of) => `Этап ${n} из ${of}`,
+  goalUp: (l, n) => `Цель: выиграть «${l}» и выйти в «${n}»`,
+  goalTop: 'Цель: стать чемпионом Первой лиги',
 };
 
 const TEXTS: Record<Lang, ProgressTexts> = { uz, en, ru };

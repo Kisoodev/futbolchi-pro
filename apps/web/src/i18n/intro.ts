@@ -23,7 +23,7 @@ export type IntroLineKey =
   | 'doubt'
   | 'prove'
   | 'momGift'
-  | 'dadBlessing'
+  | 'momFather'
   | 'academy'
   | 'kidLaugh'
   | 'promise'
@@ -51,18 +51,18 @@ export interface IntroScript {
 
 const uz: IntroScript = {
   lines: {
-    place: ({ name }) => `${name}, 17 yosh. Toshkent chekkasidagi mahalla.`,
+    place: ({ name }) => `${name}, 17 yosh. Oddiy bir qishloq.`,
     night: () => "Hamma uxlagan. Faqat to'p uyg'oq.",
-    dream: () => 'Yulduz akademiyasi saralash o\'tkazmoqda... Bu mening imkoniyatim.',
+    dream: () => "Futbol akademiyasi saralash o'tkazmoqda... Bu mening imkoniyatim.",
     heroAsk: () => "Dada... men futbolchi bo'lmoqchiman. Akademiyaga boraman.",
     dad1: ({ g }) => `Futbol — o'yin, ${g === 'female' ? 'qizim' : "o'g'lim"}. Hayot esa boshqa narsa.`,
     dad2: () => "Mingta boladan bittasi yetib boradi. Jarohat, o'qish... Keyin pushaymon bo'lasan.",
     mom1: () => 'Otang seni o\'ylayapti, bolam...',
-    heroHurt: () => 'Meni hech qachon tushunmaysizlar!',
+    heroHurt: () => "Axir mening orzuim — mashhur futbolchi bo'lish!",
     doubt: () => 'Balki dadam haqdir...',
     prove: () => "Yo'q. Isbotlab beraman.",
-    momGift: () => "Bu otangning butsasi. Yoshligida u ham orzu qilgan edi.",
-    dadBlessing: () => "Bor. Lekin boshlagan ishingni oxirigacha yetkaz.",
+    momGift: () => "Mana, yo'l puli. O'zingni ehtiyot qil, bolam.",
+    momFather: () => "Otang kuzatgani chiqmadi... hali ham xafa. Lekin men senga ishonaman.",
     academy: () => 'Saralash kuni.',
     kidLaugh: ({ g }) => `Bu ${g === 'female' ? 'qiz' : 'bola'} qayerdan keldi? Ha-ha!`,
     promise: () => "Endi bu faqat orzu emas. Bu — va'da.",
@@ -73,8 +73,8 @@ const uz: IntroScript = {
     coachVerdict: () => 'Yomon emas. Lekin bu faqat boshlanishi. Bugundan men bilan ishlaysan — har haftani birga rejalashtiramiz.',
     tagline: () => 'Karyerang shu yerdan boshlanadi.',
   },
-  phone: ['YULDUZ', 'AKADEMIYASI', 'Saralash:', 'shanba 9:00'],
-  academySign: 'YULDUZ AKADEMIYASI',
+  phone: ['FUTBOL', 'AKADEMIYASI', 'Saralash:', 'shanba 9:00'],
+  academySign: 'FUTBOL AKADEMIYASI',
   who: { hero: ({ name }) => name, kid: 'Akademiya bolasi' },
   skip: "O'tkazib yuborish ⏭",
   loading: 'Sahna tayyorlanmoqda...',
@@ -83,18 +83,18 @@ const uz: IntroScript = {
 
 const en: IntroScript = {
   lines: {
-    place: ({ name }) => `${name}, 17. A mahalla on the edge of Tashkent.`,
+    place: ({ name }) => `${name}, 17. A small village.`,
     night: () => 'Everyone is asleep. Only the ball is awake.',
-    dream: () => 'Yulduz Academy is holding trials... This is my chance.',
+    dream: () => 'The football academy is holding trials... This is my chance.',
     heroAsk: () => "Dad... I want to be a footballer. I'm going to the academy.",
     dad1: ({ g }) => `Football is a game, ${g === 'female' ? 'my girl' : 'son'}. Life is something else.`,
     dad2: () => "One kid in a thousand makes it. Injuries, school... You'll regret it.",
     mom1: () => 'Your father is thinking of you, dear...',
-    heroHurt: () => "You'll never understand me!",
+    heroHurt: () => 'But my dream is to become a famous footballer!',
     doubt: () => 'Maybe Dad is right...',
     prove: () => "No. I'll prove it.",
-    momGift: () => 'These were your father\'s boots. He had a dream too, once.',
-    dadBlessing: () => 'Go. But finish what you start.',
+    momGift: () => 'Here, money for the road. Take care of yourself, dear.',
+    momFather: () => "Your father didn't come out... he's still upset. But I believe in you.",
     academy: () => 'Trial day.',
     kidLaugh: ({ g }) => `Where did ${g === 'female' ? 'she' : 'he'} come from? Ha-ha!`,
     promise: () => "It's not just a dream anymore. It's a promise.",
@@ -105,8 +105,8 @@ const en: IntroScript = {
     coachVerdict: () => "Not bad. But this is only the start. From today you work with me — we'll plan every week together.",
     tagline: () => 'Your career starts here.',
   },
-  phone: ['YULDUZ', 'ACADEMY', 'Trials:', 'Sat 9:00'],
-  academySign: 'YULDUZ ACADEMY',
+  phone: ['FOOTBALL', 'ACADEMY', 'Trials:', 'Sat 9:00'],
+  academySign: 'FOOTBALL ACADEMY',
   who: { hero: ({ name }) => name, kid: 'Academy kid' },
   skip: 'Skip ⏭',
   loading: 'Setting the scene...',
@@ -115,18 +115,18 @@ const en: IntroScript = {
 
 const ru: IntroScript = {
   lines: {
-    place: ({ name }) => `${name}, 17 лет. Махалля на окраине Ташкента.`,
+    place: ({ name }) => `${name}, 17 лет. Обычная деревня.`,
     night: () => 'Все спят. Не спит только мяч.',
-    dream: () => 'Академия «Юлдуз» проводит отбор... Это мой шанс.',
+    dream: () => 'Футбольная академия проводит отбор... Это мой шанс.',
     heroAsk: ({ g }) => `Папа... я хочу стать ${g === 'female' ? 'футболисткой' : 'футболистом'}. Я пойду в академию.`,
     dad1: ({ g }) => `Футбол — это игра, ${g === 'female' ? 'дочка' : 'сынок'}. А жизнь — другое.`,
     dad2: () => 'Из тысячи доходит один. Травмы, учёба... Потом пожалеешь.',
     mom1: () => 'Отец думает о тебе, родной...',
-    heroHurt: () => 'Вы меня никогда не поймёте!',
+    heroHurt: ({ g }) => `Но моя мечта — стать ${g === 'female' ? 'известной футболисткой' : 'известным футболистом'}!`,
     doubt: () => 'Может, папа прав...',
     prove: () => 'Нет. Я докажу.',
-    momGift: () => 'Это бутсы твоего отца. Когда-то он тоже мечтал.',
-    dadBlessing: () => 'Иди. Но доведи начатое до конца.',
+    momGift: () => 'Вот, деньги на дорогу. Береги себя, родной.',
+    momFather: () => 'Отец не вышел проводить... он всё ещё обижен. Но я в тебя верю.',
     academy: () => 'День отбора.',
     kidLaugh: ({ g }) => `${g === 'female' ? 'Откуда она взялась' : 'Откуда он взялся'}? Ха-ха!`,
     promise: () => 'Это уже не просто мечта. Это обещание.',
@@ -137,8 +137,8 @@ const ru: IntroScript = {
     coachVerdict: () => 'Неплохо. Но это только начало. С сегодняшнего дня работаешь со мной — каждую неделю планируем вместе.',
     tagline: () => 'Твоя карьера начинается здесь.',
   },
-  phone: ['АКАДЕМИЯ', '«ЮЛДУЗ»', 'Отбор:', 'сб 9:00'],
-  academySign: 'АКАДЕМИЯ «ЮЛДУЗ»',
+  phone: ['ФУТБОЛЬНАЯ', 'АКАДЕМИЯ', 'Отбор:', 'сб 9:00'],
+  academySign: 'ФУТБОЛЬНАЯ АКАДЕМИЯ',
   who: { hero: ({ name }) => name, kid: 'Игрок академии' },
   skip: 'Пропустить ⏭',
   loading: 'Готовим сцену...',

@@ -113,6 +113,18 @@ export function IntroPlayer({ name, appearance, onDone, scenes = OPENING, size, 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(false);
   const [showSkip, setShowSkip] = useState(false);
+  /**
+   * The skip button stays hidden so the film plays clean; it appears only when
+   * the viewer touches the screen (or presses a key) and hides again after a while.
+   */
+  const hideSkip = useRef(0);
+  const revealSkip = () => {
+    if (clean) return;
+    setShowSkip(true);
+    window.clearTimeout(hideSkip.current);
+    hideSkip.current = window.setTimeout(() => setShowSkip(false), 4000);
+  };
+  useEffect(() => () => window.clearTimeout(hideSkip.current), []);
   const doneRef = useRef(onDone);
   doneRef.current = onDone;
   const script = introScript();
@@ -239,7 +251,6 @@ export function IntroPlayer({ name, appearance, onDone, scenes = OPENING, size, 
       started = true;
       startAt = performance.now();
       void audio.start();
-      if (!clean) setTimeout(() => setShowSkip(true), 1200);
     };
     const handle: IntroHandle = {
       canvas,
@@ -293,7 +304,9 @@ export function IntroPlayer({ name, appearance, onDone, scenes = OPENING, size, 
     })();
 
     const onKey = (e: KeyboardEvent) => {
-      if (!clean && e.key === 'Escape') finish();
+      if (clean) return;
+      if (e.key === 'Escape') finish();
+      else revealSkip();
     };
     window.addEventListener('keydown', onKey);
 
@@ -310,7 +323,7 @@ export function IntroPlayer({ name, appearance, onDone, scenes = OPENING, size, 
   }, []);
 
   return (
-    <div ref={wrapRef} className={size ? 'intro-stage fixed-size' : 'intro-stage'}>
+    <div ref={wrapRef} className={size ? 'intro-stage fixed-size' : 'intro-stage'} onPointerDown={revealSkip}>
       <canvas ref={canvasRef} className="intro-canvas" style={size ? { aspectRatio: `${size.w} / ${size.h}` } : undefined} />
       {!ready && <p className="intro-loading">{script.loading}</p>}
       {showSkip && !clean && (

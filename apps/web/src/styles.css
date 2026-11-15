@@ -552,3 +552,75 @@ a.link { color: var(--ink-muted); font-weight: 600; text-decoration: none; displ
 .rec-replay .replay { max-width: 960px; margin: 0 auto; }
 .rec-match { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
 .rec-match select { min-width: 0; }
+
+/* ----- Progression: rating card, XP, upgrade ----- */
+.rating-card { --card: #b0703c; display: inline-grid; justify-items: center; align-content: center; line-height: 1; border-radius: 8px; color: #fff; background: linear-gradient(160deg, color-mix(in srgb, var(--card) 70%, #fff), var(--card)); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.35), 0 2px 6px rgba(0, 0, 0, 0.2); text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.rating-card strong { font-family: var(--pixel); }
+.rating-card small { font: 800 0.55rem var(--body); text-transform: uppercase; letter-spacing: 0.04em; }
+.rating-card.sm { min-width: 42px; padding: 3px 6px; }
+.rating-card.sm strong { font-size: 1.15rem; }
+.rating-card.md { min-width: 56px; padding: 5px 8px; }
+.rating-card.md strong { font-size: 1.6rem; }
+.rating-card.lg { min-width: 76px; padding: 8px 10px; }
+.rating-card.lg strong { font-size: 2.3rem; }
+.xp-chip { min-height: 0; padding: 2px 8px; border-radius: 999px; font: 800 0.78rem var(--body); background: #efe6ff; color: #5b2bbf; box-shadow: none; }
+.upgrade-btn { width: 100%; margin-top: 8px; }
+.captain-gap { margin: 6px 0 0; font-weight: 700; font-size: 0.85rem; color: var(--ink-muted); }
+.session-slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; }
+.session-slots .slot { min-height: 36px; padding: 4px 6px; font-size: 0.8rem; border: 2px dashed var(--line); background: #fff; box-shadow: none; color: var(--ink-muted); }
+.session-slots .slot.full { border-style: solid; border-color: var(--grass); background: var(--grass-pale); color: var(--grass-ink); font-weight: 800; }
+.option .session-count { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--sky-pale); color: var(--sky-deep); font-weight: 800; }
+.option.on .session-count { background: var(--grass); color: #fff; }
+.option .session-xp { margin-left: auto; color: #5b2bbf; font-weight: 800; font-size: 0.8rem; }
+.xp-earned { display: grid; justify-items: center; gap: 2px; }
+.xp-earned strong { font: 700 2.2rem var(--pixel); color: #5b2bbf; }
+.xp-bank { margin: 0; font-weight: 800; color: #5b2bbf; }
+.xp-bank.big { text-align: center; }
+.growth-actions { display: grid; gap: 8px; }
+.season-growth { display: flex; align-items: center; gap: 8px; font-weight: 800; margin: 0 0 8px; }
+.upgrade-modal { z-index: 66; }
+.upgrade-box { display: grid; gap: 10px; max-width: min(94vw, 480px); }
+.upgrade-head { display: flex; gap: 12px; align-items: center; }
+.upgrade-info { display: grid; gap: 2px; }
+.upgrade-info h2 { margin: 0; }
+.upgrade-hint { margin: 0; }
+.upgrade-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.upgrade-list li { display: grid; grid-template-columns: 7em 1fr 2.2em auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 8px; transition: background 0.3s; }
+.upgrade-list li.focus { background: var(--grass-pale); }
+.upgrade-list li.flash { background: #fff3c4; }
+.upgrade-list li.flash .up-val { animation: grow-bounce 0.5s both; color: var(--grass-ink); }
+.up-name { font-weight: 700; font-size: 0.9rem; }
+.up-name .star { color: #e0a526; margin-right: 2px; }
+.up-bar { position: relative; height: 10px; border-radius: 999px; background: #e3ecf5; overflow: hidden; }
+.up-bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #6fb7ef, #2f78b7); transition: width 0.5s ease; }
+.upgrade-list li.key .up-bar i { background: linear-gradient(90deg, #8ee26a, var(--grass)); }
+.up-val { font-family: var(--pixel); text-align: right; }
+.up-buy { min-height: 0; padding: 5px 8px; font-size: 0.78rem; white-space: nowrap; }
+.upgrade-actions { display: flex; justify-content: space-between; gap: 8px; margin: 0; }
+.level-pop { text-align: center; font: 700 1.5rem var(--pixel); color: var(--grass-ink); animation: grow-bounce 0.6s both; }
+.milestone { display: flex; align-items: center; justify-content: space-between; gap: 8px; background: linear-gradient(90deg, #fff6d6, #ffe48a); border-radius: 10px; padding: 8px 10px; animation: grow-bounce 0.6s both; }
+.milestone button { min-height: 0; padding: 4px 10px; }
+.points-hint.warn { color: var(--danger); }
+@media (max-width: 420px) { .upgrade-list li { grid-template-columns: 5.6em 1fr 2em auto; gap: 6px; } .up-name { font-size: 0.82rem; } }
+
+/* ----- Training effects in words, growth rows "54 → 55" ----- */
+.eff.mid { background: #fdf1d8; color: #8a5a00; }
+.grow-row { grid-template-columns: 7.5em 1fr 4.2em 3.6em; }
+.grow-val em { font-style: normal; color: var(--grass-ink); }
+.grow-note { font-weight: 800; font-size: 0.8rem; color: var(--grass-ink); }
+.grow-hint { margin: 0; }
+.growth-ovr { justify-content: flex-start; gap: 12px; }
+.growth-ovr > div { display: grid; gap: 2px; }
+.ovr-line { font-weight: 800; }
+.ovr-line.up { color: var(--grass-ink); animation: grow-bounce 0.6s both; }
+@media (max-width: 420px) { .grow-row { grid-template-columns: 6.2em 1fr 4em 3.2em; } }
+
+/* ----- League road: Akademiya → 2-liga → 1-liga ----- */
+.league-path { margin: 8px 0 2px; }
+.league-path ol { list-style: none; margin: 0; padding: 0; display: flex; align-items: center; gap: 4px; }
+.league-path li { flex: 1; text-align: center; font: 800 0.72rem var(--body); padding: 4px 4px; border-radius: 999px; background: #eef3f8; color: var(--ink-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: relative; }
+.league-path li + li::before { content: '›'; position: absolute; left: -7px; color: var(--ink-muted); }
+.league-path li.now { background: var(--sky-deep); color: #fff; box-shadow: 0 0 0 2px #f2c84b; }
+.league-path li.done { background: var(--grass-pale); color: var(--grass-ink); }
+.league-path p { margin: 4px 0 0; font-size: 0.8rem; color: var(--ink-muted); }
+.league-path p b { color: var(--sky-deep); }

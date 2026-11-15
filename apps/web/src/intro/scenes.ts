@@ -337,17 +337,18 @@ const gift: Scene = {
     { at: 1200, sfx: 'step' },
     { at: 2000, sfx: 'step' },
     { at: GIFT, sfx: 'cloth' },
-    { at: 7400, sfx: 'door' },
-    { at: DAD_TALK, sfx: 'heart' },
+    { at: DAD_TALK, sfx: 'whoosh' },
+    { at: 11400, sfx: 'heart' },
   ],
   lines: [
     { at: MOM_IN, end: GIFT + 600, who: 'mom', key: 'momGift' },
-    { at: DAD_TALK + 300, end: 12600, who: 'dad', key: 'dadBlessing' },
+    { at: DAD_TALK - 600, end: 12600, who: 'mom', key: 'momFather' },
   ],
+  // the father does not come out: the camera looks at the closed gate, then back at the hero
   camera: camKeys(
-    [[0, -60], [MOM_IN, -50], [GIFT + 600, -40], [7600, DOOR_X - 30], [DAD_TALK, DOOR_X], [12400, DOOR_X], [13200, -20], [14500, -20]],
-    [[0, WIDE_Y], [MOM_IN, -66], [GIFT + 600, -56], [DAD_TALK, DAD_FACE], [12400, DAD_FACE], [13200, HERO_FACE], [14500, HERO_FACE]],
-    [[0, 1], [MOM_IN, 1.7], [GIFT + 600, 2], [7600, 1.6], [DAD_TALK, 2.9], [12400, 3.2], [13200, 2.8], [14500, 3.1]],
+    [[0, -60], [MOM_IN, -50], [GIFT + 600, -40], [7600, DOOR_X - 30], [DAD_TALK, DOOR_X - 10], [10600, DOOR_X - 10], [11400, -20], [14500, -20]],
+    [[0, WIDE_Y], [MOM_IN, -66], [GIFT + 600, -56], [DAD_TALK, -70], [10600, -70], [11400, HERO_FACE], [14500, HERO_FACE]],
+    [[0, 1], [MOM_IN, 1.7], [GIFT + 600, 2], [7600, 1.6], [DAD_TALK, 1.9], [10600, 2], [11400, 2.8], [14500, 3.1]],
   ),
   paint(p) {
     const { t, cast } = p;
@@ -358,21 +359,21 @@ const gift: Scene = {
     ishkom(p, L, -330, 60);
     sori(p, -300, L);
     yard(p, L);
-    // father appears at the darvoza
-    const dadIn = clamp01((t - 7400) / 500);
-    if (dadIn > 0) person(p.ctx, cast.dad(), DOOR_X, 0, { alpha: dadIn, bob: breathe(t) });
-    // mother walks in from the left with the boots
+    // mother walks in from the left with some money for the road
     const mx = lerp(-190, -70, clamp01(t / MOM_IN));
     person(p.ctx, cast.mom(), mx, 0, { bob: t < MOM_IN ? walkBob(t) : breathe(t, 400) });
     const hx = -20;
     const nod = t > 13000 && t < 13600 ? 1 : 0;
-    person(p.ctx, cast.heroSprite('stand'), hx, 0, { bob: breathe(t, 700) - nod });
-    // the boots pass from her hands to the hero's
-    const u = clamp01((t - GIFT) / 600);
-    const bx = lerp(mx - 9, hx - 9, u);
-    const by = lerp(-38, -44, u);
+    const bob = breathe(t, 700) - nod;
+    person(p.ctx, cast.heroSprite('stand'), hx, 0, { bob });
     p.world(1);
-    p.ctx.drawImage(cast.boots(), bx, by, 18, 8);
+    // the bag on the hero's shoulder
+    p.ctx.drawImage(cast.bag(), hx + 6, -66 - bob, 22, 16);
+    // the money passes from her hands to the hero's
+    const u = clamp01((t - GIFT) / 600);
+    const bx = lerp(mx - 7, hx - 9, u);
+    const by = lerp(-38, -42, u);
+    p.ctx.drawImage(cast.money(), bx, by, 15, 9);
     glow(p, -200, -260, 320, '#ffcf8a', 0.25);
     vignette(p, 0.35);
   },
@@ -510,7 +511,7 @@ const title: Scene = {
     const { t, cast } = p;
     sky(p, '#ffb36a', '#ffe7b8');
     academy(p, s.academySign);
-    person(p.ctx, cast.heroSprite('hands_hips', '#2f78b7'), -16, 0, { bob: breathe(t) });
+    person(p.ctx, cast.heroSprite('hands_hips'), -16, 0, { bob: breathe(t) });
     person(p.ctx, cast.coach(), 34, 0, { bob: breathe(t, 500) });
     glow(p, 0, -320, 420, '#ffd27a', 0.35);
     vignette(p, 0.45);

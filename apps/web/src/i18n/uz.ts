@@ -47,7 +47,9 @@ export const uz = {
     GK: 'Darvozabon',
     CB: 'Markaziy himoyachi',
     FB: 'Qanot himoyachisi',
+    CDM: "Tayanch yarim himoyachi",
     CM: 'Yarim himoyachi',
+    CAM: "Hujumkor yarim himoyachi",
     W: 'Qanot hujumchisi',
     ST: 'Hujumchi',
   } satisfies Record<Position, string>,
@@ -59,7 +61,6 @@ export const uz = {
     dribbling: 'Dribling',
     defending: 'Himoya',
     physical: 'Jismoniy kuch',
-    mentality: 'Ruhiyat',
   } satisfies Record<StatKey, string>,
 
   // Persona creation
@@ -171,6 +172,7 @@ export const uz = {
     bonus_negative: "Ochkolar manfiy bo'lishi mumkin emas.",
     bonus_per_stat: "Bitta ko'rsatkichga 5 tadan ortiq ochko berib bo'lmaydi.",
     bonus_total: "Ochkolar yetarli emas.",
+    ovr_cap: "Umumiy reyting 55 dan oshmasligi kerak: ochkolarni boshqa ko'rsatkichlarga taqsimlang.",
   } as Record<string, string>,
 
   // Loading

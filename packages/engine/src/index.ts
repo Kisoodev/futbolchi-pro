@@ -9,3 +9,6 @@ export * from './league';
 export * from './season';
 export * from './story';
 export * from './account';
+export * from './progression';
+export * from './npc';
+export * from './migrate';

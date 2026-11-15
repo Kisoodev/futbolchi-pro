@@ -14,7 +14,7 @@
 import type { Appearance, Gender } from '@futbolchi/engine';
 import { drawAvatar, type Pose } from '../art/avatarRects';
 import { characterSprite } from '../characters';
-import { paintBag, paintBoots, type Painter } from '../characters/painters';
+import { paintBag, paintBoots, paintMoney, type Painter } from '../characters/painters';
 
 /** Buffer height in world units at zoom 1. */
 export const VIEW_H = 300;
@@ -86,7 +86,7 @@ function makeCanvas(w: number, h: number, paint: Painter): Canvas {
   return c;
 }
 
-/** The hero in everyday clothes (a faded T-shirt and shorts). */
+/** The hero in everyday clothes: a T-shirt, jeans and sneakers (never a football kit in the story). */
 const HOME_KIT = '#b8433a';
 /** The academy kids' kit and a second, rival-looking one. */
 const ACADEMY_KITS = ['#2f78b7', '#1f8a4c', '#2f78b7'];
@@ -137,7 +137,7 @@ export class Cast {
   }
 
   heroSprite(pose: Pose = 'stand', kit = HOME_KIT): Canvas {
-    return this.get(`hero:${pose}:${kit}`, 64, 128, (ctx) => drawAvatar(ctx, this.hero, kit, 0, 0, 1, pose));
+    return this.get(`hero:${pose}:${kit}`, 64, 128, (ctx) => drawAvatar(ctx, this.hero, kit, 0, 0, 1, pose, 'casual'));
   }
   kid(i: number, pose: Pose = 'stand'): Canvas {
     return this.get(`kid:${i}:${pose}`, 64, 128, (ctx) => drawAvatar(ctx, kidLook(i, this.gender), ACADEMY_KITS[i % 3], 0, 0, 1, pose));
@@ -155,6 +155,9 @@ export class Cast {
   boots(): Canvas {
     return this.get('boots', 18, 8, paintBoots);
   }
+  money(): Canvas {
+    return this.get('money', 15, 9, paintMoney);
+  }
   bag(): Canvas {
     return this.get('bag', 22, 16, paintBag);
   }
@@ -162,7 +165,6 @@ export class Cast {
   /** Draws all sprites once so the film never stutters on a first use. */
   warmUp(): void {
     for (const pose of ['stand', 'ball_arm', 'hands_hips', 'arms_crossed', 'thumbs_up', 'ball_foot'] as const) this.heroSprite(pose);
-    this.heroSprite('stand', '#2f78b7');
     for (let i = 0; i < 3; i++) this.kid(i);
     this.kid(1, 'arms_crossed');
     this.dad();
@@ -170,6 +172,7 @@ export class Cast {
     this.coach();
     this.boots();
     this.bag();
+    this.money();
   }
 }
 

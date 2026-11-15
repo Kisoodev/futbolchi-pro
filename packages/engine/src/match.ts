@@ -192,7 +192,7 @@ export function simulateMatch(input: MatchInput): MatchResult {
 
       // Shot
       const shotA = pStep === 'shot' ? eff!.shooting : A.att;
-      const gkR = pIsGk ? eff!.defending * 0.5 + eff!.mentality * 0.3 + eff!.physical * 0.2 : D.gk;
+      const gkR = pIsGk ? eff!.defending * 0.6 + eff!.physical * 0.25 + eff!.passing * 0.15 : D.gk;
       const pGoal = stepProbability(C.GOAL_BASE, shotA, gkR, C.GOAL_LO, C.GOAL_HI, C.GOAL_SLOPE);
       const shooterIsPersona = pStep === 'shot';
       if (rng.chance(pGoal)) {
@@ -235,7 +235,7 @@ export function simulateMatch(input: MatchInput): MatchResult {
     if (rng.chance(C.CARD_PER_PHASE)) {
       const last = path[path.length - 1];
       const personaFouls =
-        pDefending && rng.chance(C.CARD_PERSONA_SHARE * (1.5 - persona!.stats.mentality / 100));
+        pDefending && rng.chance(C.CARD_PERSONA_SHARE * (1.5 - persona!.stats.defending / 100));
       let card: 'yellow' | 'red' = 'yellow';
       if (personaFouls) {
         if (ps!.yellow >= 1 || rng.chance(C.RED_STRAIGHT_SHARE)) {

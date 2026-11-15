@@ -3,15 +3,16 @@
  * leagues, players or towns that host a real professional club.
  */
 import * as C from './constants';
-import { clamp, createRng, hashSeed } from './rng';
-import type { Club, ClubRatings, Fixture, TableRow, Tier } from './types';
+import { generateSquad, ratingsFromSquad, squadAvg } from './npc';
+import { createRng, hashSeed } from './rng';
+import type { Club, Fixture, TableRow, Tier } from './types';
 
 /** League names (Uzbek, proper nouns). */
 export const TIER_NAMES: Record<Tier, string> = {
-  1: 'Oltin Liga',
-  2: 'Kumush Liga',
-  3: 'Bronza Liga',
-  4: 'Akademiya Ligasi',
+  1: 'Elit liga',
+  2: '1-liga',
+  3: '2-liga',
+  4: 'Akademiya ligasi',
 };
 
 /** Invented town names. */
@@ -20,7 +21,10 @@ export const TOWNS = [
   'Bulutli', 'Oydinkent', 'Quyoshli', "Gulbog'", 'Tolzor', 'Suvsamar', 'Yulduzkent', 'Charoqli',
   'Moviyobod', 'Lolazor', 'Bahorobod', 'Shirinsoy', "Ko'kterak", 'Oqqushli', 'Tiniqsoy', 'Bodomzor',
   'Anorli', 'Uzumzor', 'Qayinsoy', "Yong'oqli", 'Shabbodali', 'Tongotar', 'Kamalakli', 'Sohilobod',
-  'Ilonsoy', 'Toshtepa', 'Otliqsoy', 'Bulbulobod',
+  'Ilonsoy', 'Toshtepa', 'Otliqsoy', 'Bulbulobod', 'Shaftolizor', 'Behizor', 'Sarvzor', 'Nilufarobod',
+  'Sunbulli', 'Chaqmoqli', 'Oltinsoy', 'Kumushtepa', 'Shamshodli', 'Gilosli', 'Rayhonzor', 'Jiydali',
+  'Tutzor', 'Qamishli', 'Lochinobod', 'Burgutli', 'Shunqorli', 'Oqbulut', "Ko'ksoy", 'Soyalik',
+  'Zilolsoy', 'Marjonli', 'Durdonali', "Bo'stonli", 'Archazor', 'Terakzor', 'Chashmali', 'Buloqli',
 ];
 
 const NAME_PATTERNS = [
@@ -36,13 +40,8 @@ const COLORS = [
   '#c2398f', '#5f3dc4', '#2b4c7e', '#b5651d', '#7a1f3d', '#364fc7', '#9f7aea', '#a0522d',
 ];
 
-function rateClub(base: number, rng: ReturnType<typeof createRng>): ClubRatings {
-  const club = rng.range(-C.CLUB_RATING_SPREAD, C.CLUB_RATING_SPREAD);
-  const r = (): number => Math.round(clamp(base + club + rng.range(-2, 2), 20, 95));
-  return { att: r(), mid: r(), def: r(), gk: r() };
-}
-
-export const clubAvg = (c: Club): number => (c.ratings.att + c.ratings.mid + c.ratings.def + c.ratings.gk) / 4;
+/** Average OVR of the club's squad (falls back to its line ratings). */
+export const clubAvg = (c: Club): number => (c.squad?.length ? squadAvg(c.squad) : (c.ratings.att + c.ratings.mid + c.ratings.def + c.ratings.gk) / 4);
 
 /** Generates the whole pyramid: CLUBS_PER_TIER clubs in each of the tiers. */
 export function generateWorld(seed: number): Record<string, Club> {
@@ -54,11 +53,13 @@ export function generateWorld(seed: number): Record<string, Club> {
   for (const tier of C.TIERS) {
     for (let k = 0; k < C.CLUBS_PER_TIER; k++, i++) {
       const id = `c${String(i + 1).padStart(2, '0')}`;
+      const squad = generateSquad(id, tier, seed);
       clubs[id] = {
         id,
         name: rng.pick(NAME_PATTERNS)(towns[i % towns.length]),
         tier,
-        ratings: rateClub(C.TIER_BASE_RATING[tier], rng),
+        ratings: ratingsFromSquad(squad),
+        squad,
         color: colors[i % colors.length],
       };
     }

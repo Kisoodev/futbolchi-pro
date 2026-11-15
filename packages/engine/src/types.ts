@@ -3,7 +3,7 @@
  * no classes, no Date objects (ISO strings only), no functions.
  */
 
-export const POSITIONS = ['GK', 'CB', 'FB', 'CM', 'W', 'ST'] as const;
+export const POSITIONS = ['GK', 'CB', 'FB', 'CDM', 'CM', 'CAM', 'W', 'ST'] as const;
 export type Position = (typeof POSITIONS)[number];
 
 export const STAT_KEYS = [
@@ -13,10 +13,9 @@ export const STAT_KEYS = [
   'dribbling',
   'defending',
   'physical',
-  'mentality',
 ] as const;
 export type StatKey = (typeof STAT_KEYS)[number];
-/** Stats are floats in [1, 99]; the UI shows them rounded. */
+/** Six attributes, 1–100 (docs/PROGRESSION_SYSTEM.md). */
 export type Stats = Record<StatKey, number>;
 
 /** Cosmetic options chosen at creation. They never affect the simulation. */
@@ -107,8 +106,10 @@ export interface Persona {
   age: number;
   appearance: Appearance;
   stats: Stats;
-  /** HIDDEN from the player. Caps long-term growth. Never render it. */
-  potential: number;
+  /** Unspent XP (earned in matches and training, spent on attributes). */
+  xp: number;
+  /** Old saves only: the hidden growth cap of the previous system. Unused. */
+  potential?: number;
   /** 0–100. Lowers effective stats in matches. */
   fatigue: number;
   injuryWeeksLeft: number;
@@ -129,11 +130,24 @@ export interface ClubRatings {
 
 export type Tier = 1 | 2 | 3 | 4;
 
+export type NpcRole = 'regular' | 'good' | 'strong';
+
+/** A computer-controlled player of a club's squad. */
+export interface NpcPlayer {
+  id: string;
+  position: Position;
+  role: NpcRole;
+  ovr: number;
+  captain: boolean;
+}
+
 export interface Club {
   id: string;
   name: string;
   tier: Tier;
+  /** Derived from the squad (averages of its lines). */
   ratings: ClubRatings;
+  squad: NpcPlayer[];
   /** Hex colour used by the replay and share card. */
   color: string;
 }
@@ -180,6 +194,8 @@ export interface Season {
   outcome?: SeasonOutcome;
   finalPosition?: number;
   storyUz?: string;
+  /** Persona OVR when the season started (for the season report). */
+  startOvr?: number;
 }
 
 export type PersonaRole = 'start' | 'sub' | 'bench' | 'injured';
@@ -284,7 +300,8 @@ export interface Account {
 }
 
 export interface GameState {
-  version: 1;
+  /** 2 = progression system v1 (six attributes, XP, NPC squads). */
+  version: 1 | 2;
   seed: number;
   persona: Persona;
   clubs: Record<string, Club>;

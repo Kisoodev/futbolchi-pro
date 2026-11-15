@@ -236,6 +236,20 @@ export const paintBoots: Painter = (ctx) => {
   P('#c8b89a')(12, 0, 1, 3);
 };
 
+/** A few folded banknotes (the mother's money for the road). */
+export const paintMoney: Painter = (ctx) => {
+  const P = (c: string) => px(ctx, c);
+  P(OUTLINE)(0, 1, 14, 8);
+  P('#5f9e5a')(1, 2, 12, 6);
+  P('#7fbf72')(1, 2, 12, 1);
+  P(OUTLINE)(2, 0, 13, 7);
+  P('#6fae63')(3, 1, 11, 5);
+  P('#9fd88f')(3, 1, 11, 1);
+  P('#e7f2d8')(7, 2, 3, 3);
+  P('#4f8a4a')(4, 4, 2, 1);
+  P('#4f8a4a')(11, 4, 2, 1);
+};
+
 /** Sports bag carried on the shoulder. */
 export const paintBag: Painter = (ctx) => {
   const P = (c: string) => px(ctx, c);
@@ -249,7 +263,7 @@ export const paintBag: Painter = (ctx) => {
 
 // ---------------------------------------------------------------- coach
 /**
- * Coach Rustam Sobirov of the Yulduz academy (a fictional character): bald
+ * Coach Rustam Sobirov of the football academy (a fictional character): bald
  * with short grey sides, a grey stubble beard, a dark suit over a black shirt,
  * the academy's gold star on the chest, a whistle and a clipboard.
  */

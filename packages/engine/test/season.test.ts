@@ -13,6 +13,7 @@ import {
   trainingOffer,
   TIER_NAMES,
   type GameState,
+  PROGRESSION_CONFIG,
 } from '../src';
 import * as C from '../src/constants';
 
@@ -27,11 +28,11 @@ function playSeason(state: GameState): GameState {
 }
 
 describe('world & fixtures', () => {
-  it('generates 4 tiers of 8 clubs with unique names', () => {
+  it('generates 3 leagues of 16 clubs with unique names', () => {
     const clubs = Object.values(generateWorld(3));
-    expect(clubs).toHaveLength(32);
-    for (const t of C.TIERS) expect(clubs.filter((c) => c.tier === t)).toHaveLength(8);
-    expect(new Set(clubs.map((c) => c.name)).size).toBe(32);
+    expect(clubs).toHaveLength(48);
+    for (const t of C.TIERS) expect(clubs.filter((c) => c.tier === t)).toHaveLength(16);
+    expect(new Set(clubs.map((c) => c.name)).size).toBe(48);
   });
 
   it('double round-robin: 14 weeks, each pair meets home and away once', () => {
@@ -62,13 +63,13 @@ describe('season loop', () => {
     expect(() => playWeek(s, notOffered)).toThrow();
   });
 
-  it('a full season plays 14 matches and ends in the summary phase', () => {
+  it('a full season plays 30 matches and ends in the summary phase', () => {
     const end = playSeason(start());
     const season = currentSeason(end);
-    expect(season.matchIds).toHaveLength(14);
+    expect(season.matchIds).toHaveLength(30);
     expect(season.finished).toBe(true);
     expect(end.phase).toBe('seasonSummary');
-    for (const row of season.table) expect(row.played).toBe(14);
+    for (const row of season.table) expect(row.played).toBe(30);
     const totalGf = season.table.reduce((a, r) => a + r.gf, 0);
     const totalGa = season.table.reduce((a, r) => a + r.ga, 0);
     expect(totalGf).toBe(totalGa);
@@ -88,16 +89,17 @@ describe('season loop', () => {
     expect(c2).toEqual(c1);
   });
 
-  it('promotion and relegation keep 8 clubs per tier and move the persona club correctly', () => {
+  it('promotion and relegation keep 16 clubs per tier and move the persona club correctly', () => {
     for (let seed = 1; seed <= 8; seed++) {
       const end = playSeason(start(seed));
-      for (const t of C.TIERS) expect(Object.values(end.clubs).filter((c) => c.tier === t)).toHaveLength(8);
+      for (const t of C.TIERS) expect(Object.values(end.clubs).filter((c) => c.tier === t)).toHaveLength(16);
       const season = currentSeason(end);
       const tierNow = end.clubs[end.persona.clubId].tier;
       if (season.outcome === 'promoted') expect(tierNow).toBe(season.tier - 1);
       else if (season.outcome === 'relegated') expect(tierNow).toBe(season.tier + 1);
       else expect(tierNow).toBe(season.tier);
-      if (season.finalPosition! <= 2) expect(season.outcome).toBe('promoted');
+      if (season.finalPosition === 1) expect(season.outcome).toBe('promoted');
+      else if (season.outcome === 'promoted') throw new Error('only the champion goes up');
     }
   });
 
@@ -124,14 +126,14 @@ describe('season loop', () => {
       ...s,
       matches,
       phase: 'training',
-      persona: { ...s.persona, stats: { pace: 70, shooting: 70, passing: 70, dribbling: 70, defending: 70, physical: 70, mentality: 70 } },
+      persona: { ...s.persona, stats: { pace: 70, shooting: 70, passing: 70, dribbling: 70, defending: 70, physical: 70 } },
       seasons: [...s.seasons.slice(0, -1), { ...season, finished: false, outcome: undefined }],
       clubs: Object.fromEntries(Object.entries(s.clubs).map(([k, c]) => [k, c])),
     };
     // Re-run finalize on the original club tiers.
     const orig = start(11);
     s = finalizeSeason({ ...boosted, clubs: orig.clubs });
-    expect(s.transferOffers.length).toBe(C.TRANSFER_OFFERS);
+    expect(s.transferOffers.length).toBe(PROGRESSION_CONFIG.OFFERS);
     const newTier = s.clubs[s.persona.clubId].tier;
     for (const o of s.transferOffers) expect(s.clubs[o.clubId].tier).toBe(newTier - 1);
     const moved = startNextSeason(s, s.transferOffers[0].clubId);
@@ -147,8 +149,8 @@ describe('season loop', () => {
     }
     expect(s.seasons).toHaveLength(7);
     expect(s.persona.age).toBe(C.START_AGE + 6);
-    expect(currentSeason(s).fixtures.length).toBe(56);
-    expect(seasonWeeks(currentSeason(s))).toBe(14);
+    expect(currentSeason(s).fixtures.length).toBe(240);
+    expect(seasonWeeks(currentSeason(s))).toBe(30);
   });
 });
 
@@ -162,7 +164,7 @@ describe('story', () => {
   it('mentions goals, apps and promotion in Uzbek', () => {
     const t = seasonStoryUz(base);
     expect(t).toContain("8 ta o'yinda 4 ta gol urdingiz");
-    expect(t).toContain("Bronza Ligaga ko'tarildi");
+    expect(t).toContain("2-ligaga ko'tarildi");
   });
   it('covers no appearances, injury, relegation and GK', () => {
     expect(seasonStoryUz({ ...base, apps: 0, avgRating: null, best: null })).toContain('maydonga tushish nasib etmadi');
@@ -175,6 +177,6 @@ describe('story', () => {
     const f = seasonFacts(end, currentSeason(end).id);
     const apps = currentSeason(end).matchIds.filter((id) => end.matches[id].personaStats!.rating !== null).length;
     expect(f.apps).toBe(apps);
-    expect(f.matches).toBe(14);
+    expect(f.matches).toBe(30);
   });
 });

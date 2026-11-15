@@ -24,6 +24,10 @@ import {
   type GameState,
   type Position,
   type Stats,
+  canAddCreationPoint,
+  ovr,
+  PROGRESSION_CONFIG,
+  startStats,
 } from '@futbolchi/engine';
 import { tx } from '../i18n';
 import { api } from '../state/api';
@@ -48,7 +52,7 @@ const pick = <T,>(list: readonly T[]): T => list[Math.floor(Math.random() * list
 type LookTab = 'face' | 'hair' | 'body' | 'kit';
 const LOOK_TABS: LookTab[] = ['face', 'hair', 'body', 'kit'];
 const TAB_ICONS: Record<LookTab, string> = { face: '🙂', hair: '💇', body: '📏', kit: '👕' };
-const POSITION_ICONS: Record<string, string> = { GK: '🧤', CB: '🛡️', FB: '🏃', CM: '🎯', W: '⚡', ST: '⚽' };
+const POSITION_ICONS: Record<string, string> = { GK: '🧤', CB: '🛡️', FB: '🏃', CDM: '🧱', CM: '🎯', CAM: '🪄', W: '⚡', ST: '⚽' };
 
 /** A random, valid look (cosmetic only, so Math.random is fine here). */
 function randomLook(prev: Appearance): Appearance {
@@ -215,14 +219,14 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
   // A pose (arms up, ball…) always shows the whole body.
   const camera = pose !== 'stand' ? 'full' : tab === 'face' ? 'face' : tab === 'hair' ? 'head' : 'full';
   const used = STAT_KEYS.reduce((a, k) => a + (bonus[k] ?? 0), 0);
-  const left = C.BONUS_POINTS_TOTAL - used;
-  const preview = { ...C.STAT_TEMPLATES[position] };
+  const left = PROGRESSION_CONFIG.CREATION_POINTS - used;
+  const preview = startStats(position);
   for (const k of STAT_KEYS) preview[k] += bonus[k] ?? 0;
   const validation = validatePersonaInput({ name, position, bonus, appearance: look });
 
   const adjust = (k: keyof Stats, d: number) => {
     const v = (bonus[k] ?? 0) + d;
-    if (v < 0 || v > C.BONUS_POINTS_PER_STAT_MAX || (d > 0 && left <= 0)) return;
+    if (v < 0 || (d > 0 && !canAddCreationPoint(position, bonus, k))) return;
     setBonus({ ...bonus, [k]: v });
   };
 
@@ -262,7 +266,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
           </div>
           <div className="preview-ovr">
             <span className="ovr">
-              <strong>{Math.round(computeOvr(preview, position))}</strong>
+              <strong>{ovr(preview, position)}</strong>
               <small>{tx.ovr}</small>
             </span>
             <span>
@@ -385,15 +389,16 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
             <div className="points-head">
               <strong>{tx.bonusLabel(left)}</strong>
               <span className="pips" aria-hidden>
-                {Array.from({ length: C.BONUS_POINTS_TOTAL }, (_, i) => (
+                {Array.from({ length: PROGRESSION_CONFIG.CREATION_POINTS }, (_, i) => (
                   <i key={i} className={i < left ? 'on' : ''} />
                 ))}
               </span>
             </div>
             <p className="points-hint">{tx.skillsHint}</p>
+            {left > 0 && STAT_KEYS.every((k) => !canAddCreationPoint(position, bonus, k)) && <p className="points-hint warn">{tx.errors.ovr_cap}</p>}
             <ul className="stat-edit">
               {STAT_KEYS.map((k) => {
-                const isKey = C.POSITION_WEIGHTS[position][k] >= 0.15;
+                const isKey = PROGRESSION_CONFIG.WEIGHTS[position][k] >= 0.2;
                 return (
                   <li key={k} className={`${isKey ? 'key' : ''} ${bonus[k] ? 'boosted' : ''}`}>
                     <span className="label">
@@ -409,7 +414,7 @@ export function CreateScreen({ name, entitlementId, onCreated }: Props) {
                       type="button"
                       className="step plus"
                       onClick={() => adjust(k, 1)}
-                      disabled={left <= 0 || (bonus[k] ?? 0) >= C.BONUS_POINTS_PER_STAT_MAX}
+                      disabled={!canAddCreationPoint(position, bonus, k)}
                       aria-label={`${tx.stats[k]} +`}
                     >
                       +

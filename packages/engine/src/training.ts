@@ -1,7 +1,7 @@
 import * as C from './constants';
-import { addFatigue, changeStat } from './persona';
+import { addFatigue } from './persona';
 import { createRng } from './rng';
-import type { Persona, StatKey } from './types';
+import type { Persona } from './types';
 
 export type { TrainingId, TrainingOption } from './constants';
 
@@ -25,27 +25,19 @@ export function offerTraining(persona: Persona, seed: number): C.TrainingId[] {
   return rng.shuffle([...picks.slice(0, C.TRAINING_OFFER_SIZE), 'rest'] as C.TrainingId[]).slice(0, C.TRAINING_OFFER_SIZE);
 }
 
-export interface TrainingResult {
+export interface TrainingSessionsResult {
   persona: Persona;
+  /** Extra injury risk carried into the match (the riskiest session). */
   injuryRiskBonus: number;
-  /** Actual stat deltas applied, for UI feedback. */
-  deltas: Partial<Record<StatKey, number>>;
 }
 
-export function applyTraining(persona: Persona, optionId: string): TrainingResult {
+/**
+ * A training day: fatigue and the injury risk carried into the match. The
+ * attribute growth is added by the caller from the day's XP (trainDay).
+ */
+export function applyTrainingDay(persona: Persona, optionId: string): TrainingSessionsResult {
   const opt = getTrainingOption(optionId);
-  let p = persona;
-  const deltas: Partial<Record<StatKey, number>> = {};
-  // Injured players can only rest: a non-rest choice gives no gains.
-  if (persona.injuryWeeksLeft === 0) {
-    for (const [k, base] of Object.entries(opt.gains) as [StatKey, number][]) {
-      const before = p.stats[k];
-      p = changeStat(p, k, base > 0 ? base * C.TRAINING_GAIN_MULT : base);
-      deltas[k] = p.stats[k] - before;
-    }
-  }
-  p = addFatigue(p, opt.fatigue);
-  return { persona: p, injuryRiskBonus: opt.injuryRisk, deltas };
+  return { persona: addFatigue(persona, opt.fatigue), injuryRiskBonus: opt.injuryRisk };
 }
 
 /** End-of-week recovery: fatigue drops and injuries heal. */
