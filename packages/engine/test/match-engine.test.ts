@@ -6,6 +6,9 @@ import {
   actionShares,
   dribbleProbability,
   MATCH_CONFIG as MC,
+  newGame,
+  pickLineup,
+  type PersonaOrder,
   passProbability,
   runMatch,
   shapeSpot,
@@ -249,4 +252,42 @@ describe('matches', () => {
     for (let seed = 1; seed <= 40; seed++) runMatch({ matchId: `f${seed}`, seed, lineups });
     expect((performance.now() - t0) / 40).toBeLessThan(50);
   });
+});
+
+describe("the persona's orders during the match", () => {
+  const setup = (seed: number) => {
+    const s = newGame({ seed, persona: { id: 'me', name: 'Aziz', position: 'W', bonus: {} } });
+    const club = s.clubs[s.persona.clubId];
+    const other = Object.values(s.clubs).find((c) => c.id !== club.id && c.tier === club.tier)!;
+    const me = { id: 'me', name: 'Aziz', position: 'W' as const, injuryWeeksLeft: 0, ovr: 55 };
+    return { s, lineups: { home: pickLineup(club, { seed, persona: me }), away: pickLineup(other, { seed }) } };
+  };
+  const persona = (s: ReturnType<typeof setup>['s'], orders?: PersonaOrder[]) => ({ side: 'home' as const, position: 'W' as const, stats: s.persona.stats, fatigue: 10, role: 'start' as const, injuryRiskBonus: 0, ...(orders ? { orders } : {}) });
+
+  it('nothing before the minute of an order changes (the replay can switch to the new match)', () => {
+    for (const seed of [2, 5, 9]) {
+      const { s, lineups } = setup(seed);
+      const a = runMatch({ matchId: 'o', seed, lineups, persona: persona(s) });
+      const b = runMatch({ matchId: 'o', seed, lineups, persona: persona(s, [{ from: 50, effort: 2, mentality: 2, confidence: 2 }]) });
+      const before = (r: typeof a) => JSON.stringify(r.log.filter((e) => e.minute < 50));
+      expect(before(b)).toBe(before(a));
+    }
+  });
+
+  it('confident and attacking: more take-ons and shots; high effort: a heavier load', () => {
+    let calm = 0, bold = 0;
+    let loadHigh = 0;
+    for (let seed = 1; seed <= 25; seed++) {
+      const { s, lineups } = setup(seed);
+      const count = (orders?: PersonaOrder[]) => {
+        const r = runMatch({ matchId: 'c', seed, lineups, persona: persona(s, orders) });
+        if (orders?.[0].effort === 2) loadHigh += r.personaStats!.load ?? 1;
+        return r.log.filter((e) => e.playerId === 'me' && ['DRIBBLE', 'KNOCK_AND_RUN', 'SHOOT'].includes(e.type)).length;
+      };
+      calm += count([{ from: 0, effort: 1, mentality: 0, confidence: 0 }]);
+      bold += count([{ from: 0, effort: 2, mentality: 2, confidence: 2 }]);
+    }
+    expect(bold).toBeGreaterThan(calm * 1.3);
+    expect(loadHigh / 25).toBeGreaterThan(1.3);
+  }, 60_000);
 });

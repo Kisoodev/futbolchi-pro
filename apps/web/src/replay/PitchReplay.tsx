@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import type { Appearance, Club, Match, MatchEvent, PitchPoint, Position } from '@futbolchi/engine';
+import type { Appearance, Club, Match, MatchEvent, PersonaOrder, PitchPoint, Position } from '@futbolchi/engine';
 import { tx } from '../i18n';
 import { eventText } from '../i18n/events';
 import { buildTimeline, frameAt, personaWindow, type Frame } from './timeline';
@@ -30,6 +30,9 @@ export interface ReplayProps {
   personaPosition: Position;
   /** The persona's look, for their face in the live replay. */
   personaLook?: Appearance;
+  /** Live orders to the persona (v2 matches). */
+  orders?: PersonaOrder[];
+  onOrders?: (orders: PersonaOrder[]) => void;
   onFinished?: () => void;
   /** Shown above / below the event feed in the side column. */
   sideTop?: ReactNode;
@@ -38,7 +41,7 @@ export interface ReplayProps {
   hold?: boolean;
 }
 
-export const SPEEDS = [1, 2, 4];
+export const SPEEDS = [1, 2];
 /** Same breakpoint as the fit-to-screen layout in styles.css. */
 export const FIT_QUERY = '(min-width: 900px) and (min-height: 520px)';
 

@@ -18,7 +18,7 @@ import { applyAccountEvents, normalizeAccount, type AccountEvent, type AccountRe
 import { createRng, hashSeed } from './rng';
 import { seasonFacts, seasonStoryUz } from './story';
 import { applyTrainingDay, offerTraining, weeklyRecovery, type TrainingId } from './training';
-import type { Club, GameState, Match, MatchLineup, Persona, PersonaRole, Season, SeasonOutcome, Side, StatKey, Tier, WeekDay } from './types';
+import type { PersonaOrder, Club, GameState, Match, MatchLineup, Persona, PersonaRole, Season, SeasonOutcome, Side, StatKey, Tier, WeekDay } from './types';
 
 export interface NewGameInput {
   seed: number;
@@ -181,7 +181,12 @@ export interface MatchDayResult extends WeekResult {
 }
 
 /** Day 2 of a week: the match. The performance earns XP; then the week ends. */
-export function playMatchDay(state: GameState): MatchDayResult {
+/**
+ * `orders`: the player's instructions to the persona during the match. The
+ * app plays the match day again from the same state when they change (the
+ * engine is deterministic, so everything before the order's minute stays the same).
+ */
+export function playMatchDay(state: GameState, opts: { orders?: PersonaOrder[] } = {}): MatchDayResult {
   if (state.phase !== 'training') throw new Error('season is over; start the next season');
   if (dayOf(state) !== 'match') throw new Error('train first: today is training day');
   const season = currentSeason(state);
@@ -204,7 +209,7 @@ export function playMatchDay(state: GameState): MatchDayResult {
     // the persona's league is played by the possession-chain engine with both clubs' XIs; other leagues use the quick engine
     const myLeague = state.clubs[fx.homeId].tier === state.clubs[persona.clubId].tier;
     const lineups = myLeague ? weekLineups(state, fx.homeId, fx.awayId) : undefined;
-    const simPersona = involved ? { side, position: persona.position, stats: persona.stats, fatigue: persona.fatigue, role, injuryRiskBonus } : null;
+    const simPersona = involved ? { side, position: persona.position, stats: persona.stats, fatigue: persona.fatigue, role, injuryRiskBonus, ...(opts.orders?.length ? { orders: opts.orders } : {}) } : null;
     const result = simulateMatch({
       matchId: fx.matchId,
       seed,
@@ -248,7 +253,8 @@ export function playMatchDay(state: GameState): MatchDayResult {
           opponentOvr: clubAvg(opponent),
           personaOvr: personaLevel(persona),
         });
-        persona = addFatigue(persona, (C.FATIGUE_PER_FULL_MATCH * ps.minutes) / 90);
+        // high effort tires more (ps.load, from the match orders)
+        persona = addFatigue(persona, (C.FATIGUE_PER_FULL_MATCH * ps.minutes * (ps.load ?? 1)) / 90);
         persona = applyMatchGrowth(persona, xp);
         grownStats = persona.stats;
         persona = {

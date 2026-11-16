@@ -136,6 +136,29 @@ export const MATCH_CONFIG = {
     raw: { lean: { KNOCK_AND_RUN: 1.15, LONG_PASS: 1.1, SHORT_PASS: 0.95 }, tackle: 1.05 },
     underdog: { lean: { CLEAR: 1.1, LONG_PASS: 1.1 }, tackle: 1.05 },
   },
+  /**
+   * The persona's orders (0 low, 1 normal, 2 high). Effort: attributes × attr,
+   * tiredness starts earlier and grows faster, tackles more; mentality:
+   * attacking leans to shots and forward play and stops tracking back,
+   * defensive the other way; confidence: takes players on or plays safe.
+   */
+  orders: {
+    effort: [
+      { attr: 0.97, fatigueStart: 65, fatigueMul: 0.6, tackle: 0.8, load: 0.75 },
+      { attr: 1, fatigueStart: 55, fatigueMul: 1, tackle: 1, load: 1 },
+      { attr: 1.05, fatigueStart: 35, fatigueMul: 2, tackle: 1.2, load: 1.5 },
+    ],
+    mentality: [
+      { lean: { SHOOT: 0.8, DRIBBLE: 0.9, THROUGH_BALL: 0.9, BACK_PASS: 1.2, CLEAR: 1.2 }, tackle: 1.3, tracksBack: true, involvement: 0.92 },
+      { lean: {}, tackle: 1, tracksBack: true, involvement: 1 },
+      { lean: { SHOOT: 1.25, THROUGH_BALL: 1.15, DRIBBLE: 1.1, KNOCK_AND_RUN: 1.1, BACK_PASS: 0.7 }, tackle: 0.7, tracksBack: false, involvement: 1.12 },
+    ],
+    confidence: [
+      { lean: { DRIBBLE: 0.65, KNOCK_AND_RUN: 0.65, SHOOT: 0.85, SHORT_PASS: 1.1, BACK_PASS: 1.1 } },
+      { lean: {} },
+      { lean: { DRIBBLE: 1.4, KNOCK_AND_RUN: 1.4, SHOOT: 1.15, SHORT_PASS: 0.9 } },
+    ],
+  },
   /** The main character takes fewer knocks and cards than other players (less luck-based setbacks). */
   persona: { injuryMul: 0.5, cardMul: 0.5 },
   /** Player match rating (all players). */

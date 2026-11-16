@@ -308,6 +308,8 @@ export interface PlayerMatchLine {
 
 export interface PersonaMatchStats {
   role: PersonaRole;
+  /** Work load of the match (1 = normal effort; more with high effort): scales the tiredness after it. */
+  load?: number;
   minutes: number;
   goals: number;
   assists: number;
@@ -345,6 +347,22 @@ export interface Match {
 }
 
 /** What the match engine needs to know about the persona. */
+/** 0 = low, 1 = normal, 2 = high. */
+export type OrderLevel = 0 | 1 | 2;
+
+/**
+ * The player's instructions to their persona during a match, from a minute on:
+ * effort (work rate: stronger, but tires faster), mentality (0 defensive,
+ * 2 attacking: shoots and goes forward more, helps less in defence) and
+ * confidence (high: takes players on, low: plays it safe).
+ */
+export interface PersonaOrder {
+  from: number;
+  effort: OrderLevel;
+  mentality: OrderLevel;
+  confidence: OrderLevel;
+}
+
 export interface MatchPersonaInput {
   side: Side;
   position: Position;
@@ -353,6 +371,8 @@ export interface MatchPersonaInput {
   role: PersonaRole;
   /** Extra injury probability from this week's training. */
   injuryRiskBonus: number;
+  /** Instructions given during the match (the latest one whose minute has come counts). */
+  orders?: PersonaOrder[];
 }
 
 export interface TransferOffer {

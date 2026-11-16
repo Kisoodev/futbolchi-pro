@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import type { GameState } from '@futbolchi/engine';
+import type { GameState, PersonaOrder } from '@futbolchi/engine';
 import { tx } from '../i18n';
 import { PitchReplay } from '../replay/PitchReplay';
 import { CoachGuide } from '../coach/CoachGuide';
@@ -8,9 +8,12 @@ interface Props {
   state: GameState;
   matchId: string;
   onContinue: () => void;
+  /** The orders given to the persona so far, and how to give new ones (the match is played again). */
+  orders?: PersonaOrder[];
+  onOrders?: (orders: PersonaOrder[]) => void;
 }
 
-export function MatchScreen({ state, matchId, onContinue }: Props) {
+export function MatchScreen({ state, matchId, onContinue, orders, onOrders }: Props) {
   const match = state.matches[matchId];
   const [finished, setFinished] = useState(false);
   const onFinished = useCallback(() => setFinished(true), []);
@@ -25,6 +28,8 @@ export function MatchScreen({ state, matchId, onContinue }: Props) {
         personaName={state.persona.name}
         personaPosition={state.persona.position}
         personaLook={state.persona.appearance}
+        orders={orders}
+        onOrders={onOrders}
         onFinished={onFinished}
         sideTop={
           <div className="match-head">

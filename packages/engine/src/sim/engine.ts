@@ -209,6 +209,10 @@ export interface Situation {
   riskMul: number;
   /** The club style leans the choices (MATCH_CONFIG.styles). */
   style?: ClubStyle;
+  /** The persona's orders lean their own choices (MATCH_CONFIG.orders). */
+  personaLean?: Partial<Record<ActionType, number>>;
+  /** Passes to the persona are this much more attractive (attacking orders: more involved). */
+  personaPull?: number;
 }
 
 export interface Option {
@@ -249,7 +253,7 @@ export function evaluateOptions(s: Situation): Option[] {
     return Math.pow(MC.riskByRow[row - 1], e) * (e > 0 ? Math.pow(s.riskMul, e) : 1);
   };
   const add = (o: Omit<Option, 'utility'>, fit: number, reward: number) => {
-    const lean = s.style ? (MC.styles[s.style].lean as Partial<Record<ActionType, number>>)[o.type] ?? 1 : 1;
+    const lean = (s.style ? (MC.styles[s.style].lean as Partial<Record<ActionType, number>>)[o.type] ?? 1 : 1) * (s.personaLean?.[o.type] ?? 1);
     const u = rw[o.type] * fit * o.p * reward * risk(o.type) * lean * MC.UTILITY_SCALE;
     if (u > 0) out.push({ ...o, utility: u });
   };
@@ -264,7 +268,7 @@ export function evaluateOptions(s: Situation): Option[] {
     const kind: PassKind | null = back && d <= pd.longMax ? 'back' : d <= pd.shortMax ? 'short' : d <= pd.longMax ? 'long' : null;
     if (!kind) continue;
     const p = passProbability(kind, a, m.markerDEF, s.pressure, m.markers, d);
-    let reward = valueAt(m.spot) * (kind === 'back' ? 0.85 : 1);
+    let reward = valueAt(m.spot) * (kind === 'back' ? 0.85 : 1) * (m.player.persona ? s.personaPull ?? 1 : 1);
     if (m.markers === 0) reward *= s.pressure >= 2 ? MC.OPEN_TEAMMATE_BONUS : s.pressure === 1 ? 1 + (MC.OPEN_TEAMMATE_BONUS - 1) / 2 : 1;
     const type: ActionType = kind === 'back' ? 'BACK_PASS' : kind === 'short' ? 'SHORT_PASS' : 'LONG_PASS';
     const fit = kind === 'long' ? (0.6 * a.PAS + 0.4 * a.VIS) / 100 : a.PAS / 100;
@@ -476,9 +480,24 @@ export function runMatch(input: SimInput): SimResult {
     return log.length - 1;
   };
 
+  // ---- the persona's orders (the latest one whose minute has come)
+  const orders = (persona?.orders ?? []).slice().sort((x, y) => x.from - y.from);
+  const orderAt = (minute: number) => {
+    let o: { effort: number; mentality: number; confidence: number } = { effort: 1, mentality: 1, confidence: 1 };
+    for (const x of orders) if (x.from <= minute) o = x;
+    return o;
+  };
+  const orderNow = () => orderAt(minuteNow());
+  let loadSum = 0;
+  let loadN = 0;
+
   // ---- effective attributes (§3, §8)
   const fatigueFactor = (e: Entry) => {
     const m = minuteNow() - e.from;
+    if (e.p.persona) {
+      const ef = MC.orders.effort[orderNow().effort];
+      return Math.max(0.6, 1 - (Math.max(0, m - ef.fatigueStart) / 35) * (1 - e.p.attrs.STA / 100) * MC.FATIGUE_MAX * ef.fatigueMul);
+    }
     return 1 - (Math.max(0, m - MC.FATIGUE_START_MIN) / 35) * (1 - e.p.attrs.STA / 100) * MC.FATIGUE_MAX;
   };
   const effCache = new Map<Entry, { at: number; a: Attrs }>();
@@ -492,8 +511,9 @@ export function runMatch(input: SimInput): SimResult {
     }
     const at = effMinute;
     const cached = effCache.get(e);
-    if (cached && cached.at === at) return cached.a;
-    const f = fatigueFactor(e) * (e.side === 'home' ? MC.homeMorale : 1);
+    // the persona's orders can change any minute: never cached
+    if (cached && cached.at === at && !e.p.persona) return cached.a;
+    const f = fatigueFactor(e) * (e.side === 'home' ? MC.homeMorale : 1) * (e.p.persona ? MC.orders.effort[orderNow().effort].attr : 1);
     const k = MC.strength.compression;
     const kp = MC.strength.passCompression;
     const lift = form[e.side];
@@ -974,6 +994,19 @@ export function runMatch(input: SimInput): SimResult {
   };
 
   /** Builds what the player on the ball sees (shape spots, pressure, open teammates). */
+  /** The persona's orders in the situation: their own lean when on the ball, their pull on teammates' passes. */
+  const personaSit = (side: Side): Pick<Situation, 'personaLean' | 'personaPull'> => {
+    if (!persona || persona.side !== side) return {};
+    const o = orderNow();
+    const out: Pick<Situation, 'personaLean' | 'personaPull'> = { personaPull: MC.orders.mentality[o.mentality].involvement };
+    if (holder.p.persona) {
+      const lean: Partial<Record<ActionType, number>> = {};
+      for (const src of [MC.orders.mentality[o.mentality].lean, MC.orders.confidence[o.confidence].lean] as Partial<Record<ActionType, number>>[])
+        for (const [k, v] of Object.entries(src)) lean[k as ActionType] = (lean[k as ActionType] ?? 1) * (v as number);
+      out.personaLean = lean;
+    }
+    return out;
+  };
   const read = (): { sit: Situation; opps: Entry[] } => {
     const side = poss;
     const opp = other(side);
@@ -990,7 +1023,7 @@ export function runMatch(input: SimInput): SimResult {
       const spot = { x: toAttack(side, s.x) + rng.range(-5, 5), y: s.y + rng.range(-5, 5) };
       return { e, spot, d: dist(spot, axBall), a: eff(e) };
     });
-    const outfield = defs.filter((d) => d.e.p.slot !== 'GK').sort((x, y) => x.d - y.d);
+    const outfield = defs.filter((d) => d.e.p.slot !== 'GK' && !(d.e.p.persona && !MC.orders.mentality[orderNow().mentality].tracksBack)).sort((x, y) => x.d - y.d);
     let pressure: 0 | 1 | 2 = 0;
     const pressers: typeof outfield = [];
     if (!freeNext && outfield[0] && outfield[0].d * (1 - MC.pressure.closeDown) <= MC.pressure.radius1) {
@@ -1035,7 +1068,7 @@ export function runMatch(input: SimInput): SimResult {
     supportNext = false;
     if (counter > 0) counter--;
     return {
-      sit: { holder: holder.p, attrs: a, ball: axBall, pressure, pressers: pressers.map((d) => ({ id: d.e.p.id, attrs: eff(d.e) })), mates, lastLine, spaceBehind, gk: gkE ? eff(gkE) : NO_GK, riskMul, shotRef, style: input.lineups[side].style },
+      sit: { holder: holder.p, attrs: a, ball: axBall, pressure, pressers: pressers.map((d) => ({ id: d.e.p.id, attrs: eff(d.e) })), mates, lastLine, spaceBehind, gk: gkE ? eff(gkE) : NO_GK, riskMul, shotRef, style: input.lineups[side].style, ...personaSit(side) },
       opps: pressers.map((d) => d.e),
     };
   };
@@ -1054,7 +1087,9 @@ export function runMatch(input: SimInput): SimResult {
     // the defender may go in first (§5.5)
     if (pressure >= 1 && opps[0]) {
       const oppStyle = input.lineups[opp].style;
-      const chance = (pressure >= 2 ? MC.tackle.chanceP2 : MC.tackle.chanceP1) * (oppStyle ? MC.styles[oppStyle].tackle : 1);
+      const po = orderNow();
+      const personaTackle = opps[0].p.persona ? MC.orders.effort[po.effort].tackle * MC.orders.mentality[po.mentality].tackle : 1;
+      const chance = (pressure >= 2 ? MC.tackle.chanceP2 : MC.tackle.chanceP1) * (oppStyle ? MC.styles[oppStyle].tackle : 1) * personaTackle;
       if (rng.chance(chance)) {
         const tackler = opps[0];
         const p = tackleProbability(eff(tackler), sit.attrs);
@@ -1278,6 +1313,10 @@ export function runMatch(input: SimInput): SimResult {
     const before = tk;
     step();
     stats[owner].possession += tk - before;
+    if (persona && personaEntry()) {
+      loadSum += MC.orders.effort[orderNow().effort].load * (tk - before);
+      loadN += tk - before;
+    }
   }
   tk = MC.TICKS_PER_MATCH;
   coach();
@@ -1315,6 +1354,7 @@ export function runMatch(input: SimInput): SimResult {
     const line = me ? playerLines.find((p) => p.id === me.id) : undefined;
     personaStats.minutes = line?.minutes ?? 0;
     personaStats.rating = line ? line.rating : null;
+    if (loadN > 0) personaStats.load = Math.round((loadSum / loadN) * 100) / 100;
   }
 
   const events: MatchEvent[] = summary

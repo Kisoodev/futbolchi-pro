@@ -17,14 +17,19 @@ import {
   type Match,
   type Point,
   type Kit,
+  type LineupPlayer,
+  type OrderLevel,
+  type PersonaOrder,
   type Side,
+  type SimEvent,
 } from '@futbolchi/engine';
 import { tx } from '../i18n';
 import { eventText } from '../i18n/events';
 import { replayTexts } from '../i18n/replay';
+import { progressTexts } from '../i18n/progress';
 import { drawAvatar, headBox, SKIN_HEX } from '../art/avatarRects';
 import { kitStroke, matchKits, paintShirt } from './kits';
-import { buildScenes, liveFrameAt, livePlayers, pitchAt, rebuildLog, type LivePlayer, type PitchState, type Scene } from './liveScenes';
+import { buildScenes, liveFrameAt, livePlayers, ownerBefore, pitchAt, rebuildLog, type LivePlayer, type PitchState, type Scene } from './liveScenes';
 import { COLORS, drawPitchBase, PIXEL_FONT, SPEEDS, useFitPitch, type ReplayProps } from './PitchReplay';
 import { Crest } from '../components/Crest';
 
@@ -70,7 +75,7 @@ function headSprite(cache: HeadCache, p: LivePlayer, look: Appearance, kit: stri
   return c;
 }
 
-export function LiveReplay({ match, clubs, personaName, personaLook, onFinished, sideTop, sideBottom, hold = false }: ReplayProps) {
+export function LiveReplay({ match, clubs, personaName, personaLook, onFinished, sideTop, sideBottom, hold = false, orders = [], onOrders }: ReplayProps) {
   const rt = replayTexts();
   const { areaRef, boardRef, frameW } = useFitPitch();
   const log = useMemo(() => rebuildLog(match) ?? [], [match]);
@@ -157,18 +162,63 @@ export function LiveReplay({ match, clubs, personaName, personaLook, onFinished,
     ? `${rt.action[action.type]} · ${isPass && actorName && targetName && action.outcome !== 'INTERCEPTED' ? rt.passTo(actorName, targetName) : actorName ?? ''}${frame.k > 0.85 && rt.outcome[action.outcome] ? ` — ${rt.outcome[action.outcome]}` : ''}`
     : '';
 
+  // ---- live numbers: everything in the log up to the action on screen
+  const upTo = done ? log.length - 1 : scene ? scene.firstIndex + Math.max(0, frame.j) : -1;
+  const live = useMemo(() => liveStats(log, upTo), [log, upTo]);
+  const pt = progressTexts();
+
+  // ---- the persona's orders (three levels each); a new order counts from the next minute
+  const meId = match.lineups?.[match.personaSide ?? 'home'].starters.find((p) => p.persona)?.id ?? '';
+  const personaOn = !!match.personaStats && match.personaStats.role === 'start' && !!meId && !live.off.has(meId);
+  const now = orderAt(orders, minute);
+  const give = (key: 'effort' | 'mentality' | 'confidence', level: OrderLevel) => {
+    if (!onOrders || done) return;
+    const from = Math.min(90, minute + 1);
+    onOrders([...orders.filter((o) => o.from < from), { from, effort: now.effort, mentality: now.mentality, confidence: now.confidence, [key]: level }]);
+  };
+  const [tab, setTab] = useState<'events' | 'lineups'>('events');
+  const nameOf = (id: string) => (players.get(id)?.persona ? personaName : players.get(id)?.name ?? '');
+
   return (
-    <div className="replay">
+    <div className="replay live">
       <div className="replay-main">
         <div ref={areaRef} className="pitch-area">
           <div className="pitch-frame" style={frameW ? { width: frameW } : undefined}>
-            <div ref={boardRef} className="scoreboard">
-              <span className="team" style={{ borderColor: home.color }}><Crest club={home} size={18} /> {home.name}</span>
-              <span className="score">
-                {shownScore[0]} : {shownScore[1]}
-              </span>
-              <span className="team" style={{ borderColor: away.color }}><Crest club={away} size={18} /> {away.name}</span>
-              <span className="minute">{done ? tx.fullTime : `${minute}'`}</span>
+            <div ref={boardRef} className="board">
+              <div className="scoreboard">
+                <span className="team" style={{ borderColor: home.color }}>
+                  <Crest club={home} size={18} /> {home.name}
+                </span>
+                <span className="score">
+                  {shownScore[0]} : {shownScore[1]}
+                </span>
+                <span className="team" style={{ borderColor: away.color }}>
+                  <Crest club={away} size={18} /> {away.name}
+                </span>
+                <span className="minute">{done ? tx.fullTime : `${minute}'`}</span>
+                <span className="mini-controls">
+                  <button aria-label={playing ? tx.pause : tx.play} title={playing ? tx.pause : tx.play} onClick={() => (done ? (setT(0), (finishedRef.current = false), setPlaying(true)) : setPlaying(!playing))}>
+                    {playing ? '❚❚' : '▶'}
+                  </button>
+                  <button aria-label={tx.speed} title={tx.speed} onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>
+                    {speed}×
+                  </button>
+                  <button aria-label={tx.skip} title={tx.skip} onClick={() => setT(total)} disabled={done}>
+                    ⏭
+                  </button>
+                </span>
+              </div>
+              <div className="live-stats">
+                <span className="ls-num">{live.possession[0]}%</span>
+                <span className="ls-bar" aria-label={rt.stats.possession}>
+                  <i style={{ width: `${live.possession[0]}%`, background: home.color }} />
+                  <i style={{ width: `${live.possession[1]}%`, background: away.color }} />
+                </span>
+                <span className="ls-num">{live.possession[1]}%</span>
+                <span className="ls-label">
+                  {rt.stats.possession} · {rt.stats.shots} {live.shots[0]}–{live.shots[1]} · {rt.stats.onTarget} {live.onTarget[0]}–{live.onTarget[1]}
+                </span>
+              </div>
             </div>
             <div ref={wrapRef} className="pitch-wrap">
               <canvas ref={canvasRef} className="pitch" aria-label={tx.pitchLabel} />
@@ -181,44 +231,151 @@ export function LiveReplay({ match, clubs, personaName, personaLook, onFinished,
             </div>
           </div>
         </div>
-        <div className="controls">
-          <button onClick={() => (done ? (setT(0), (finishedRef.current = false), setPlaying(true)) : setPlaying(!playing))}>
-            {playing ? tx.pause : tx.play}
-          </button>
-          <button onClick={() => setSpeed(SPEEDS[(SPEEDS.indexOf(speed) + 1) % SPEEDS.length])}>
-            {tx.speed}: {speed}×
-          </button>
-          <button onClick={() => setT(total)} disabled={done}>
-            {tx.skip}
-          </button>
-        </div>
+        {onOrders && match.personaStats?.role === 'start' && (
+          <div className={`orders ${personaOn && !done ? '' : 'off'}`}>
+            {(['effort', 'mentality', 'confidence'] as const).map((key) => (
+              // one button per order: each tap moves to the next level (low → normal → high → low)
+              <button
+                key={key}
+                className={`order lv${now[key]}`}
+                disabled={!personaOn || done}
+                aria-label={`${rt.orders[key]}: ${rt.orders.levels[key][now[key]]}`}
+                onClick={() => give(key, ((now[key] + 1) % 3) as OrderLevel)}
+              >
+                <span className="order-name">{rt.orders[key]}</span>
+                <span className="order-level">
+                  <i className="order-dots" aria-hidden>
+                    {[0, 1, 2].map((d) => (
+                      <b key={d} className={d <= now[key] ? 'on' : ''} />
+                    ))}
+                  </i>
+                  {rt.orders.levels[key][now[key]]}
+                </span>
+                <small className="order-hint">{personaOn ? rt.orders.hints[key][now[key]] : rt.orders.offPitch}</small>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       <aside className="replay-side">
         {sideTop}
-        <ol className="event-feed">
-          {visible.length === 0 && done && <li className="muted">{tx.noEvents}</li>}
-          {visible
-            .map((e, i) => ({ e, i }))
-            .reverse()
-            .map(({ e, i }) => (
-              <li
-                key={e.id}
-                className={e.actor === 'persona' ? 'me' : ''}
-                onClick={() => {
-                  setT(scenes[i].start);
-                  finishedRef.current = false;
-                }}
-              >
-                <span className="min">{e.minute}'</span>
-                <span>{tx.eventIcons[e.type]}</span>
-                <span>{eventText(e, match, clubs, personaName)}</span>
-              </li>
-            ))}
-        </ol>
+        <div className="side-tabs" role="tablist">
+          <button role="tab" aria-selected={tab === 'events'} className={tab === 'events' ? 'on' : ''} onClick={() => setTab('events')}>
+            {rt.tabs.events}
+          </button>
+          <button role="tab" aria-selected={tab === 'lineups'} className={tab === 'lineups' ? 'on' : ''} onClick={() => setTab('lineups')}>
+            {rt.tabs.lineups}
+          </button>
+        </div>
+        {tab === 'events' ? (
+          <ol className="event-feed">
+            {visible.length === 0 && done && <li className="muted">{tx.noEvents}</li>}
+            {visible
+              .map((e, i) => ({ e, i }))
+              .reverse()
+              .map(({ e, i }) => (
+                <li
+                  key={e.id}
+                  className={e.actor === 'persona' ? 'me' : ''}
+                  onClick={() => {
+                    setT(scenes[i].start);
+                    finishedRef.current = false;
+                  }}
+                >
+                  <span className="min">{e.minute}'</span>
+                  <span>{tx.eventIcons[e.type]}</span>
+                  <span>{eventText(e, match, clubs, personaName)}</span>
+                </li>
+              ))}
+          </ol>
+        ) : (
+          <div className="lineups">
+            {/* only our own bench */}
+            {[match.personaSide ?? 'home'].map((side) => {
+              const lu = match.lineups?.[side];
+              const club = side === 'home' ? home : away;
+              if (!lu) return null;
+              const row = (p: LineupPlayer, starter: boolean) => (
+                <li key={p.id} className={`${p.persona ? 'me' : ''} ${live.off.has(p.id) ? 'gone' : ''}`}>
+                  <span className="lu-pos">{starter ? p.slot : p.position}</span>
+                  <span className="lu-name">
+                    {p.persona ? personaName : p.name}
+                    {live.on.get(p.id) !== undefined && (
+                      <em className="lu-in">
+                        {' '}
+                        ▲{live.on.get(p.id)}'{live.replaced.get(p.id) ? ` ↔ ${nameOf(live.replaced.get(p.id)!)}` : ''}
+                      </em>
+                    )}
+                    {live.subOff.get(p.id) !== undefined && <em className="lu-out"> ▼{live.subOff.get(p.id)}'</em>}
+                    {live.red.has(p.id) && <em className="lu-red"> 🟥</em>}
+                  </span>
+                  <span className="lu-ovr">{p.ovr}</span>
+                </li>
+              );
+              return (
+                <section key={side} className="lu-team">
+                  <h4>
+                    <Crest club={club} size={16} /> {club.name}
+                    <small>4-3-3{lu.style ? ` · ${pt.clubStyles[lu.style]}` : ''}</small>
+                  </h4>
+                  {/* the starters are on the pitch above: only the bench here */}
+                  <ul>{lu.bench.map((p) => row(p, false))}</ul>
+                </section>
+              );
+            })}
+          </div>
+        )}
         {sideBottom}
       </aside>
     </div>
   );
+}
+
+/** Possession, shots and changes from the log up to (and including) action `upTo`. */
+function liveStats(log: SimEvent[], upTo: number) {
+  const poss = [0, 0];
+  const shots = [0, 0];
+  const onTarget = [0, 0];
+  const on = new Map<string, number>();
+  /** Who each substitute replaced. */
+  const replaced = new Map<string, string>();
+  const subOff = new Map<string, number>();
+  const red = new Set<string>();
+  const off = new Set<string>();
+  const sideIdx = (s: string) => (s === 'home' ? 0 : 1);
+  for (let i = 0; i <= upTo && i < log.length; i++) {
+    const a = log[i];
+    if (BALL_ACTIONS.has(a.type)) poss[sideIdx(ownerBefore(a))]++;
+    if (a.type === 'SHOOT' || a.type === 'HEADER' || a.type === 'PENALTY') {
+      shots[sideIdx(a.side)]++;
+      if (a.outcome === 'GOAL' || a.outcome === 'SAVED_CAUGHT' || a.outcome === 'SAVED_PARRIED') onTarget[sideIdx(a.side)]++;
+    }
+    if (a.type === 'SUB') {
+      subOff.set(a.playerId, a.minute);
+      off.add(a.playerId);
+      if (a.targetId) {
+        on.set(a.targetId, a.minute);
+        replaced.set(a.targetId, a.playerId);
+      }
+    }
+    if (a.type === 'FOUL' && a.outcome === 'RED') {
+      red.add(a.playerId);
+      off.add(a.playerId);
+    }
+  }
+  const all = poss[0] + poss[1];
+  const h = all ? Math.round((poss[0] / all) * 100) : 50;
+  return { possession: [h, 100 - h], shots, onTarget, on, replaced, subOff, red, off };
+}
+
+const BALL_ACTIONS = new Set(['SHORT_PASS', 'LONG_PASS', 'THROUGH_BALL', 'CROSS', 'DRIBBLE', 'KNOCK_AND_RUN', 'CARRY', 'SHOOT', 'HOLD_UP', 'CLEAR', 'BACK_PASS']);
+
+type Levels = { effort: OrderLevel; mentality: OrderLevel; confidence: OrderLevel };
+/** The orders in force at a minute (normal when none were given). */
+function orderAt(orders: PersonaOrder[], minute: number): Levels {
+  let o: Levels = { effort: 1, mentality: 1, confidence: 1 };
+  for (const x of orders.slice().sort((p, q) => p.from - q.from)) if (x.from <= minute + 1) o = x;
+  return o;
 }
 
 function drawLive(

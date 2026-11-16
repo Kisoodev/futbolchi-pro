@@ -12,6 +12,24 @@ export interface ReplayTexts {
   kickOff: string;
   secondHalf: string;
   legend: string;
+  /** The persona's orders during the match (three levels each). */
+  orders: {
+    title: string;
+    effort: string;
+    mentality: string;
+    confidence: string;
+    levels: { effort: [string, string, string]; mentality: [string, string, string]; confidence: [string, string, string] };
+    hints: { effort: [string, string, string]; mentality: [string, string, string]; confidence: [string, string, string] };
+    /** Shown when an order was given. */
+    given: (minute: number) => string;
+    offPitch: string;
+  };
+  tabs: { events: string; lineups: string };
+  stats: { possession: string; shots: string; onTarget: string };
+  starters: string;
+  bench: string;
+  cameOn: string;
+  sentOff: string;
 }
 
 const uz: ReplayTexts = {
@@ -68,6 +86,26 @@ const uz: ReplayTexts = {
   kickOff: 'O‘yin boshlandi',
   secondHalf: 'Ikkinchi bo‘lim',
   legend: 'Oltin rang — siz',
+  orders: {
+    title: "Ko'rsatmalar",
+    effort: 'Harakat',
+    mentality: 'Uslub',
+    confidence: 'Ishonch',
+    levels: { effort: ['Tejamkor', "O'rtacha", 'Kuchli'], mentality: ['Himoyaviy', 'Muvozanat', 'Hujumkor'], confidence: ['Ehtiyotkor', "O'rtacha", 'Yuqori'] },
+    hints: {
+      effort: ['Kuchni tejaydi, kam charchaydi', 'Odatdagidek', "Kuchliroq o'ynaydi, lekin tez charchaydi"],
+      mentality: ["Himoyaga ko'proq yordam beradi, kam zarba", 'Odatdagidek', "Ko'proq zarba va hujum, himoyaga qaytmaydi"],
+      confidence: ['Xavfsiz pas beradi, kam aldaydi', 'Odatdagidek', "Ko'proq aldab o'tadi va tezlik bilan o'tib ketadi"],
+    },
+    given: (m) => `${m}-daqiqadan kuchga kirdi`,
+    offPitch: "Siz maydonda emassiz",
+  },
+  tabs: { events: 'Voqealar', lineups: 'Zaxira' },
+  stats: { possession: "To'pga egalik", shots: 'Zarbalar', onTarget: 'Darvozaga' },
+  starters: 'Asosiy tarkib',
+  bench: 'Zaxira',
+  cameOn: 'maydonga tushdi',
+  sentOff: 'chetlatildi',
 };
 
 const en: ReplayTexts = {
@@ -124,6 +162,26 @@ const en: ReplayTexts = {
   kickOff: 'Kick-off',
   secondHalf: 'Second half',
   legend: 'Gold — you',
+  orders: {
+    title: 'Instructions',
+    effort: 'Effort',
+    mentality: 'Mentality',
+    confidence: 'Confidence',
+    levels: { effort: ['Save energy', 'Normal', 'All out'], mentality: ['Defensive', 'Balanced', 'Attacking'], confidence: ['Careful', 'Normal', 'Bold'] },
+    hints: {
+      effort: ['Saves energy, tires less', 'As usual', 'Plays stronger, but tires faster'],
+      mentality: ['Helps the defence more, shoots less', 'As usual', "More shots and attacks, doesn't track back"],
+      confidence: ['Safe passes, fewer take-ons', 'As usual', 'Takes players on and runs past them more'],
+    },
+    given: (m) => `In force from minute ${m}`,
+    offPitch: "You're not on the pitch",
+  },
+  tabs: { events: 'Events', lineups: 'Bench' },
+  stats: { possession: 'Possession', shots: 'Shots', onTarget: 'On target' },
+  starters: 'Starting XI',
+  bench: 'Bench',
+  cameOn: 'came on',
+  sentOff: 'sent off',
 };
 
 const ru: ReplayTexts = {
@@ -180,6 +238,26 @@ const ru: ReplayTexts = {
   kickOff: 'Начало матча',
   secondHalf: 'Второй тайм',
   legend: 'Золотой — вы',
+  orders: {
+    title: 'Указания',
+    effort: 'Усилия',
+    mentality: 'Настрой',
+    confidence: 'Уверенность',
+    levels: { effort: ['Экономно', 'Обычно', 'На максимум'], mentality: ['Оборона', 'Баланс', 'Атака'], confidence: ['Осторожно', 'Обычно', 'Смело'] },
+    hints: {
+      effort: ['Бережёт силы, меньше устаёт', 'Как обычно', 'Играет сильнее, но быстрее устаёт'],
+      mentality: ['Больше помогает защите, реже бьёт', 'Как обычно', 'Больше ударов и атак, не возвращается в защиту'],
+      confidence: ['Надёжный пас, меньше обводок', 'Как обычно', 'Чаще обводит и убегает на скорости'],
+    },
+    given: (m) => `Действует с ${m}-й минуты`,
+    offPitch: 'Вас нет на поле',
+  },
+  tabs: { events: 'События', lineups: 'Запасные' },
+  stats: { possession: 'Владение', shots: 'Удары', onTarget: 'В створ' },
+  starters: 'Основной состав',
+  bench: 'Запасные',
+  cameOn: 'вышел на замену',
+  sentOff: 'удалён',
 };
 
 const TEXTS: Record<Lang, ReplayTexts> = { uz, en, ru };

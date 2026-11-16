@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { playMatchDay, startNextSeason, trainDay, type GameState, type TrainingId } from '@futbolchi/engine';
+import { playMatchDay, startNextSeason, trainDay, type GameState, type PersonaOrder, type TrainingId } from '@futbolchi/engine';
 import { GrowthReveal, type GrowthData } from './components/GrowthReveal';
 import { AccountBadge } from './components/AccountBadge';
 import { tx, useLang } from './i18n';
@@ -98,6 +98,34 @@ export function App() {
   const [growth, setGrowth] = useState<GrowthData | null>(null);
   /** Match-day growth waits until the match has been watched. */
   const [afterMatch, setAfterMatch] = useState<GrowthData | null>(null);
+  /** The state before the match day and the orders given so far (the match is played again when they change). */
+  const [matchRun, setMatchRun] = useState<{ base: GameState; orders: PersonaOrder[] } | null>(null);
+
+  /** Plays the match day (again, when the orders change) and keeps the growth to show afterwards. */
+  const runMatchDay = (game: GameState, orders: PersonaOrder[]) => {
+    const r = playMatchDay(game, { orders });
+    update(r.state);
+    const ps = r.state.matches[r.matchId]?.personaStats;
+    const played = (ps?.minutes ?? 0) > 0;
+    // growth from the performance only (fatigue and recovery are not "growth")
+    const before = game.persona.stats;
+    const after = { ...before };
+    for (const [k, d] of Object.entries(r.deltas)) after[k as keyof typeof after] = before[k as keyof typeof before] + (d ?? 0);
+    setAfterMatch({
+      kind: 'match',
+      name: game.persona.name,
+      before,
+      after,
+      levelBefore: r.levelBefore,
+      levelAfter: r.levelAfter,
+      milestones: r.milestones,
+      rating: ps?.rating ?? null,
+      reward: r.reward,
+      account: r.state.account,
+      benched: !played,
+    });
+    return r;
+  };
 
   const update = (next: GameState) => {
     setGame(next);
@@ -226,7 +254,17 @@ export function App() {
         <MatchScreen
           state={game}
           matchId={route.matchId}
+          orders={matchRun?.orders ?? []}
+          onOrders={
+            matchRun
+              ? (orders) => {
+                  setMatchRun({ ...matchRun, orders });
+                  runMatchDay(matchRun.base, orders);
+                }
+              : undefined
+          }
           onContinue={() => {
+            setMatchRun(null);
             setRoute({ name: 'game' });
             if (afterMatch) setGrowth(afterMatch);
             setAfterMatch(null);
@@ -262,27 +300,8 @@ export function App() {
               }}
               coachHold={!!growth}
               onPlayMatch={() => {
-                const r = playMatchDay(game);
-                update(r.state);
-                const ps = r.state.matches[r.matchId]?.personaStats;
-                const played = (ps?.minutes ?? 0) > 0;
-                // growth from the performance only (fatigue and recovery are not "growth")
-                const before = game.persona.stats;
-                const after = { ...before };
-                for (const [k, d] of Object.entries(r.deltas)) after[k as keyof typeof after] = before[k as keyof typeof before] + (d ?? 0);
-                setAfterMatch({
-                  kind: 'match',
-                  name: game.persona.name,
-                  before,
-                  after,
-                  levelBefore: r.levelBefore,
-                  levelAfter: r.levelAfter,
-                  milestones: r.milestones,
-                  rating: ps?.rating ?? null,
-                  reward: r.reward,
-                  account: r.state.account,
-                  benched: !played,
-                });
+                const r = runMatchDay(game, []);
+                setMatchRun({ base: game, orders: [] });
                 setRoute({ name: 'match', matchId: r.matchId });
               }}
             />
